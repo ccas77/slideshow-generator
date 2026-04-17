@@ -1,0 +1,32 @@
+{
+  "name": "hero-section",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
+  },
+  "dependencies": {
+    "@fontsource/inter": "^5.2.8",
+    "@google/genai": "^1.46.0",
+    "@resvg/resvg-js": "^2.6.2",
+    "@tailwindcss/postcss": "^4.2.1",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@upstash/redis": "^1.37.0",
+    "clsx": "^2.1.1",
+    "framer-motion": "^12.36.0",
+    "next": "^14.2.35",
+    "postcss": "^8.5.8",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "sharp": "^0.34.5",
+    "tailwind-merge": "^3.5.0",
+    "tailwindcss": "^4.2.1",
+    "typescript": "^5.9.3"
+  },
+  "devDependencies": {
+    "@types/node": "25.5.0"
+  }
+}
