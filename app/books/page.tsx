@@ -52,6 +52,8 @@ export default function BooksPage() {
   const [importName, setImportName] = useState("");
   const [importText, setImportText] = useState("");
   const [analyzingSlide, setAnalyzingSlide] = useState(false);
+  const [showAnalyzeModal, setShowAnalyzeModal] = useState(false);
+  const [analyzeUrl, setAnalyzeUrl] = useState("");
 
   useEffect(() => {
     const pw = localStorage.getItem("sg.password");
@@ -133,13 +135,14 @@ export default function BooksPage() {
     if (activeBookId === id) setActiveBookId(null);
   }
 
-  function analyzeSlide() {
+  function analyzeSlideUpload() {
     const input = document.createElement("input");
     input.type = "file";
     input.accept = "image/*";
     input.onchange = async () => {
       const file = input.files?.[0];
       if (!file || !activeBookId) return;
+      setShowAnalyzeModal(false);
       setAnalyzingSlide(true);
       try {
         const dataUrl = await new Promise<string>((resolve) => {
@@ -169,6 +172,34 @@ export default function BooksPage() {
       }
     };
     input.click();
+  }
+
+  async function analyzeSlideUrl() {
+    if (!analyzeUrl.trim() || !activeBookId) return;
+    setShowAnalyzeModal(false);
+    setAnalyzingSlide(true);
+    try {
+      const res = await fetch("/api/analyze-slide", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageUrl: analyzeUrl.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed");
+      const newItem: NamedItem = {
+        id: uid(),
+        name: "From URL",
+        value: data.prompt,
+      };
+      setEditingItem({ kind: "prompts", item: newItem });
+      setAnalyzeUrl("");
+    } catch (err) {
+      window.alert(
+        err instanceof Error ? err.message : "Failed to analyze slide"
+      );
+    } finally {
+      setAnalyzingSlide(false);
+    }
   }
 
   const activeBook = books.find((b) => b.id === activeBookId);
@@ -323,7 +354,7 @@ export default function BooksPage() {
                             })),
                           }));
                         }}
-                        onAnalyzeSlide={analyzeSlide}
+                        onAnalyzeSlide={() => { setAnalyzeUrl(""); setShowAnalyzeModal(true); }}
                       />
                     </>
                   )}
@@ -583,6 +614,44 @@ export default function BooksPage() {
               setEditingSlideshow(null);
             }}
           />
+        </Modal>
+      )}
+
+      {/* Analyze slide modal */}
+      {showAnalyzeModal && activeBook && (
+        <Modal onClose={() => setShowAnalyzeModal(false)}>
+          <h3 className="text-lg font-semibold mb-2">Analyze a slide</h3>
+          <p className="text-xs text-zinc-500 mb-5">
+            Upload an image or paste a URL. The visual style will be extracted as an image prompt, ignoring any text.
+          </p>
+          <button
+            onClick={analyzeSlideUpload}
+            className="w-full px-5 py-3 rounded-lg bg-white text-black font-medium hover:bg-zinc-200 transition-colors text-sm mb-3"
+          >
+            Upload image
+          </button>
+          <div className="flex items-center gap-3 mb-3">
+            <div className="flex-1 h-px bg-zinc-800" />
+            <span className="text-xs text-zinc-600">or</span>
+            <div className="flex-1 h-px bg-zinc-800" />
+          </div>
+          <div className="flex gap-2">
+            <input
+              type="url"
+              value={analyzeUrl}
+              onChange={(e) => setAnalyzeUrl(e.target.value)}
+              placeholder="Paste image URL"
+              className="flex-1 rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20 placeholder:text-zinc-600"
+              onKeyDown={(e) => { if (e.key === "Enter") analyzeSlideUrl(); }}
+            />
+            <button
+              onClick={analyzeSlideUrl}
+              disabled={!analyzeUrl.trim()}
+              className="px-4 py-2 rounded-lg bg-white text-black text-sm font-medium hover:bg-zinc-200 transition-colors disabled:opacity-40"
+            >
+              Analyze
+            </button>
+          </div>
         </Modal>
       )}
 
