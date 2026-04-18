@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import AppHeader from "@/components/AppHeader";
 import HowItWorks from "@/components/HowItWorks";
+import SlidePreview from "@/components/SlidePreview";
 
 interface NamedItem {
   id: string;
@@ -78,6 +79,9 @@ export default function InstagramPage() {
   const [importBookId, setImportBookId] = useState("");
   const [importSlideshowId, setImportSlideshowId] = useState("");
   const [truncating, setTruncating] = useState(false);
+
+  // Preview
+  const [previewSlideshow, setPreviewSlideshow] = useState<InstagramSlideshow | null>(null);
 
   // Editor (inline on slideshows tab)
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -625,6 +629,12 @@ export default function InstagramPage() {
                           </div>
                           <div className="flex gap-2 shrink-0">
                             <button
+                              onClick={() => setPreviewSlideshow(s)}
+                              className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
+                            >
+                              Preview
+                            </button>
+                            <button
                               onClick={() => startEditing(s)}
                               className="text-xs text-zinc-400 hover:text-white transition-colors"
                             >
@@ -923,6 +933,13 @@ export default function InstagramPage() {
               </div>
             )}
           </>
+        )}
+        {previewSlideshow && (
+          <SlidePreview
+            slides={previewSlideshow.slideTexts.split("\n").filter(Boolean)}
+            caption={previewSlideshow.captions.length > 0 ? previewSlideshow.captions[0].value : undefined}
+            onClose={() => setPreviewSlideshow(null)}
+          />
         )}
       </div>
     </div>

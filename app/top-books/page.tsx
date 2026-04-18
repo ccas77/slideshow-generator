@@ -96,6 +96,9 @@ export default function TopBooksPage() {
   ]);
   const [savingAuto, setSavingAuto] = useState(false);
 
+  // Preview
+  const [previewListId, setPreviewListId] = useState<string | null>(null);
+
   // Active tab
   const [tab, setTab] = useState<"books" | "lists">("books");
 
@@ -617,6 +620,12 @@ export default function TopBooksPage() {
                             {autoOn ? "Auto on" : "Automate"}
                           </button>
                           <button
+                            onClick={() => setPreviewListId(l.id)}
+                            className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
+                          >
+                            Preview
+                          </button>
+                          <button
                             onClick={() => { setPublishListId(l.id); setPublishAccounts([]); setPublishResult(null); setScheduledAt(""); }}
                             className="text-xs bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-lg transition-colors"
                           >
@@ -928,6 +937,83 @@ export default function TopBooksPage() {
             </div>
           </Modal>
         )}
+
+        {/* ═══ LIST PREVIEW MODAL ═══ */}
+        {previewListId && (() => {
+          const list = lists.find((l) => l.id === previewListId);
+          if (!list) return null;
+          const poolBooks = list.bookIds
+            .map((id) => books.find((b) => b.id === id))
+            .filter(Boolean) as TopBook[];
+          const pinned = poolBooks.filter((b) => b.pinned);
+          const unpinned = poolBooks.filter((b) => !b.pinned).sort(() => Math.random() - 0.5);
+          const selected = [...pinned];
+          for (const b of unpinned) {
+            if (selected.length >= list.count) break;
+            selected.push(b);
+          }
+          const finalOrder = selected.sort(() => Math.random() - 0.5);
+          const titleText = list.titleTexts.length > 0
+            ? list.titleTexts[Math.floor(Math.random() * list.titleTexts.length)]
+            : list.name;
+          const caption = list.captions.length > 0
+            ? list.captions[Math.floor(Math.random() * list.captions.length)]
+            : undefined;
+
+          return (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm" onClick={() => setPreviewListId(null)}>
+              <div className="relative w-full max-w-sm mx-4" onClick={(e) => e.stopPropagation()}>
+                {/* Title slide */}
+                <div className="rounded-2xl overflow-hidden bg-gradient-to-br from-zinc-800 via-zinc-700 to-zinc-900 border border-zinc-600 shadow-2xl p-6 mb-3">
+                  <div className="text-[10px] text-zinc-500 uppercase tracking-widest mb-3">Title slide</div>
+                  <div className="text-lg font-bold text-white leading-snug">{titleText}</div>
+                  <div className="text-[10px] text-zinc-500 mt-3">Background image generated at post time</div>
+                </div>
+
+                {/* Book grid */}
+                <div className="rounded-2xl overflow-hidden bg-zinc-900/90 border border-zinc-700 p-4 mb-3">
+                  <div className="text-[10px] text-zinc-500 uppercase tracking-widest mb-3">
+                    {finalOrder.length} books selected (shuffled)
+                  </div>
+                  <div className="grid grid-cols-5 gap-2">
+                    {finalOrder.map((b, i) => (
+                      <div key={b.id} className="relative">
+                        <img src={b.coverData} alt={b.title} className="w-full aspect-[2/3] rounded-lg object-cover" />
+                        <div className="absolute top-0.5 left-0.5 bg-black/70 text-white text-[9px] w-4 h-4 rounded-full flex items-center justify-center font-bold">
+                          {i + 1}
+                        </div>
+                        {b.pinned && (
+                          <div className="absolute bottom-0.5 right-0.5 bg-amber-500/80 text-[8px] px-1 rounded text-black font-bold">
+                            PIN
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Caption */}
+                {caption && (
+                  <div className="text-xs text-zinc-400 bg-zinc-900/80 border border-zinc-800 rounded-lg p-3 mb-3 max-h-20 overflow-y-auto">
+                    <span className="text-zinc-600 uppercase text-[10px] tracking-wide block mb-1">Caption</span>
+                    {caption}
+                  </div>
+                )}
+
+                <p className="text-[10px] text-zinc-600 text-center mb-2">
+                  Each preview shuffles differently. Pinned books always appear.
+                </p>
+
+                <button
+                  onClick={() => setPreviewListId(null)}
+                  className="w-full text-xs text-zinc-500 hover:text-white transition-colors py-1"
+                >
+                  Close preview
+                </button>
+              </div>
+            </div>
+          );
+        })()}
       </div>
     </div>
   );
