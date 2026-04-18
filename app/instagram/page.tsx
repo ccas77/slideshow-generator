@@ -78,6 +78,8 @@ export default function InstagramPage() {
 
   // Editor modal
   const [editing, setEditing] = useState<InstagramSlideshow | null>(null);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [analyzeUrl, setAnalyzeUrl] = useState("");
 
   // Automation modal
   const [autoId, setAutoId] = useState<string | null>(null);
@@ -133,6 +135,68 @@ export default function InstagramPage() {
     } catch {}
     setSaving(false);
   }, []);
+
+  function analyzeUpload() {
+    if (!editing) return;
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*";
+    input.onchange = async () => {
+      const file = input.files?.[0];
+      if (!file || !editing) return;
+      setAnalyzing(true);
+      try {
+        const dataUrl = await new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.readAsDataURL(file);
+        });
+        const res = await fetch("/api/analyze-slide", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ imageData: dataUrl }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Failed");
+        const newItem = { id: uid(), name: file.name.replace(/\.[^.]+$/, ""), value: data.prompt };
+        setEditing({
+          ...editing,
+          imagePrompts: [...editing.imagePrompts, newItem],
+          imagePromptIds: [...editing.imagePromptIds, newItem.id],
+        });
+      } catch (err) {
+        window.alert(err instanceof Error ? err.message : "Failed to analyze");
+      } finally {
+        setAnalyzing(false);
+      }
+    };
+    input.click();
+  }
+
+  async function analyzeFromUrl() {
+    if (!analyzeUrl.trim() || !editing) return;
+    setAnalyzing(true);
+    try {
+      const res = await fetch("/api/analyze-slide", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageUrl: analyzeUrl.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed");
+      const newItem = { id: uid(), name: "From URL", value: data.prompt };
+      setEditing({
+        ...editing,
+        imagePrompts: [...editing.imagePrompts, newItem],
+        imagePromptIds: [...editing.imagePromptIds, newItem.id],
+      });
+      setAnalyzeUrl("");
+    } catch (err) {
+      window.alert(err instanceof Error ? err.message : "Failed to analyze");
+    } finally {
+      setAnalyzing(false);
+    }
+  }
 
   async function importSlideshow() {
     const book = books.find((b) => b.id === importBookId);
@@ -563,6 +627,29 @@ export default function InstagramPage() {
               className="text-xs text-blue-400 hover:text-blue-300"
             >
               + New prompt
+            </button>
+            <button
+              onClick={analyzeUpload}
+              disabled={analyzing}
+              className="text-xs text-purple-400 hover:text-purple-300 disabled:opacity-40"
+            >
+              {analyzing ? "Analyzing…" : "Analyze image"}
+            </button>
+          </div>
+          <div className="flex gap-2 mb-4">
+            <input
+              value={analyzeUrl}
+              onChange={(e) => setAnalyzeUrl(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") analyzeFromUrl(); }}
+              placeholder="Paste image URL and press Enter…"
+              className="flex-1 rounded-lg border border-zinc-800 bg-zinc-900 px-2 py-1 text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-white/20"
+            />
+            <button
+              onClick={analyzeFromUrl}
+              disabled={!analyzeUrl.trim() || analyzing}
+              className="text-xs text-purple-400 hover:text-purple-300 disabled:opacity-40 shrink-0"
+            >
+              Extract
             </button>
           </div>
 
