@@ -104,8 +104,8 @@ export default function InstagramPage() {
       const [igRes, booksRes, ttRes, igAccRes] = await Promise.all([
         fetch("/api/ig-slideshows"),
         fetch(`/api/books?password=${encodeURIComponent(password)}`),
-        fetch("/api/post-tiktok"),
-        fetch("/api/post-tiktok?platform=instagram"),
+        fetch(`/api/post-tiktok?password=${encodeURIComponent(password)}`),
+        fetch(`/api/post-tiktok?password=${encodeURIComponent(password)}&platform=instagram`),
       ]);
       if (igRes.ok) setIgSlideshows((await igRes.json()).slideshows || []);
       if (booksRes.ok) setBooks((await booksRes.json()).books || []);
