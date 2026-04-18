@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import AppHeader from "@/components/AppHeader";
+import HowItWorks from "@/components/HowItWorks";
 
 interface NamedItem {
   id: string;
@@ -210,6 +211,11 @@ export default function BooksPage() {
     <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-zinc-900 to-black text-white">
       <div className="mx-auto w-full max-w-5xl px-6 sm:px-10 py-10">
         <AppHeader />
+        <HowItWorks>
+          <p><strong>Books</strong> — organize your content into books, each containing slideshows, image prompts, and captions.</p>
+          <p>A <strong>book</strong> groups related content together. Each book has a pool of <strong>image prompts</strong> (used to generate cover images via AI) and <strong>captions</strong> (posted with your slideshow).</p>
+          <p>Each book contains <strong>slideshows</strong> — sets of slide texts that become TikTok carousels. A slideshow picks from the book's prompt and caption pools when posting.</p>
+        </HowItWorks>
 
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold">Books</h1>

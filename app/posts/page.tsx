@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import AppHeader from "@/components/AppHeader";
+import HowItWorks from "@/components/HowItWorks";
 
 interface TikTokAccount {
   id: number;
@@ -97,6 +98,10 @@ export default function PostsPage() {
     <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-zinc-900 to-black text-white">
       <div className="mx-auto w-full max-w-4xl px-6 sm:px-10 py-10">
         <AppHeader />
+        <HowItWorks>
+          <p><strong>Posts</strong> — view all your scheduled and published posts.</p>
+          <p>Filter by account to see what's been posted or what's coming up. Each entry shows the caption, slide count, and when it was scheduled or posted.</p>
+        </HowItWorks>
 
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold">Posts</h1>

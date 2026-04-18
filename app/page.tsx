@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect, useMemo } from "react";
 import AppHeader from "@/components/AppHeader";
+import HowItWorks from "@/components/HowItWorks";
 
 interface TikTokAccount {
   id: number;
@@ -755,6 +756,11 @@ export default function Home() {
     <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-zinc-900 to-black text-white">
       <div className="mx-auto w-full max-w-3xl px-6 sm:px-10 py-10">
         <AppHeader />
+        <HowItWorks>
+          <p><strong>Dashboard</strong> — manage your TikTok accounts and automate slideshow posting.</p>
+          <p>Select a book and slideshow, pick which accounts to post to, and set time windows for automated daily posting. Each post gets a fresh AI-generated image.</p>
+          <p>Use the automation toggle to enable/disable scheduled posting. Time windows are in UTC — one post is scheduled at a random time within each window.</p>
+        </HowItWorks>
         <p className="text-sm text-zinc-500 mb-6 -mt-4">
           {selectedAccount
             ? `Working as @${selectedAccount.username}`

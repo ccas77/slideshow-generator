@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import AppHeader from "@/components/AppHeader";
+import HowItWorks from "@/components/HowItWorks";
 
 interface Message {
   role: "user" | "assistant";
@@ -189,6 +190,10 @@ export default function ChatPage() {
     <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-zinc-900 to-black text-white flex flex-col">
       <div className="mx-auto w-full max-w-3xl px-6 sm:px-10 py-10 flex flex-col flex-1 min-h-0">
         <AppHeader />
+        <HowItWorks>
+          <p><strong>Chat</strong> — talk to an AI assistant for help with your content.</p>
+          <p>Enter your PostBridge credentials to connect, then chat with the assistant about your slideshows, captions, or anything else.</p>
+        </HowItWorks>
 
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold">Publisher Champ Chat</h2>

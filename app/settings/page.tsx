@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import AppHeader from "@/components/AppHeader";
+import HowItWorks from "@/components/HowItWorks";
 
 interface TikTokAccount {
   id: number;
@@ -79,6 +80,10 @@ export default function SettingsPage() {
     <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-zinc-900 to-black text-white">
       <div className="mx-auto w-full max-w-4xl px-6 sm:px-10 py-10">
         <AppHeader />
+        <HowItWorks>
+          <p><strong>Settings</strong> — choose which TikTok accounts are available across the app.</p>
+          <p>Check the accounts you want to use for posting and automation. Unchecked accounts won't appear in account pickers on other pages.</p>
+        </HowItWorks>
 
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold">Settings</h1>
