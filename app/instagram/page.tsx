@@ -473,29 +473,44 @@ export default function InstagramPage() {
           <label className="block text-xs font-medium text-zinc-400 mb-1">
             Image prompts ({editing.imagePrompts.length})
           </label>
-          <div className="space-y-1 max-h-28 overflow-y-auto rounded-lg border border-zinc-800 bg-zinc-900 p-2 mb-4">
+          <div className="space-y-1 max-h-36 overflow-y-auto rounded-lg border border-zinc-800 bg-zinc-900 p-2 mb-2">
             {editing.imagePrompts.map((p) => (
               <div
                 key={p.id}
-                className="flex items-center gap-2 px-2 py-1.5 text-sm text-zinc-300"
+                className="group rounded-lg border border-zinc-800 bg-zinc-950/50 px-2 py-1.5"
               >
-                <span className="truncate">{p.name}</span>
-                <button
-                  onClick={() =>
+                <div className="flex items-center gap-2 text-sm text-zinc-300">
+                  <span className="truncate font-medium">{p.name}</span>
+                  <button
+                    onClick={() =>
+                      setEditing({
+                        ...editing,
+                        imagePrompts: editing.imagePrompts.filter(
+                          (x) => x.id !== p.id
+                        ),
+                        imagePromptIds: editing.imagePromptIds.filter(
+                          (x) => x !== p.id
+                        ),
+                      })
+                    }
+                    className="text-xs text-red-500 hover:text-red-400 ml-auto shrink-0"
+                  >
+                    Remove
+                  </button>
+                </div>
+                <textarea
+                  value={p.value}
+                  onChange={(e) =>
                     setEditing({
                       ...editing,
-                      imagePrompts: editing.imagePrompts.filter(
-                        (x) => x.id !== p.id
-                      ),
-                      imagePromptIds: editing.imagePromptIds.filter(
-                        (x) => x !== p.id
+                      imagePrompts: editing.imagePrompts.map((x) =>
+                        x.id === p.id ? { ...x, value: e.target.value } : x
                       ),
                     })
                   }
-                  className="text-xs text-red-500 hover:text-red-400 ml-auto shrink-0"
-                >
-                  Remove
-                </button>
+                  rows={2}
+                  className="w-full mt-1 rounded bg-zinc-900 border border-zinc-800 px-2 py-1 text-xs text-zinc-400 focus:outline-none focus:ring-1 focus:ring-white/20 resize-none"
+                />
               </div>
             ))}
             {editing.imagePrompts.length === 0 && (
@@ -504,39 +519,146 @@ export default function InstagramPage() {
               </p>
             )}
           </div>
+          <div className="flex gap-2 mb-4">
+            {(() => {
+              const sourceBook = books.find((b) => b.id === editing.sourceBookId);
+              const available = sourceBook?.imagePrompts.filter(
+                (p) => !editing.imagePromptIds.includes(p.id)
+              );
+              if (available && available.length > 0) {
+                return (
+                  <select
+                    value=""
+                    onChange={(e) => {
+                      const item = available.find((p) => p.id === e.target.value);
+                      if (!item) return;
+                      setEditing({
+                        ...editing,
+                        imagePrompts: [...editing.imagePrompts, item],
+                        imagePromptIds: [...editing.imagePromptIds, item.id],
+                      });
+                    }}
+                    className="rounded-lg border border-zinc-800 bg-zinc-900 px-2 py-1 text-xs text-zinc-400 focus:outline-none"
+                  >
+                    <option value="">+ Add from book pool…</option>
+                    {available.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                      </option>
+                    ))}
+                  </select>
+                );
+              }
+              return null;
+            })()}
+            <button
+              onClick={() => {
+                const newItem = { id: uid(), name: `Prompt ${editing.imagePrompts.length + 1}`, value: "" };
+                setEditing({
+                  ...editing,
+                  imagePrompts: [...editing.imagePrompts, newItem],
+                  imagePromptIds: [...editing.imagePromptIds, newItem.id],
+                });
+              }}
+              className="text-xs text-blue-400 hover:text-blue-300"
+            >
+              + New prompt
+            </button>
+          </div>
 
           {/* Captions */}
           <label className="block text-xs font-medium text-zinc-400 mb-1">
             Captions ({editing.captions.length})
           </label>
-          <div className="space-y-1 max-h-28 overflow-y-auto rounded-lg border border-zinc-800 bg-zinc-900 p-2 mb-5">
+          <div className="space-y-1 max-h-36 overflow-y-auto rounded-lg border border-zinc-800 bg-zinc-900 p-2 mb-2">
             {editing.captions.map((c) => (
               <div
                 key={c.id}
-                className="flex items-center gap-2 px-2 py-1.5 text-sm text-zinc-300"
+                className="group rounded-lg border border-zinc-800 bg-zinc-950/50 px-2 py-1.5"
               >
-                <span className="truncate">{c.name}</span>
-                <button
-                  onClick={() =>
+                <div className="flex items-center gap-2 text-sm text-zinc-300">
+                  <span className="truncate font-medium">{c.name}</span>
+                  <button
+                    onClick={() =>
+                      setEditing({
+                        ...editing,
+                        captions: editing.captions.filter(
+                          (x) => x.id !== c.id
+                        ),
+                        captionIds: editing.captionIds.filter(
+                          (x) => x !== c.id
+                        ),
+                      })
+                    }
+                    className="text-xs text-red-500 hover:text-red-400 ml-auto shrink-0"
+                  >
+                    Remove
+                  </button>
+                </div>
+                <textarea
+                  value={c.value}
+                  onChange={(e) =>
                     setEditing({
                       ...editing,
-                      captions: editing.captions.filter(
-                        (x) => x.id !== c.id
-                      ),
-                      captionIds: editing.captionIds.filter(
-                        (x) => x !== c.id
+                      captions: editing.captions.map((x) =>
+                        x.id === c.id ? { ...x, value: e.target.value } : x
                       ),
                     })
                   }
-                  className="text-xs text-red-500 hover:text-red-400 ml-auto shrink-0"
-                >
-                  Remove
-                </button>
+                  rows={2}
+                  className="w-full mt-1 rounded bg-zinc-900 border border-zinc-800 px-2 py-1 text-xs text-zinc-400 focus:outline-none focus:ring-1 focus:ring-white/20 resize-none"
+                />
               </div>
             ))}
             {editing.captions.length === 0 && (
               <p className="text-xs text-zinc-600 px-2 py-1">No captions.</p>
             )}
+          </div>
+          <div className="flex gap-2 mb-5">
+            {(() => {
+              const sourceBook = books.find((b) => b.id === editing.sourceBookId);
+              const available = sourceBook?.captions.filter(
+                (c) => !editing.captionIds.includes(c.id)
+              );
+              if (available && available.length > 0) {
+                return (
+                  <select
+                    value=""
+                    onChange={(e) => {
+                      const item = available.find((c) => c.id === e.target.value);
+                      if (!item) return;
+                      setEditing({
+                        ...editing,
+                        captions: [...editing.captions, item],
+                        captionIds: [...editing.captionIds, item.id],
+                      });
+                    }}
+                    className="rounded-lg border border-zinc-800 bg-zinc-900 px-2 py-1 text-xs text-zinc-400 focus:outline-none"
+                  >
+                    <option value="">+ Add from book pool…</option>
+                    {available.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                );
+              }
+              return null;
+            })()}
+            <button
+              onClick={() => {
+                const newItem = { id: uid(), name: `Caption ${editing.captions.length + 1}`, value: "" };
+                setEditing({
+                  ...editing,
+                  captions: [...editing.captions, newItem],
+                  captionIds: [...editing.captionIds, newItem.id],
+                });
+              }}
+              className="text-xs text-blue-400 hover:text-blue-300"
+            >
+              + New caption
+            </button>
           </div>
 
           <div className="flex gap-3 justify-end">
