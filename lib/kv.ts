@@ -254,6 +254,41 @@ export async function setTopNLists(lists: TopNList[]): Promise<void> {
   await redis.set(TOP_N_LISTS_KEY, lists);
 }
 
+// ── Instagram Slideshows ──
+
+export interface InstagramAutomation {
+  enabled: boolean;
+  igAccountIds: number[];
+  tiktokAccountIds: number[];
+  intervals: TimeWindow[];
+}
+
+export interface InstagramSlideshow {
+  id: string;
+  name: string;
+  sourceBookId?: string;
+  sourceSlideshowId?: string;
+  slideTexts: string;
+  imagePromptIds: string[];
+  captionIds: string[];
+  imagePrompts: NamedItem[];
+  captions: NamedItem[];
+  automation?: InstagramAutomation;
+}
+
+const IG_SLIDESHOWS_KEY = "ig-slideshows";
+
+export async function getIgSlideshows(): Promise<InstagramSlideshow[]> {
+  const data = await redis.get<InstagramSlideshow[]>(IG_SLIDESHOWS_KEY);
+  return data ?? [];
+}
+
+export async function setIgSlideshows(
+  slideshows: InstagramSlideshow[]
+): Promise<void> {
+  await redis.set(IG_SLIDESHOWS_KEY, slideshows);
+}
+
 // ── Settings ──
 
 const SETTINGS_KEY = "app-settings";
