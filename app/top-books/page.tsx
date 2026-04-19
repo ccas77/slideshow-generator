@@ -24,6 +24,8 @@ interface TopNAutomation {
   accountIds: number[]; // TikTok carousel accounts
   videoAccountIds?: number[]; // TikTok video accounts
   fbAccountIds?: number[]; // Facebook video accounts
+  igCarouselAccountIds?: number[]; // Instagram carousel accounts
+  igVideoAccountIds?: number[]; // Instagram video accounts
   intervals: TimeWindow[];
 }
 
@@ -91,6 +93,8 @@ export default function TopBooksPage() {
   const [autoAccounts, setAutoAccounts] = useState<number[]>([]);
   const [autoVideoAccounts, setAutoVideoAccounts] = useState<number[]>([]);
   const [autoFbAccounts, setAutoFbAccounts] = useState<number[]>([]);
+  const [autoIgCarouselAccounts, setAutoIgCarouselAccounts] = useState<number[]>([]);
+  const [autoIgVideoAccounts, setAutoIgVideoAccounts] = useState<number[]>([]);
   const [autoIntervals, setAutoIntervals] = useState<TimeWindow[]>([
     { start: "18:00", end: "20:00" },
   ]);
@@ -395,6 +399,8 @@ export default function TopBooksPage() {
     setAutoAccounts(a?.accountIds || []);
     setAutoVideoAccounts(a?.videoAccountIds || []);
     setAutoFbAccounts(a?.fbAccountIds || []);
+    setAutoIgCarouselAccounts(a?.igCarouselAccountIds || []);
+    setAutoIgVideoAccounts(a?.igVideoAccountIds || []);
     setAutoIntervals(
       a?.intervals && a.intervals.length > 0
         ? a.intervals
@@ -416,6 +422,18 @@ export default function TopBooksPage() {
 
   function toggleAutoFbAccount(id: number) {
     setAutoFbAccounts((prev) =>
+      prev.includes(id) ? prev.filter((a) => a !== id) : [...prev, id]
+    );
+  }
+
+  function toggleAutoIgCarouselAccount(id: number) {
+    setAutoIgCarouselAccounts((prev) =>
+      prev.includes(id) ? prev.filter((a) => a !== id) : [...prev, id]
+    );
+  }
+
+  function toggleAutoIgVideoAccount(id: number) {
+    setAutoIgVideoAccounts((prev) =>
       prev.includes(id) ? prev.filter((a) => a !== id) : [...prev, id]
     );
   }
@@ -447,6 +465,8 @@ export default function TopBooksPage() {
                 accountIds: autoAccounts,
                 videoAccountIds: autoVideoAccounts,
                 fbAccountIds: autoFbAccounts,
+                igCarouselAccountIds: autoIgCarouselAccounts,
+                igVideoAccountIds: autoIgVideoAccounts,
                 intervals: autoIntervals,
               },
             }
@@ -581,7 +601,8 @@ export default function TopBooksPage() {
                 {lists.map((l) => {
                   const listBooks = l.bookIds.map((id) => books.find((b) => b.id === id)).filter(Boolean) as TopBook[];
                   const auto = l.automation;
-                  const autoOn = !!auto?.enabled && !!auto?.intervals?.length && !!auto?.accountIds?.length;
+                  const totalAutoAccounts = (auto?.accountIds?.length || 0) + (auto?.videoAccountIds?.length || 0) + (auto?.fbAccountIds?.length || 0) + (auto?.igCarouselAccountIds?.length || 0) + (auto?.igVideoAccountIds?.length || 0);
+                  const autoOn = !!auto?.enabled && !!auto?.intervals?.length && totalAutoAccounts > 0;
                   return (
                     <div key={l.id} className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-4">
                       <div className="flex items-start justify-between gap-3">
@@ -590,7 +611,7 @@ export default function TopBooksPage() {
                             <span className="font-medium">{l.name}</span>
                             {autoOn && (
                               <span className="text-[10px] uppercase tracking-wide bg-green-500/15 text-green-300 px-1.5 py-0.5 rounded">
-                                Auto · {auto!.intervals.length}/day · {auto!.accountIds.length} acct
+                                Auto · {auto!.intervals.length}/day · {totalAutoAccounts} acct
                               </span>
                             )}
                           </div>
@@ -765,23 +786,45 @@ export default function TopBooksPage() {
 
         {/* ═══ PUBLISH MODAL ═══ */}
         {publishListId && (
-          <Modal onClose={() => setPublishListId(null)} title="Publish to TikTok">
+          <Modal onClose={() => setPublishListId(null)} title="Publish Top N">
             <div className="space-y-4">
-              <div>
-                <label className="text-xs text-zinc-400 block mb-2">Select accounts</label>
-                <div className="space-y-2">
-                  {accounts.map((a) => (
-                    <label key={a.id} className="flex items-center gap-2 text-sm">
-                      <input
-                        type="checkbox"
-                        checked={publishAccounts.includes(a.id)}
-                        onChange={() => togglePublishAccount(a.id)}
-                        className="rounded"
-                      />
-                      @{a.username}
-                    </label>
-                  ))}
-                </div>
+              <div className="space-y-4">
+                {accounts.length > 0 && (
+                  <div>
+                    <label className="text-xs text-zinc-400 block mb-2">TikTok accounts</label>
+                    <div className="space-y-2">
+                      {accounts.map((a) => (
+                        <label key={a.id} className="flex items-center gap-2 text-sm">
+                          <input
+                            type="checkbox"
+                            checked={publishAccounts.includes(a.id)}
+                            onChange={() => togglePublishAccount(a.id)}
+                            className="rounded"
+                          />
+                          @{a.username}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {igAccounts.length > 0 && (
+                  <div>
+                    <label className="text-xs text-zinc-400 block mb-2">Instagram accounts</label>
+                    <div className="space-y-2">
+                      {igAccounts.map((a) => (
+                        <label key={a.id} className="flex items-center gap-2 text-sm">
+                          <input
+                            type="checkbox"
+                            checked={publishAccounts.includes(a.id)}
+                            onChange={() => togglePublishAccount(a.id)}
+                            className="rounded"
+                          />
+                          @{a.username}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
               <div>
                 <label className="text-xs text-zinc-400 block mb-1">Schedule (optional)</label>
@@ -876,6 +919,46 @@ export default function TopBooksPage() {
                           type="checkbox"
                           checked={autoFbAccounts.includes(a.id)}
                           onChange={() => toggleAutoFbAccount(a.id)}
+                          className="rounded"
+                        />
+                        @{a.username}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs text-zinc-400 block mb-2">Instagram carousel accounts</label>
+                  <div className="space-y-2">
+                    {igAccounts.length === 0 && (
+                      <p className="text-xs text-zinc-500">No Instagram accounts available.</p>
+                    )}
+                    {igAccounts.map((a) => (
+                      <label key={a.id} className="flex items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={autoIgCarouselAccounts.includes(a.id)}
+                          onChange={() => toggleAutoIgCarouselAccount(a.id)}
+                          className="rounded"
+                        />
+                        @{a.username}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs text-zinc-400 block mb-2">Instagram video accounts</label>
+                  <div className="space-y-2">
+                    {igAccounts.length === 0 && (
+                      <p className="text-xs text-zinc-500">No Instagram accounts available.</p>
+                    )}
+                    {igAccounts.map((a) => (
+                      <label key={a.id} className="flex items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={autoIgVideoAccounts.includes(a.id)}
+                          onChange={() => toggleAutoIgVideoAccount(a.id)}
                           className="rounded"
                         />
                         @{a.username}
