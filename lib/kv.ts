@@ -185,7 +185,9 @@ export interface TopBook {
 
 export interface TopNAutomation {
   enabled: boolean;
-  accountIds: number[];
+  accountIds: number[]; // TikTok carousel accounts
+  videoAccountIds?: number[]; // TikTok video accounts
+  fbAccountIds?: number[]; // Facebook video accounts
   intervals: TimeWindow[]; // one post scheduled per interval per day
 }
 
@@ -266,6 +268,7 @@ export interface InstagramSlideshow {
   captionIds: string[];
   imagePrompts: NamedItem[];
   captions: NamedItem[];
+  coverImage?: string; // base64 data URL for final slide
 }
 
 export interface IgGlobalAutomation {

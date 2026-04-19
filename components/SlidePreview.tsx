@@ -5,33 +5,42 @@ import { useState } from "react";
 interface SlidePreviewProps {
   slides: string[];
   caption?: string;
+  coverImage?: string;
   onClose: () => void;
 }
 
-export default function SlidePreview({ slides, caption, onClose }: SlidePreviewProps) {
+export default function SlidePreview({ slides, caption, coverImage, onClose }: SlidePreviewProps) {
+  const totalSlides = slides.length + (coverImage ? 1 : 0);
   const [current, setCurrent] = useState(0);
-  if (slides.length === 0) return null;
+  if (totalSlides === 0) return null;
+
+  const isCoverSlide = coverImage && current === totalSlides - 1;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm" onClick={onClose}>
       <div className="relative w-full max-w-xs mx-4" onClick={(e) => e.stopPropagation()}>
         {/* Phone frame */}
         <div className="relative aspect-[9/16] rounded-2xl overflow-hidden bg-gradient-to-br from-zinc-800 via-zinc-700 to-zinc-900 shadow-2xl border border-zinc-600">
-          {/* Centered text */}
-          <div className="absolute inset-0 flex items-center justify-center p-6">
-            <div className="text-center">
-              <p className="text-white text-sm leading-relaxed font-medium drop-shadow-lg">
-                {slides[current]}
-              </p>
-              <div className="text-[10px] text-zinc-500 uppercase tracking-widest mt-6">
-                Image generated at post time
+          {isCoverSlide ? (
+            /* Cover image slide */
+            <img src={coverImage} alt="Book cover" className="absolute inset-0 w-full h-full object-contain bg-black" />
+          ) : (
+            /* Text slide */
+            <div className="absolute inset-0 flex items-center justify-center p-6">
+              <div className="text-center">
+                <p className="text-white text-sm leading-relaxed font-medium drop-shadow-lg">
+                  {slides[current]}
+                </p>
+                <div className="text-[10px] text-zinc-500 uppercase tracking-widest mt-6">
+                  Image generated at post time
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
           {/* Slide counter */}
           <div className="absolute top-3 right-3 bg-black/50 text-white text-[10px] px-2 py-0.5 rounded-full">
-            {current + 1}/{slides.length}
+            {current + 1}/{totalSlides}
           </div>
         </div>
 
@@ -45,7 +54,7 @@ export default function SlidePreview({ slides, caption, onClose }: SlidePreviewP
             &larr; Prev
           </button>
           <div className="flex gap-1">
-            {slides.map((_, i) => (
+            {Array.from({ length: totalSlides }).map((_, i) => (
               <button
                 key={i}
                 onClick={() => setCurrent(i)}
@@ -54,8 +63,8 @@ export default function SlidePreview({ slides, caption, onClose }: SlidePreviewP
             ))}
           </div>
           <button
-            onClick={() => setCurrent(Math.min(slides.length - 1, current + 1))}
-            disabled={current === slides.length - 1}
+            onClick={() => setCurrent(Math.min(totalSlides - 1, current + 1))}
+            disabled={current === totalSlides - 1}
             className="text-xs text-zinc-400 hover:text-white disabled:opacity-30 transition-colors"
           >
             Next &rarr;
