@@ -938,9 +938,14 @@ export default function InstagramPage() {
         )}
         {previewSlideshow && (() => {
           const srcBook = books.find((b) => b.id === previewSlideshow.sourceBookId);
+          const allSlides = previewSlideshow.slideTexts.split("\n").filter(Boolean);
+          // Drop last text slide (book tag) when cover replaces it
+          const slides = srcBook?.coverImage && allSlides.length > 2
+            ? allSlides.slice(0, -1)
+            : allSlides;
           return (
             <SlidePreview
-              slides={previewSlideshow.slideTexts.split("\n").filter(Boolean)}
+              slides={slides}
               caption={previewSlideshow.captions.length > 0 ? previewSlideshow.captions[0].value : undefined}
               coverImage={srcBook?.coverImage}
               onClose={() => setPreviewSlideshow(null)}

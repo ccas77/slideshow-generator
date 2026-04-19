@@ -8,6 +8,7 @@ import HowItWorks from "@/components/HowItWorks";
 interface Book {
   id: string;
   name: string;
+  coverImage?: string;
   imagePrompts: { id: string; name: string; value: string }[];
   captions: { id: string; name: string; value: string }[];
   slideshows: {

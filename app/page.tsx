@@ -645,11 +645,15 @@ export default function Home() {
       const coverImage = selectedBookId
         ? books.find((b) => b.id === selectedBookId)?.coverImage
         : undefined;
-      const totalSlides = slideshow.texts.length + (coverImage ? 1 : 0);
+      // If book has cover, drop the last text slide (book tag) since cover replaces it
+      const textSlides = coverImage && slideshow.texts.length > 2
+        ? slideshow.texts.slice(0, -1)
+        : slideshow.texts;
+      const totalSlides = textSlides.length + (coverImage ? 1 : 0);
 
-      for (let i = 0; i < slideshow.texts.length; i++) {
+      for (let i = 0; i < textSlides.length; i++) {
         setPostStatus(`Uploading slide ${i + 1} of ${totalSlides}...`);
-        const canvas = await renderSlideToCanvas(slideshow.image, slideshow.texts[i]);
+        const canvas = await renderSlideToCanvas(slideshow.image, textSlides[i]);
         const dataUrl = canvas.toDataURL("image/png");
 
         const res = await fetch("/api/post-tiktok?action=upload", {
@@ -668,7 +672,7 @@ export default function Home() {
         const res = await fetch("/api/post-tiktok?action=upload", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ password, image: coverImage, index: slideshow.texts.length }),
+          body: JSON.stringify({ password, image: coverImage, index: textSlides.length }),
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || "Cover upload failed");
@@ -1286,7 +1290,11 @@ export default function Home() {
           const previewCover = selectedBookId
             ? books.find((b) => b.id === selectedBookId)?.coverImage
             : undefined;
-          const totalPreviewSlides = slideshow.texts.length + (previewCover ? 1 : 0);
+          // Drop the last text slide (book tag) when cover replaces it
+          const previewTexts = previewCover && slideshow.texts.length > 2
+            ? slideshow.texts.slice(0, -1)
+            : slideshow.texts;
+          const totalPreviewSlides = previewTexts.length + (previewCover ? 1 : 0);
           const isCoverSlide = previewCover && currentSlide === totalPreviewSlides - 1;
 
           return (
@@ -1367,7 +1375,7 @@ export default function Home() {
                           textAlign: "center",
                         }}
                       >
-                        {slideshow.texts[currentSlide]}
+                        {previewTexts[currentSlide]}
                       </p>
                     </div>
                   </>
