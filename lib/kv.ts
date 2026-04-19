@@ -57,6 +57,7 @@ export function migrateBook(raw: unknown): Book {
   const b = raw as {
     id: string;
     name: string;
+    coverImage?: string;
     imagePrompts?: NamedItem[];
     captions?: NamedItem[];
     slideshows?: Array<{
@@ -74,6 +75,7 @@ export function migrateBook(raw: unknown): Book {
     return {
       id: b.id,
       name: b.name,
+      coverImage: b.coverImage,
       imagePrompts: b.imagePrompts,
       captions: b.captions,
       slideshows: (b.slideshows || []).map((s) => ({
@@ -128,7 +130,7 @@ export function migrateBook(raw: unknown): Book {
       captionIds: capIds,
     });
   }
-  return { id: b.id, name: b.name, imagePrompts, captions, slideshows };
+  return { id: b.id, name: b.name, coverImage: b.coverImage, imagePrompts, captions, slideshows };
 }
 
 export interface AccountData {
