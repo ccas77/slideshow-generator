@@ -54,6 +54,7 @@ interface Slideshow {
 interface Book {
   id: string;
   name: string;
+  coverImage?: string;
   imagePrompts: NamedItem[];
   captions: NamedItem[];
   slideshows: Slideshow[];

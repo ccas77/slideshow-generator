@@ -23,6 +23,7 @@ interface Slideshow {
 interface Book {
   id: string;
   name: string;
+  coverImage?: string;
   imagePrompts: NamedItem[];
   captions: NamedItem[];
   slideshows: Slideshow[];
@@ -43,7 +44,6 @@ interface InstagramSlideshow {
   captionIds: string[];
   imagePrompts: NamedItem[];
   captions: NamedItem[];
-  coverImage?: string;
 }
 
 interface IgGlobalAutomation {
@@ -615,67 +615,6 @@ export default function InstagramPage() {
                             </button>
                           </div>
 
-                          {/* Cover image (final slide) */}
-                          <div className="mt-5">
-                            <label className="block text-xs font-medium text-zinc-400 mb-2">
-                              Cover image (final slide)
-                            </label>
-                            {editDraft.coverImage ? (
-                              <div className="flex items-start gap-3">
-                                <img src={editDraft.coverImage} alt="Cover" className="w-20 aspect-[2/3] rounded-lg object-cover border border-zinc-700" />
-                                <button
-                                  onClick={() => setEditDraft({ ...editDraft, coverImage: undefined })}
-                                  className="text-xs text-red-500 hover:text-red-400"
-                                >
-                                  Remove
-                                </button>
-                              </div>
-                            ) : (
-                              <div className="space-y-2">
-                                <label className="inline-flex items-center gap-2 text-xs text-blue-400 hover:text-blue-300 cursor-pointer">
-                                  <span>Upload image</span>
-                                  <input
-                                    type="file"
-                                    accept="image/*"
-                                    className="hidden"
-                                    onChange={(e) => {
-                                      const file = e.target.files?.[0];
-                                      if (!file) return;
-                                      const reader = new FileReader();
-                                      reader.onload = () => {
-                                        setEditDraft({ ...editDraft, coverImage: reader.result as string });
-                                      };
-                                      reader.readAsDataURL(file);
-                                      e.target.value = "";
-                                    }}
-                                  />
-                                </label>
-                                <div className="flex gap-2">
-                                  <input
-                                    placeholder="Or paste image URL…"
-                                    className="flex-1 rounded-lg border border-zinc-800 bg-zinc-900 px-2 py-1 text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-white/20"
-                                    onKeyDown={async (e) => {
-                                      if (e.key !== "Enter") return;
-                                      const url = (e.target as HTMLInputElement).value.trim();
-                                      if (!url) return;
-                                      try {
-                                        const res = await fetch("/api/fetch-image-url", {
-                                          method: "POST",
-                                          headers: { "Content-Type": "application/json", "x-password": password || "" },
-                                          body: JSON.stringify({ url }),
-                                        });
-                                        const data = await res.json();
-                                        if (data.coverData) {
-                                          setEditDraft({ ...editDraft, coverImage: data.coverData });
-                                        }
-                                      } catch {}
-                                      (e.target as HTMLInputElement).value = "";
-                                    }}
-                                  />
-                                </div>
-                              </div>
-                            )}
-                          </div>
                         </div>
                       );
                     }
@@ -686,7 +625,7 @@ export default function InstagramPage() {
                           <div className="flex-1 min-w-0">
                             <div className="font-medium text-sm">{s.name}</div>
                             <div className="text-xs text-zinc-500 mt-0.5">
-                              {slideCount} slides{s.coverImage ? " + cover" : ""} · {s.imagePrompts.length} prompts · {s.captions.length} captions
+                              {slideCount} slides{sourceBook?.coverImage ? " + cover" : ""} · {s.imagePrompts.length} prompts · {s.captions.length} captions
                               {sourceBook && <span> · from {sourceBook.name}</span>}
                             </div>
                           </div>
@@ -997,14 +936,17 @@ export default function InstagramPage() {
             )}
           </>
         )}
-        {previewSlideshow && (
-          <SlidePreview
-            slides={previewSlideshow.slideTexts.split("\n").filter(Boolean)}
-            caption={previewSlideshow.captions.length > 0 ? previewSlideshow.captions[0].value : undefined}
-            coverImage={previewSlideshow.coverImage}
-            onClose={() => setPreviewSlideshow(null)}
-          />
-        )}
+        {previewSlideshow && (() => {
+          const srcBook = books.find((b) => b.id === previewSlideshow.sourceBookId);
+          return (
+            <SlidePreview
+              slides={previewSlideshow.slideTexts.split("\n").filter(Boolean)}
+              caption={previewSlideshow.captions.length > 0 ? previewSlideshow.captions[0].value : undefined}
+              coverImage={srcBook?.coverImage}
+              onClose={() => setPreviewSlideshow(null)}
+            />
+          );
+        })()}
       </div>
     </div>
   );

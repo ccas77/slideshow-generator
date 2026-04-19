@@ -45,6 +45,7 @@ export interface Slideshow {
 export interface Book {
   id: string;
   name: string;
+  coverImage?: string; // base64 data URL for book cover
   imagePrompts: NamedItem[];
   captions: NamedItem[];
   slideshows: Slideshow[];
@@ -268,7 +269,6 @@ export interface InstagramSlideshow {
   captionIds: string[];
   imagePrompts: NamedItem[];
   captions: NamedItem[];
-  coverImage?: string; // base64 data URL for final slide
 }
 
 export interface IgGlobalAutomation {

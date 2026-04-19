@@ -22,6 +22,7 @@ interface Slideshow {
 interface Book {
   id: string;
   name: string;
+  coverImage?: string;
   imagePrompts: NamedItem[];
   captions: NamedItem[];
   slideshows: Slideshow[];
@@ -302,6 +303,71 @@ export default function BooksPage() {
                         Delete book
                       </button>
                     </div>
+                  </div>
+
+                  {/* Cover image */}
+                  <div className="mb-5 flex items-center gap-4">
+                    {activeBook.coverImage ? (
+                      <>
+                        <img src={activeBook.coverImage} alt="Cover" className="w-12 h-[72px] rounded-lg object-cover border border-zinc-700" />
+                        <div className="flex flex-col gap-1">
+                          <span className="text-xs text-zinc-500">Book cover</span>
+                          <button
+                            onClick={() => updateBook(activeBook.id, (b) => ({ ...b, coverImage: undefined }))}
+                            className="text-xs text-red-500 hover:text-red-400"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-[72px] rounded-lg border border-dashed border-zinc-700 flex items-center justify-center">
+                          <span className="text-zinc-600 text-lg">+</span>
+                        </div>
+                        <div className="flex flex-col gap-1.5">
+                          <label className="text-xs text-blue-400 hover:text-blue-300 cursor-pointer">
+                            Upload cover
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (!file) return;
+                                const reader = new FileReader();
+                                reader.onload = () => {
+                                  updateBook(activeBook.id, (b) => ({ ...b, coverImage: reader.result as string }));
+                                };
+                                reader.readAsDataURL(file);
+                                e.target.value = "";
+                              }}
+                            />
+                          </label>
+                          <input
+                            placeholder="Or paste URL + Enter"
+                            className="rounded border border-zinc-800 bg-zinc-900 px-2 py-0.5 text-[11px] text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-white/20 w-40"
+                            onKeyDown={async (e) => {
+                              if (e.key !== "Enter") return;
+                              const url = (e.target as HTMLInputElement).value.trim();
+                              if (!url) return;
+                              try {
+                                const res = await fetch("/api/fetch-image-url", {
+                                  method: "POST",
+                                  headers: { "Content-Type": "application/json", "x-password": password || "" },
+                                  body: JSON.stringify({ url }),
+                                });
+                                const data = await res.json();
+                                if (data.coverData) {
+                                  updateBook(activeBook.id, (b) => ({ ...b, coverImage: data.coverData }));
+                                }
+                              } catch {}
+                              (e.target as HTMLInputElement).value = "";
+                            }}
+                          />
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Tabs */}
