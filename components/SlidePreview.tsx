@@ -17,16 +17,16 @@ export default function SlidePreview({ slides, caption, onClose }: SlidePreviewP
       <div className="relative w-full max-w-xs mx-4" onClick={(e) => e.stopPropagation()}>
         {/* Phone frame */}
         <div className="relative aspect-[9/16] rounded-2xl overflow-hidden bg-gradient-to-br from-zinc-800 via-zinc-700 to-zinc-900 shadow-2xl border border-zinc-600">
-          {/* Placeholder image area */}
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="text-[10px] text-zinc-500 uppercase tracking-widest">Image generated at post time</div>
-          </div>
-
-          {/* Text overlay */}
-          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent p-5 pt-16">
-            <p className="text-white text-sm leading-relaxed font-medium drop-shadow-lg">
-              {slides[current]}
-            </p>
+          {/* Centered text */}
+          <div className="absolute inset-0 flex items-center justify-center p-6">
+            <div className="text-center">
+              <p className="text-white text-sm leading-relaxed font-medium drop-shadow-lg">
+                {slides[current]}
+              </p>
+              <div className="text-[10px] text-zinc-500 uppercase tracking-widest mt-6">
+                Image generated at post time
+              </div>
+            </div>
           </div>
 
           {/* Slide counter */}
