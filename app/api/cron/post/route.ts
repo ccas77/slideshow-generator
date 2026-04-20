@@ -20,6 +20,20 @@ function pickRandom<T>(arr: T[]): T | null {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
+// Returns true if now is within 1 hour before the window start (UTC).
+// This prevents duplicate scheduling when cron runs more than once per day.
+function shouldProcessWindow(windowStart: string): boolean {
+  const [sh, sm] = windowStart.split(":").map(Number);
+  const now = new Date();
+  const nowMin = now.getUTCHours() * 60 + now.getUTCMinutes();
+  const startMin = sh * 60 + sm;
+  // Check if we're in the 60 minutes before the window starts
+  const diff = startMin - nowMin;
+  // Handle midnight wrap: if diff is very negative, add 24h
+  const adjusted = diff < -60 ? diff + 1440 : diff;
+  return adjusted >= 0 && adjusted < 60;
+}
+
 function randomTimeInWindow(windowStart: string, windowEnd: string): Date {
   const [sh, sm] = windowStart.split(":").map(Number);
   const [eh, em] = windowEnd.split(":").map(Number);
@@ -102,6 +116,7 @@ export async function GET(req: NextRequest) {
         }
 
         for (const win of windows) {
+          if (!shouldProcessWindow(win.start)) continue;
           let imagePrompt = "";
           let slideTexts: string[] = [];
           let captionText = "";
@@ -321,6 +336,7 @@ export async function GET(req: NextRequest) {
         if (!auto.intervals || auto.intervals.length === 0) continue;
 
         for (const win of auto.intervals) {
+          if (!shouldProcessWindow(win.start)) continue;
           try {
             const scheduledAt = randomTimeInWindow(win.start, win.end);
             const r = await publishTopN({
@@ -369,6 +385,7 @@ export async function GET(req: NextRequest) {
             let pointer = accConfig.pointer;
 
             for (const win of accConfig.intervals) {
+              if (!shouldProcessWindow(win.start)) continue;
               const ss = pool[pointer % pool.length];
               const prompt = pickRandom(ss.imagePrompts);
               const caption = pickRandom(ss.captions);
