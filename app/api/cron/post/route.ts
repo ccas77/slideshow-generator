@@ -347,7 +347,7 @@ export async function GET(req: NextRequest) {
     const igAutoResults: Array<{ status: string }> = [];
     try {
       const igAuto = await getIgAutomation();
-      if (igAuto.enabled && igAuto.accounts) {
+      if (igAuto.accounts && Object.keys(igAuto.accounts).length > 0) {
         const igSlideshows = await getIgSlideshows();
         if (igSlideshows.length > 0) {
           let updated = false;
