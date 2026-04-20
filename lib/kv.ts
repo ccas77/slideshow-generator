@@ -275,13 +275,23 @@ export interface InstagramSlideshow {
   captions: NamedItem[];
 }
 
+export interface IgAccountConfig {
+  enabled: boolean;
+  intervals: TimeWindow[];
+  bookIds: string[];        // which books to pull from (empty = all)
+  slideshowIds: string[];   // specific slideshows (empty = all from selected books)
+  pointer: number;          // round-robin index for this account
+}
+
 export interface IgGlobalAutomation {
   enabled: boolean;
-  igAccountIds: number[];
-  tiktokAccountIds: number[];
-  intervals: TimeWindow[];
-  igPointer: number; // round-robin index for IG slideshow
-  accountBookIds?: Record<string, string[]>; // IG account ID → allowed source book IDs
+  accounts: Record<string, IgAccountConfig>; // accountId → config
+  // Legacy fields (kept for backwards compat)
+  igAccountIds?: number[];
+  tiktokAccountIds?: number[];
+  intervals?: TimeWindow[];
+  igPointer?: number;
+  accountBookIds?: Record<string, string[]>;
 }
 
 const IG_SLIDESHOWS_KEY = "ig-slideshows";
@@ -300,7 +310,7 @@ export async function setIgSlideshows(
 
 export async function getIgAutomation(): Promise<IgGlobalAutomation> {
   const data = await redis.get<IgGlobalAutomation>(IG_AUTOMATION_KEY);
-  return data ?? { enabled: false, igAccountIds: [], tiktokAccountIds: [], intervals: [], igPointer: 0 };
+  return data ?? { enabled: false, accounts: {} };
 }
 
 export async function setIgAutomation(config: IgGlobalAutomation): Promise<void> {
