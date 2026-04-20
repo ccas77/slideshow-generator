@@ -4,6 +4,8 @@ import {
   setAccountData,
   getBooks,
   getTopNLists,
+  getTopNAutomation,
+  setTopNAutomation,
   getIgAutomation,
   getIgSlideshows,
   setIgAutomation,
@@ -317,46 +319,74 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // Phase 5: Top N list automation (sequential — sharp Pango)
+    // Phase 5: Top N list automation — per-account round-robin (sequential — sharp Pango)
     const topNResults: Array<{ listName: string; status: string }> = [];
     try {
       const topNLists = await getTopNLists();
-      for (const list of topNLists) {
-        const auto = list.automation;
-        if (!auto || !auto.enabled) continue;
-        // Merge all account groups
-        const allAutoAccountIds = [
-          ...(auto.accountIds || []),
-          ...(auto.videoAccountIds || []),
-          ...(auto.fbAccountIds || []),
-          ...(auto.igCarouselAccountIds || []),
-          ...(auto.igVideoAccountIds || []),
-        ];
-        if (allAutoAccountIds.length === 0) continue;
-        if (!auto.intervals || auto.intervals.length === 0) continue;
+      const topNAuto = await getTopNAutomation();
+      const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+      let topNUpdated = false;
+      const updatedTopNAccounts = { ...topNAuto.accounts };
 
-        for (const win of auto.intervals) {
-          if (!shouldProcessWindow(win.start)) continue;
+      for (const [accIdStr, accConfig] of Object.entries(topNAuto.accounts)) {
+        if (!accConfig.enabled || accConfig.intervals.length === 0) continue;
+
+        // Frequency check: skip if not enough days since last post
+        if (accConfig.lastPostDate) {
+          const lastDate = new Date(accConfig.lastPostDate + "T00:00:00Z");
+          const todayDate = new Date(today + "T00:00:00Z");
+          const daysSince = Math.floor((todayDate.getTime() - lastDate.getTime()) / 86400000);
+          if (daysSince < accConfig.frequencyDays) continue;
+        }
+
+        // Build eligible list pool
+        let pool = topNLists.filter((l) => l.bookIds.length > 0);
+        if (accConfig.listIds.length > 0) {
+          pool = pool.filter((l) => accConfig.listIds.includes(l.id));
+        }
+        if (pool.length === 0) continue;
+
+        // Check if any window is active this hour
+        const activeWindows = accConfig.intervals.filter((w) => shouldProcessWindow(w.start));
+        if (activeWindows.length === 0) continue;
+
+        // Round-robin: pick one list
+        const listIndex = accConfig.pointer % pool.length;
+        const selectedList = pool[listIndex];
+
+        for (const win of activeWindows) {
           try {
             const scheduledAt = randomTimeInWindow(win.start, win.end);
             const r = await publishTopN({
-              listId: list.id,
-              accountIds: allAutoAccountIds,
+              listId: selectedList.id,
+              accountIds: [Number(accIdStr)],
               scheduledAt: scheduledAt.toISOString(),
             });
             topNResults.push({
-              listName: list.name,
-              status: `scheduled ${r.slides} slides for ${scheduledAt.toISOString()} [post:${r.postId}]`,
+              listName: selectedList.name,
+              status: `${accIdStr}: scheduled ${r.slides} slides for ${scheduledAt.toISOString()} [post:${r.postId}]`,
             });
           } catch (err) {
             const msg = err instanceof Error ? err.message : String(err);
-            topNResults.push({ listName: list.name, status: `error: ${msg}` });
+            topNResults.push({ listName: selectedList.name, status: `error (${accIdStr}): ${msg}` });
           }
         }
+
+        // Advance pointer and mark today
+        updatedTopNAccounts[accIdStr] = {
+          ...accConfig,
+          pointer: accConfig.pointer + 1,
+          lastPostDate: today,
+        };
+        topNUpdated = true;
+      }
+
+      if (topNUpdated) {
+        await setTopNAutomation({ accounts: updatedTopNAccounts });
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      topNResults.push({ listName: "(list fetch)", status: `error: ${msg}` });
+      topNResults.push({ listName: "(topn-auto)", status: `error: ${msg}` });
     }
 
     // Phase 6: IG slideshow automation — per-account config (sequential — sharp Pango)

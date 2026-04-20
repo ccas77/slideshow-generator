@@ -29,6 +29,20 @@ interface TopNAutomation {
   intervals: TimeWindow[];
 }
 
+interface TopNAccountConfig {
+  enabled: boolean;
+  intervals: TimeWindow[];
+  listIds: string[];
+  pointer: number;
+  frequencyDays: number;
+  lastPostDate?: string;
+  platform: "tiktok-carousel" | "tiktok-video" | "fb-video" | "ig-carousel" | "ig-video";
+}
+
+interface TopNGlobalAutomation {
+  accounts: Record<string, TopNAccountConfig>;
+}
+
 interface TopNList {
   id: string;
   name: string;
@@ -87,24 +101,16 @@ export default function TopBooksPage() {
   const [publishResult, setPublishResult] = useState<string | null>(null);
   const [scheduledAt, setScheduledAt] = useState("");
 
-  // Automation
-  const [autoListId, setAutoListId] = useState<string | null>(null);
-  const [autoEnabled, setAutoEnabled] = useState(false);
-  const [autoAccounts, setAutoAccounts] = useState<number[]>([]);
-  const [autoVideoAccounts, setAutoVideoAccounts] = useState<number[]>([]);
-  const [autoFbAccounts, setAutoFbAccounts] = useState<number[]>([]);
-  const [autoIgCarouselAccounts, setAutoIgCarouselAccounts] = useState<number[]>([]);
-  const [autoIgVideoAccounts, setAutoIgVideoAccounts] = useState<number[]>([]);
-  const [autoIntervals, setAutoIntervals] = useState<TimeWindow[]>([
-    { start: "18:00", end: "20:00" },
-  ]);
+  // Automation (per-account)
+  const [topnAutoConfig, setTopnAutoConfig] = useState<TopNGlobalAutomation>({ accounts: {} });
+  const [selectedTopnAccount, setSelectedTopnAccount] = useState<string | null>(null);
   const [savingAuto, setSavingAuto] = useState(false);
 
   // Preview
   const [previewListId, setPreviewListId] = useState<string | null>(null);
 
   // Active tab
-  const [tab, setTab] = useState<"books" | "lists">("books");
+  const [tab, setTab] = useState<"books" | "lists" | "automation">("books");
 
   useEffect(() => {
     const pw = localStorage.getItem("sg.password");
@@ -120,18 +126,23 @@ export default function TopBooksPage() {
     if (!password) return;
     setLoading(true);
     try {
-      const [bRes, lRes, aRes, igRes, fbRes] = await Promise.all([
+      const [bRes, lRes, aRes, igRes, fbRes, autoRes] = await Promise.all([
         fetch(`/api/top-books?password=${encodeURIComponent(password)}`),
         fetch(`/api/top-n-lists?password=${encodeURIComponent(password)}`),
         fetch(`/api/post-tiktok?password=${encodeURIComponent(password)}`),
         fetch(`/api/post-tiktok?password=${encodeURIComponent(password)}&platform=instagram`),
         fetch(`/api/post-tiktok?password=${encodeURIComponent(password)}&platform=facebook`),
+        fetch(`/api/topn-automation?password=${encodeURIComponent(password)}`),
       ]);
       if (bRes.ok) setBooks((await bRes.json()).books || []);
       if (lRes.ok) setLists((await lRes.json()).lists || []);
       if (aRes.ok) setAccounts((await aRes.json()).accounts || []);
       if (igRes.ok) setIgAccounts((await igRes.json()).accounts || []);
       if (fbRes.ok) setFbAccounts((await fbRes.json()).accounts || []);
+      if (autoRes.ok) {
+        const autoData = await autoRes.json();
+        if (autoData.config) setTopnAutoConfig(autoData.config);
+      }
     } catch {}
     setLoading(false);
   }, [password]);
@@ -390,94 +401,90 @@ export default function TopBooksPage() {
     );
   }
 
-  // ── Automation ──
+  // ── Automation (per-account) ──
 
-  function openAutomation(list: TopNList) {
-    setAutoListId(list.id);
-    const a = list.automation;
-    setAutoEnabled(!!a?.enabled);
-    setAutoAccounts(a?.accountIds || []);
-    setAutoVideoAccounts(a?.videoAccountIds || []);
-    setAutoFbAccounts(a?.fbAccountIds || []);
-    setAutoIgCarouselAccounts(a?.igCarouselAccountIds || []);
-    setAutoIgVideoAccounts(a?.igVideoAccountIds || []);
-    setAutoIntervals(
-      a?.intervals && a.intervals.length > 0
-        ? a.intervals
-        : [{ start: "18:00", end: "20:00" }]
-    );
+  function detectPlatform(accountId: string): TopNAccountConfig["platform"] {
+    const numId = Number(accountId);
+    if (igAccounts.some((a) => a.id === numId)) return "ig-carousel";
+    if (fbAccounts.some((a) => a.id === numId)) return "fb-video";
+    return "tiktok-carousel";
   }
 
-  function toggleAutoAccount(id: number) {
-    setAutoAccounts((prev) =>
-      prev.includes(id) ? prev.filter((a) => a !== id) : [...prev, id]
-    );
+  function updateAccountConfig(accountKey: string, patch: Partial<TopNAccountConfig>) {
+    setTopnAutoConfig((prev) => ({
+      ...prev,
+      accounts: {
+        ...prev.accounts,
+        [accountKey]: { ...prev.accounts[accountKey], ...patch },
+      },
+    }));
   }
 
-  function toggleAutoVideoAccount(id: number) {
-    setAutoVideoAccounts((prev) =>
-      prev.includes(id) ? prev.filter((a) => a !== id) : [...prev, id]
-    );
+  function updateAccountInterval(accountKey: string, i: number, key: "start" | "end", value: string) {
+    setTopnAutoConfig((prev) => {
+      const cfg = prev.accounts[accountKey];
+      if (!cfg) return prev;
+      const newIntervals = cfg.intervals.map((w, idx) => (idx === i ? { ...w, [key]: value } : w));
+      return { ...prev, accounts: { ...prev.accounts, [accountKey]: { ...cfg, intervals: newIntervals } } };
+    });
   }
 
-  function toggleAutoFbAccount(id: number) {
-    setAutoFbAccounts((prev) =>
-      prev.includes(id) ? prev.filter((a) => a !== id) : [...prev, id]
-    );
+  function addAccountInterval(accountKey: string) {
+    setTopnAutoConfig((prev) => {
+      const cfg = prev.accounts[accountKey];
+      if (!cfg) return prev;
+      return { ...prev, accounts: { ...prev.accounts, [accountKey]: { ...cfg, intervals: [...cfg.intervals, { start: "12:00", end: "14:00" }] } } };
+    });
   }
 
-  function toggleAutoIgCarouselAccount(id: number) {
-    setAutoIgCarouselAccounts((prev) =>
-      prev.includes(id) ? prev.filter((a) => a !== id) : [...prev, id]
-    );
+  function removeAccountInterval(accountKey: string, i: number) {
+    setTopnAutoConfig((prev) => {
+      const cfg = prev.accounts[accountKey];
+      if (!cfg) return prev;
+      return { ...prev, accounts: { ...prev.accounts, [accountKey]: { ...cfg, intervals: cfg.intervals.filter((_, idx) => idx !== i) } } };
+    });
   }
 
-  function toggleAutoIgVideoAccount(id: number) {
-    setAutoIgVideoAccounts((prev) =>
-      prev.includes(id) ? prev.filter((a) => a !== id) : [...prev, id]
-    );
+  function toggleListForAccount(accountKey: string, listId: string) {
+    setTopnAutoConfig((prev) => {
+      const cfg = prev.accounts[accountKey];
+      if (!cfg) return prev;
+      const listIds = cfg.listIds.includes(listId)
+        ? cfg.listIds.filter((id) => id !== listId)
+        : [...cfg.listIds, listId];
+      return { ...prev, accounts: { ...prev.accounts, [accountKey]: { ...cfg, listIds } } };
+    });
   }
 
-  function updateAutoInterval(i: number, key: "start" | "end", value: string) {
-    setAutoIntervals((prev) =>
-      prev.map((w, idx) => (idx === i ? { ...w, [key]: value } : w))
-    );
+  function ensureAccountConfig(accountKey: string) {
+    if (!topnAutoConfig.accounts[accountKey]) {
+      const platform = detectPlatform(accountKey);
+      setTopnAutoConfig((prev) => ({
+        ...prev,
+        accounts: {
+          ...prev.accounts,
+          [accountKey]: {
+            enabled: false,
+            intervals: [{ start: "18:00", end: "20:00" }],
+            listIds: [],
+            pointer: 0,
+            frequencyDays: 1,
+            platform,
+          },
+        },
+      }));
+    }
+    setSelectedTopnAccount(accountKey);
   }
 
-  function addAutoInterval() {
-    setAutoIntervals((prev) => [...prev, { start: "12:00", end: "14:00" }]);
-  }
-
-  function removeAutoInterval(i: number) {
-    setAutoIntervals((prev) => prev.filter((_, idx) => idx !== i));
-  }
-
-  async function saveAutomation() {
-    if (!autoListId) return;
+  async function saveTopnAutomation() {
     setSavingAuto(true);
     try {
-      const updated = lists.map((l) =>
-        l.id === autoListId
-          ? {
-              ...l,
-              automation: {
-                enabled: autoEnabled,
-                accountIds: autoAccounts,
-                videoAccountIds: autoVideoAccounts,
-                fbAccountIds: autoFbAccounts,
-                igCarouselAccountIds: autoIgCarouselAccounts,
-                igVideoAccountIds: autoIgVideoAccounts,
-                intervals: autoIntervals,
-              },
-            }
-          : l
-      );
-      await fetch(`/api/top-n-lists`, {
+      await fetch(`/api/topn-automation`, {
         method: "POST",
         headers: headers(),
-        body: JSON.stringify({ lists: updated }),
+        body: JSON.stringify({ config: topnAutoConfig }),
       });
-      setAutoListId(null);
       await load();
     } catch {}
     setSavingAuto(false);
@@ -502,7 +509,7 @@ export default function TopBooksPage() {
           <p><strong>Top Books</strong> — create curated "Top N" book lists and automate posting them.</p>
           <p>Add books with cover images (upload or paste a URL). The AI can recognize title and author from the cover. Pin books to guarantee they appear in every generated list.</p>
           <p>Create a <strong>list</strong> with a name, title text variations, caption pool, and background prompt pool. When published, it picks N books (pinned ones always included), shuffles the order, and generates a slideshow.</p>
-          <p>The <strong>automation</strong> modal lets you schedule daily posts to three account groups: TikTok carousels, TikTok videos, and Facebook videos.</p>
+          <p>The <strong>automation</strong> tab lets you configure per-account auto-posting with frequency, list selection, and time windows.</p>
         </HowItWorks>
 
         <div className="flex items-center justify-between mb-6">
@@ -514,17 +521,21 @@ export default function TopBooksPage() {
 
         {/* Tabs */}
         <div className="flex gap-1 mb-6 bg-zinc-900 rounded-lg p-1 w-fit">
-          {(["books", "lists"] as const).map((t) => (
-            <button
-              key={t}
-              onClick={() => setTab(t)}
-              className={`px-4 py-2 rounded-md text-sm transition-colors ${
-                tab === t ? "bg-zinc-700 text-white" : "text-zinc-400 hover:text-white"
-              }`}
-            >
-              {t === "books" ? `Books (${books.length})` : `Lists (${lists.length})`}
-            </button>
-          ))}
+          {(["books", "lists", "automation"] as const).map((t) => {
+            const configuredCount = Object.values(topnAutoConfig.accounts).filter((c) => c.enabled).length;
+            const label = t === "books" ? `Books (${books.length})` : t === "lists" ? `Lists (${lists.length})` : `Automation${configuredCount > 0 ? ` (${configuredCount})` : ""}`;
+            return (
+              <button
+                key={t}
+                onClick={() => setTab(t)}
+                className={`px-4 py-2 rounded-md text-sm transition-colors ${
+                  tab === t ? "bg-zinc-700 text-white" : "text-zinc-400 hover:text-white"
+                }`}
+              >
+                {label}
+              </button>
+            );
+          })}
         </div>
 
         {/* ═══ BOOKS TAB ═══ */}
@@ -600,20 +611,12 @@ export default function TopBooksPage() {
               <div className="space-y-3">
                 {lists.map((l) => {
                   const listBooks = l.bookIds.map((id) => books.find((b) => b.id === id)).filter(Boolean) as TopBook[];
-                  const auto = l.automation;
-                  const totalAutoAccounts = (auto?.accountIds?.length || 0) + (auto?.videoAccountIds?.length || 0) + (auto?.fbAccountIds?.length || 0) + (auto?.igCarouselAccountIds?.length || 0) + (auto?.igVideoAccountIds?.length || 0);
-                  const autoOn = !!auto?.enabled && !!auto?.intervals?.length && totalAutoAccounts > 0;
                   return (
                     <div key={l.id} className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-4">
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
                             <span className="font-medium">{l.name}</span>
-                            {autoOn && (
-                              <span className="text-[10px] uppercase tracking-wide bg-green-500/15 text-green-300 px-1.5 py-0.5 rounded">
-                                Auto · {auto!.intervals.length}/day · {totalAutoAccounts} acct
-                              </span>
-                            )}
                           </div>
                           <div className="text-sm text-zinc-400 mt-1">
                             {(l.titleTexts || []).length} title{(l.titleTexts || []).length !== 1 ? "s" : ""} &middot; {l.count} books from {listBooks.length} in pool
@@ -630,16 +633,6 @@ export default function TopBooksPage() {
                           )}
                         </div>
                         <div className="flex gap-2 shrink-0">
-                          <button
-                            onClick={() => openAutomation(l)}
-                            className={`text-xs px-3 py-1.5 rounded-lg transition-colors ${
-                              autoOn
-                                ? "bg-green-600 hover:bg-green-500 text-white"
-                                : "bg-zinc-700 hover:bg-zinc-600 text-white"
-                            }`}
-                          >
-                            {autoOn ? "Auto on" : "Automate"}
-                          </button>
                           <button
                             onClick={() => setPreviewListId(l.id)}
                             className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
@@ -667,6 +660,173 @@ export default function TopBooksPage() {
             )}
           </>
         )}
+
+        {/* ═══ AUTOMATION TAB ═══ */}
+        {tab === "automation" && (() => {
+          const allAccts: { id: number; username: string; platformLabel: string }[] = [
+            ...accounts.map((a) => ({ ...a, platformLabel: "TikTok" })),
+            ...igAccounts.map((a) => ({ ...a, platformLabel: "Instagram" })),
+            ...fbAccounts.map((a) => ({ ...a, platformLabel: "Facebook" })),
+          ];
+          const configuredCount = Object.values(topnAutoConfig.accounts).filter((c) => c.enabled).length;
+          const selectedCfg = selectedTopnAccount ? topnAutoConfig.accounts[selectedTopnAccount] : null;
+
+          return (
+            <>
+              <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-4 mb-4">
+                <div className="text-sm text-zinc-400">
+                  {configuredCount} account{configuredCount !== 1 ? "s" : ""} configured for auto-posting
+                </div>
+              </div>
+
+              {allAccts.length === 0 ? (
+                <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-10 text-center text-zinc-500">
+                  No accounts available. Connect TikTok, Instagram, or Facebook accounts first.
+                </div>
+              ) : (
+                <>
+                  {/* Account selector */}
+                  <div className="mb-4">
+                    <label className="text-xs text-zinc-400 block mb-2">Select account to configure</label>
+                    <select
+                      value={selectedTopnAccount || ""}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val) ensureAccountConfig(val);
+                        else setSelectedTopnAccount(null);
+                      }}
+                      className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20"
+                    >
+                      <option value="">-- Choose an account --</option>
+                      {allAccts.map((a) => {
+                        const cfg = topnAutoConfig.accounts[String(a.id)];
+                        const badge = cfg?.enabled ? " [ON]" : "";
+                        return (
+                          <option key={`${a.platformLabel}-${a.id}`} value={String(a.id)}>
+                            @{a.username} ({a.platformLabel}){badge}
+                          </option>
+                        );
+                      })}
+                    </select>
+                  </div>
+
+                  {/* Per-account config */}
+                  {selectedTopnAccount && selectedCfg && (
+                    <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-5 space-y-5">
+                      {/* Enable toggle */}
+                      <label className="flex items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={selectedCfg.enabled}
+                          onChange={(e) => updateAccountConfig(selectedTopnAccount, { enabled: e.target.checked })}
+                          className="rounded"
+                        />
+                        Enable auto-posting
+                      </label>
+
+                      {/* Platform (auto-detected, read-only) */}
+                      <div>
+                        <label className="text-xs text-zinc-400 block mb-1">Platform</label>
+                        <div className="text-sm text-zinc-300 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2">
+                          {selectedCfg.platform}
+                        </div>
+                      </div>
+
+                      {/* Frequency */}
+                      <div>
+                        <label className="text-xs text-zinc-400 block mb-1">Frequency</label>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-zinc-300">Post every</span>
+                          <input
+                            type="number"
+                            min={1}
+                            value={selectedCfg.frequencyDays}
+                            onChange={(e) => updateAccountConfig(selectedTopnAccount, { frequencyDays: Math.max(1, Number(e.target.value)) })}
+                            className="w-20 rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20"
+                          />
+                          <span className="text-sm text-zinc-300">day{selectedCfg.frequencyDays !== 1 ? "s" : ""}</span>
+                        </div>
+                      </div>
+
+                      {/* List selection */}
+                      <div>
+                        <label className="text-xs text-zinc-400 block mb-2">
+                          Lists to include ({selectedCfg.listIds.length === 0 ? "all" : selectedCfg.listIds.length + " selected"})
+                        </label>
+                        <p className="text-[11px] text-zinc-600 mb-2">Leave none checked to include all lists.</p>
+                        <div className="space-y-1.5 max-h-40 overflow-y-auto">
+                          {lists.map((l) => (
+                            <label key={l.id} className="flex items-center gap-2 text-sm">
+                              <input
+                                type="checkbox"
+                                checked={selectedCfg.listIds.includes(l.id)}
+                                onChange={() => toggleListForAccount(selectedTopnAccount, l.id)}
+                                className="rounded"
+                              />
+                              {l.name}
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Time windows */}
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <label className="text-xs text-zinc-400">Time windows (UTC)</label>
+                          <button
+                            onClick={() => addAccountInterval(selectedTopnAccount)}
+                            className="text-xs text-blue-400 hover:text-blue-300"
+                          >
+                            + Add window
+                          </button>
+                        </div>
+                        <p className="text-[11px] text-zinc-600 mb-2">
+                          One post is scheduled per window per day, at a random time inside the window.
+                        </p>
+                        <div className="space-y-2">
+                          {selectedCfg.intervals.map((w, i) => (
+                            <div key={i} className="flex items-center gap-2">
+                              <input
+                                type="time"
+                                value={w.start}
+                                onChange={(e) => updateAccountInterval(selectedTopnAccount, i, "start", e.target.value)}
+                                className="rounded-lg border border-zinc-700 bg-zinc-800 px-2 py-1.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20"
+                              />
+                              <span className="text-zinc-500 text-sm">&rarr;</span>
+                              <input
+                                type="time"
+                                value={w.end}
+                                onChange={(e) => updateAccountInterval(selectedTopnAccount, i, "end", e.target.value)}
+                                className="rounded-lg border border-zinc-700 bg-zinc-800 px-2 py-1.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20"
+                              />
+                              {selectedCfg.intervals.length > 1 && (
+                                <button
+                                  onClick={() => removeAccountInterval(selectedTopnAccount, i)}
+                                  className="text-xs text-red-400 hover:text-red-300 ml-auto"
+                                >
+                                  Remove
+                                </button>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Save */}
+                      <button
+                        onClick={saveTopnAutomation}
+                        disabled={savingAuto}
+                        className="w-full rounded-lg bg-white text-black py-2 text-sm font-medium hover:bg-zinc-200 transition-colors disabled:opacity-50"
+                      >
+                        {savingAuto ? "Saving..." : "Save automation"}
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
+            </>
+          );
+        })()}
 
         {/* ═══ BOOK FORM MODAL ═══ */}
         {showBookForm && (
@@ -852,174 +1012,6 @@ export default function TopBooksPage() {
           </Modal>
         )}
 
-        {/* ═══ AUTOMATION MODAL ═══ */}
-        {autoListId && (
-          <Modal onClose={() => setAutoListId(null)} title="Automate this list">
-            <div className="space-y-4">
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={autoEnabled}
-                  onChange={(e) => setAutoEnabled(e.target.checked)}
-                  className="rounded"
-                />
-                Enable auto-posting
-              </label>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="text-xs text-zinc-400 block mb-2">TikTok carousel accounts</label>
-                  <div className="space-y-2">
-                    {accounts.length === 0 && (
-                      <p className="text-xs text-zinc-500">No TikTok accounts available.</p>
-                    )}
-                    {accounts.map((a) => (
-                      <label key={a.id} className="flex items-center gap-2 text-sm">
-                        <input
-                          type="checkbox"
-                          checked={autoAccounts.includes(a.id)}
-                          onChange={() => toggleAutoAccount(a.id)}
-                          className="rounded"
-                        />
-                        @{a.username}
-                      </label>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-xs text-zinc-400 block mb-2">TikTok video accounts</label>
-                  <div className="space-y-2">
-                    {accounts.length === 0 && (
-                      <p className="text-xs text-zinc-500">No TikTok accounts available.</p>
-                    )}
-                    {accounts.map((a) => (
-                      <label key={a.id} className="flex items-center gap-2 text-sm">
-                        <input
-                          type="checkbox"
-                          checked={autoVideoAccounts.includes(a.id)}
-                          onChange={() => toggleAutoVideoAccount(a.id)}
-                          className="rounded"
-                        />
-                        @{a.username}
-                      </label>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-xs text-zinc-400 block mb-2">Facebook video accounts</label>
-                  <div className="space-y-2">
-                    {fbAccounts.length === 0 && (
-                      <p className="text-xs text-zinc-500">No Facebook accounts available.</p>
-                    )}
-                    {fbAccounts.map((a) => (
-                      <label key={a.id} className="flex items-center gap-2 text-sm">
-                        <input
-                          type="checkbox"
-                          checked={autoFbAccounts.includes(a.id)}
-                          onChange={() => toggleAutoFbAccount(a.id)}
-                          className="rounded"
-                        />
-                        @{a.username}
-                      </label>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-xs text-zinc-400 block mb-2">Instagram carousel accounts</label>
-                  <div className="space-y-2">
-                    {igAccounts.length === 0 && (
-                      <p className="text-xs text-zinc-500">No Instagram accounts available.</p>
-                    )}
-                    {igAccounts.map((a) => (
-                      <label key={a.id} className="flex items-center gap-2 text-sm">
-                        <input
-                          type="checkbox"
-                          checked={autoIgCarouselAccounts.includes(a.id)}
-                          onChange={() => toggleAutoIgCarouselAccount(a.id)}
-                          className="rounded"
-                        />
-                        @{a.username}
-                      </label>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-xs text-zinc-400 block mb-2">Instagram video accounts</label>
-                  <div className="space-y-2">
-                    {igAccounts.length === 0 && (
-                      <p className="text-xs text-zinc-500">No Instagram accounts available.</p>
-                    )}
-                    {igAccounts.map((a) => (
-                      <label key={a.id} className="flex items-center gap-2 text-sm">
-                        <input
-                          type="checkbox"
-                          checked={autoIgVideoAccounts.includes(a.id)}
-                          onChange={() => toggleAutoIgVideoAccount(a.id)}
-                          className="rounded"
-                        />
-                        @{a.username}
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="text-xs text-zinc-400">Daily time windows (UTC)</label>
-                  <button
-                    onClick={addAutoInterval}
-                    className="text-xs text-blue-400 hover:text-blue-300"
-                  >
-                    + Add window
-                  </button>
-                </div>
-                <p className="text-[11px] text-zinc-600 mb-2">
-                  One post is scheduled per window per day, at a random time inside the window.
-                </p>
-                <div className="space-y-2">
-                  {autoIntervals.map((w, i) => (
-                    <div key={i} className="flex items-center gap-2">
-                      <input
-                        type="time"
-                        value={w.start}
-                        onChange={(e) => updateAutoInterval(i, "start", e.target.value)}
-                        className="rounded-lg border border-zinc-700 bg-zinc-800 px-2 py-1.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20"
-                      />
-                      <span className="text-zinc-500 text-sm">→</span>
-                      <input
-                        type="time"
-                        value={w.end}
-                        onChange={(e) => updateAutoInterval(i, "end", e.target.value)}
-                        className="rounded-lg border border-zinc-700 bg-zinc-800 px-2 py-1.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20"
-                      />
-                      {autoIntervals.length > 1 && (
-                        <button
-                          onClick={() => removeAutoInterval(i)}
-                          className="text-xs text-red-400 hover:text-red-300 ml-auto"
-                        >
-                          Remove
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <button
-                onClick={saveAutomation}
-                disabled={savingAuto}
-                className="w-full rounded-lg bg-white text-black py-2 text-sm font-medium hover:bg-zinc-200 transition-colors disabled:opacity-50"
-              >
-                {savingAuto ? "Saving..." : "Save automation"}
-              </button>
-            </div>
-          </Modal>
-        )}
 
         {/* ═══ LIST PREVIEW MODAL ═══ */}
         {previewListId && (() => {
