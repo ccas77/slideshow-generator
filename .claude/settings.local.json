@@ -239,7 +239,8 @@
       "Bash(grep -n \"updateAccConfig\\({ bookIds: next, slideshowIds: \\\\[\\\\] }\\)\" /Users/layo1/slideshow-creator/app/instagram/page.tsx)",
       "Bash(find /Users/layo1/ClaudeSM -path \"*/top-books*\" -name \"*.ts\" -o -path \"*/top-books*\" -name \"*.tsx\" 2>/dev/null | head -30)",
       "Bash(find /Users/layo1/slideshow-creator -path \"*/top-books*\" -name \"*.ts\" -o -path \"*/top-books*\" -name \"*.tsx\" 2>/dev/null | head -30)",
-      "Bash(find /Users/layo1/ClaudeSM -path \"*/instagram*\" -name \"*.tsx\" 2>/dev/null | head -10)"
+      "Bash(find /Users/layo1/ClaudeSM -path \"*/instagram*\" -name \"*.tsx\" 2>/dev/null | head -10)",
+      "Bash(node -e \"console.log\\(require\\('ffmpeg-static'\\)\\)\")"
     ]
   }
 }
