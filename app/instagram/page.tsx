@@ -84,6 +84,7 @@ export default function InstagramPage() {
 
   // Preview
   const [previewSlideshow, setPreviewSlideshow] = useState<InstagramSlideshow | null>(null);
+  const [expandedBooks, setExpandedBooks] = useState<Set<string>>(new Set());
 
   // Editor (inline on slideshows tab)
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -219,6 +220,9 @@ export default function InstagramPage() {
     setEditingId(s.id);
     setEditDraft({ ...s });
     setAnalyzeUrl("");
+    if (s.sourceBookId) {
+      setExpandedBooks((prev) => new Set(prev).add(s.sourceBookId!));
+    }
   }
 
   function cancelEditing() {
@@ -419,15 +423,27 @@ export default function InstagramPage() {
                     return sortedKeys.map((bookId) => {
                       const group = groups.get(bookId)!;
                       const sourceBook = bookId !== "__none__" ? books.find((b) => b.id === bookId) : null;
+                      const isExpanded = expandedBooks.has(bookId);
                       return (
-                        <div key={bookId}>
-                          <div className="flex items-center gap-2 mb-2">
-                            <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                        <div key={bookId} className="rounded-2xl border border-zinc-800 bg-zinc-900/60 overflow-hidden">
+                          <button
+                            onClick={() => {
+                              setExpandedBooks((prev) => {
+                                const next = new Set(prev);
+                                if (next.has(bookId)) next.delete(bookId);
+                                else next.add(bookId);
+                                return next;
+                              });
+                            }}
+                            className="w-full flex items-center gap-2 px-5 py-3.5 text-left hover:bg-zinc-800/50 transition-colors"
+                          >
+                            <span className="text-xs text-zinc-500 transition-transform" style={{ transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)" }}>&#9654;</span>
+                            <h3 className="text-sm font-semibold text-zinc-200 flex-1">
                               {sourceBook ? sourceBook.name : "Other"}
                             </h3>
-                            <span className="text-[10px] text-zinc-600">({group.length})</span>
-                          </div>
-                          <div className="space-y-3">
+                            <span className="text-xs text-zinc-500">{group.length} slideshow{group.length !== 1 ? "s" : ""}</span>
+                          </button>
+                          {isExpanded && <div className="space-y-3 px-5 pb-5">
                   {group.map((s) => {
                     const isEditing = editingId === s.id && editDraft;
                     const slideCount = s.slideTexts.split("\n").filter((l) => l.trim()).length;
@@ -683,7 +699,7 @@ export default function InstagramPage() {
                       </div>
                     );
                   })}
-                          </div>
+                          </div>}
                         </div>
                       );
                     });
