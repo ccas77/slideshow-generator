@@ -945,10 +945,18 @@ export default function InstagramPage() {
                               type="checkbox"
                               checked={currentConfig.bookIds.includes(b.id)}
                               onChange={() => {
-                                const next = currentConfig.bookIds.includes(b.id)
+                                const removing = currentConfig.bookIds.includes(b.id);
+                                const next = removing
                                   ? currentConfig.bookIds.filter((x) => x !== b.id)
                                   : [...currentConfig.bookIds, b.id];
-                                updateAccConfig({ bookIds: next, slideshowIds: [] });
+                                // Only drop slideshows that belonged to the removed book
+                                const nextSlideshows = removing
+                                  ? currentConfig.slideshowIds.filter((sid) => {
+                                      const ss = igSlideshows.find((s) => s.id === sid);
+                                      return ss?.sourceBookId !== b.id;
+                                    })
+                                  : currentConfig.slideshowIds;
+                                updateAccConfig({ bookIds: next, slideshowIds: nextSlideshows });
                               }}
                               className="accent-white w-3.5 h-3.5"
                             />
@@ -958,13 +966,12 @@ export default function InstagramPage() {
                       </div>
                     </div>
 
-                    {/* Slideshows */}
+                    {/* Slideshows — only shown after selecting books */}
+                    {currentConfig.bookIds.length > 0 && (
                     <div>
                       <h4 className="text-xs font-semibold text-zinc-400 uppercase tracking-wide mb-2">Slideshows</h4>
                       {(() => {
-                        const pool = currentConfig.bookIds.length > 0
-                          ? igSlideshows.filter((s) => s.sourceBookId && currentConfig.bookIds.includes(s.sourceBookId))
-                          : igSlideshows;
+                        const pool = igSlideshows.filter((s) => s.sourceBookId && currentConfig.bookIds.includes(s.sourceBookId));
                         return pool.length === 0 ? (
                           <p className="text-xs text-zinc-500">No slideshows available for selected books.</p>
                         ) : (
@@ -994,6 +1001,7 @@ export default function InstagramPage() {
                         );
                       })()}
                     </div>
+                    )}
 
                     {/* Time windows */}
                     <div>
