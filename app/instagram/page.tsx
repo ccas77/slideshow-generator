@@ -770,16 +770,29 @@ export default function InstagramPage() {
                         .map((s) => s.sourceSlideshowId!)
                     );
                     const newSlideshows = book.slideshows.filter((s) => !importedSlideshowIds.has(s.id));
+                    const importExpanded = expandedBooks.has(`import:${book.id}`);
 
                     return (
-                      <div key={book.id} className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5">
-                        <div className="flex items-center justify-between mb-3">
-                          <div>
+                      <div key={book.id} className="rounded-2xl border border-zinc-800 bg-zinc-900/60 overflow-hidden">
+                        <div className="flex items-center gap-2 px-5 py-3.5">
+                          <button
+                            onClick={() => {
+                              setExpandedBooks((prev) => {
+                                const next = new Set(prev);
+                                const key = `import:${book.id}`;
+                                if (next.has(key)) next.delete(key);
+                                else next.add(key);
+                                return next;
+                              });
+                            }}
+                            className="flex items-center gap-2 flex-1 text-left"
+                          >
+                            <span className="text-xs text-zinc-500 transition-transform" style={{ transform: importExpanded ? "rotate(90deg)" : "rotate(0deg)" }}>&#9654;</span>
                             <h3 className="text-sm font-semibold">{book.name}</h3>
-                            <p className="text-xs text-zinc-500">
+                            <span className="text-xs text-zinc-500">
                               {book.slideshows.length} slideshow{book.slideshows.length !== 1 ? "s" : ""} · {importedSlideshowIds.size} imported · {newSlideshows.length} new
-                            </p>
-                          </div>
+                            </span>
+                          </button>
                           {newSlideshows.length > 0 && (
                             <button
                               onClick={async () => {
@@ -793,13 +806,13 @@ export default function InstagramPage() {
                                 }
                               }}
                               disabled={truncating}
-                              className="text-xs bg-white text-black px-3 py-1.5 rounded-lg font-medium hover:bg-zinc-200 transition-colors disabled:opacity-40"
+                              className="text-xs bg-white text-black px-3 py-1.5 rounded-lg font-medium hover:bg-zinc-200 transition-colors disabled:opacity-40 shrink-0"
                             >
                               Import all new ({newSlideshows.length})
                             </button>
                           )}
                         </div>
-                        <div className="space-y-1">
+                        {importExpanded && <div className="space-y-1 px-5 pb-4">
                           {book.slideshows.map((ss) => {
                             const alreadyImported = importedSlideshowIds.has(ss.id);
                             const slideCount = ss.slideTexts.split("\n").filter((l) => l.trim()).length;
@@ -831,7 +844,7 @@ export default function InstagramPage() {
                               </div>
                             );
                           })}
-                        </div>
+                        </div>}
                       </div>
                     );
                   })
