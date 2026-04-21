@@ -315,7 +315,9 @@ export default function Home() {
     }
     const uid = () =>
       Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
-    let workingBooks = books;
+    // Re-fetch latest books from KV to avoid overwriting changes made on other pages
+    const freshRes = await fetch(`/api/books?password=${encodeURIComponent(password)}`);
+    let workingBooks: Book[] = freshRes.ok ? (await freshRes.json()).books || [] : books;
     let targetBookId: string;
     if (books.length === 0) {
       const bookName = window.prompt("No books yet. Name a new book:");
