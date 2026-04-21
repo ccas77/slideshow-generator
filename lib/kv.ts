@@ -385,6 +385,7 @@ export interface ExcerptSlide {
 export interface Excerpt {
   id: string;
   name: string;
+  bookId?: string; // optional link to a book for grouping
   slides: ExcerptSlide[];
 }
 
