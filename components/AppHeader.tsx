@@ -35,6 +35,7 @@ export default function AppHeader() {
           {link("/create", "Create")}
           {link("/books", "Books")}
           {link("/top-books", "Top Books")}
+          {link("/excerpts", "Excerpts")}
           {link("/instagram", "Instagram")}
           {link("/posts", "Posts")}
           {link("/chat", "Chat")}

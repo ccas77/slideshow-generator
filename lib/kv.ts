@@ -371,3 +371,30 @@ export async function listAutomatedAccounts(
   }
   return result;
 }
+
+// ── Excerpts ──
+
+export interface ExcerptSlide {
+  id: string;
+  type: "text-overlay" | "image" | "cover";
+  imageData?: string;   // base64 data URL
+  overlayText?: string; // text displayed on top (text-overlay type)
+  label?: string;       // optional short label
+}
+
+export interface Excerpt {
+  id: string;
+  name: string;
+  slides: ExcerptSlide[];
+}
+
+const EXCERPTS_KEY = "excerpts";
+
+export async function getExcerpts(): Promise<Excerpt[]> {
+  const data = await redis.get<Excerpt[]>(EXCERPTS_KEY);
+  return data ?? [];
+}
+
+export async function setExcerpts(excerpts: Excerpt[]): Promise<void> {
+  await redis.set(EXCERPTS_KEY, excerpts);
+}
