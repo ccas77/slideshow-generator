@@ -214,16 +214,6 @@ export default function BooksPage() {
 
   const activeBook = books.find((b) => b.id === activeBookId);
 
-  function downloadJSON() {
-    const blob = new Blob([JSON.stringify(books, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `books-backup-${new Date().toISOString().slice(0, 10)}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }
-
   function downloadText() {
     const lines: string[] = [];
     for (const book of books) {
@@ -264,47 +254,6 @@ export default function BooksPage() {
     URL.revokeObjectURL(url);
   }
 
-  function importJSON() {
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = ".json";
-    input.onchange = async (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (!file) return;
-      try {
-        const text = await file.text();
-        const imported = JSON.parse(text) as Book[];
-        if (!Array.isArray(imported)) {
-          window.alert("Invalid file — expected an array of books.");
-          return;
-        }
-        const action = window.prompt(
-          `Found ${imported.length} books. Type:\n  "replace" — replace all current books\n  "merge" — add imported books alongside existing ones`
-        );
-        if (action === "replace") {
-          await persist(imported);
-          window.alert(`Replaced with ${imported.length} books.`);
-        } else if (action === "merge") {
-          // Avoid duplicate IDs — re-ID imported books
-          const merged = [...books];
-          for (const ib of imported) {
-            if (books.find((b) => b.id === ib.id)) {
-              ib.id = uid();
-            }
-            merged.push(ib);
-          }
-          await persist(merged);
-          window.alert(`Merged — now ${merged.length} books total.`);
-        } else {
-          window.alert("Import cancelled.");
-        }
-      } catch {
-        window.alert("Failed to read file.");
-      }
-    };
-    input.click();
-  }
-
   if (!password) return null;
 
   return (
@@ -322,22 +271,10 @@ export default function BooksPage() {
           <div className="flex items-center gap-3">
             {saving && <span className="text-xs text-zinc-500">Saving…</span>}
             <button
-              onClick={downloadJSON}
-              className="px-3 py-2 rounded-lg border border-zinc-700 text-zinc-400 hover:text-white hover:border-zinc-500 transition-colors text-xs"
-            >
-              Export JSON
-            </button>
-            <button
               onClick={downloadText}
               className="px-3 py-2 rounded-lg border border-zinc-700 text-zinc-400 hover:text-white hover:border-zinc-500 transition-colors text-xs"
             >
               Export Text
-            </button>
-            <button
-              onClick={importJSON}
-              className="px-3 py-2 rounded-lg border border-zinc-700 text-zinc-400 hover:text-white hover:border-zinc-500 transition-colors text-xs"
-            >
-              Import JSON
             </button>
             <button
               onClick={createBook}
