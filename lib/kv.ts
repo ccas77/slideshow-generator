@@ -374,19 +374,19 @@ export async function listAutomatedAccounts(
 
 // ── Excerpts ──
 
-export interface ExcerptSlide {
+export interface ExcerptImage {
   id: string;
-  type: "text-overlay" | "image" | "cover";
-  imageData?: string;   // base64 data URL
-  overlayText?: string; // text displayed on top (text-overlay type)
-  label?: string;       // optional short label
+  imageData: string;  // base64 data URL
+  label?: string;
 }
 
 export interface Excerpt {
   id: string;
   name: string;
-  bookId?: string; // optional link to a book for grouping
-  slides: ExcerptSlide[];
+  bookId?: string;         // link to a book for grouping + cover slide
+  imagePrompt: string;     // AI prompt for generating the hook image
+  overlayText: string;     // text displayed on the hook image
+  excerptImages: ExcerptImage[]; // uploaded book page screenshots
 }
 
 const EXCERPTS_KEY = "excerpts";

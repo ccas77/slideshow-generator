@@ -5,19 +5,19 @@ import { useRouter } from "next/navigation";
 import AppHeader from "@/components/AppHeader";
 import HowItWorks from "@/components/HowItWorks";
 
-interface ExcerptSlide {
+interface ExcerptImage {
   id: string;
-  type: "text-overlay" | "image" | "cover";
-  imageData?: string;
-  overlayText?: string;
+  imageData: string; // base64 data URL
   label?: string;
 }
 
 interface Excerpt {
   id: string;
   name: string;
-  bookId?: string; // optional link to a book for grouping
-  slides: ExcerptSlide[];
+  bookId?: string;
+  imagePrompt: string;     // AI prompt for generating the hook image
+  overlayText: string;     // text displayed on the hook image
+  excerptImages: ExcerptImage[]; // uploaded book page screenshots
 }
 
 interface Book {
@@ -39,7 +39,6 @@ export default function ExcerptsPage() {
   const [saving, setSaving] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
-  const [editingSlide, setEditingSlide] = useState<ExcerptSlide | null>(null);
 
   useEffect(() => {
     const pw = localStorage.getItem("sg.password");
@@ -102,7 +101,13 @@ export default function ExcerptsPage() {
   function createExcerpt() {
     const name = window.prompt("Excerpt name:");
     if (!name?.trim()) return;
-    const ex: Excerpt = { id: uid(), name: name.trim(), slides: [] };
+    const ex: Excerpt = {
+      id: uid(),
+      name: name.trim(),
+      imagePrompt: "",
+      overlayText: "",
+      excerptImages: [],
+    };
     persist([...excerpts, ex]);
     setActiveId(ex.id);
   }
@@ -116,47 +121,65 @@ export default function ExcerptsPage() {
   }
 
   function deleteExcerpt(id: string) {
-    if (!window.confirm("Delete this excerpt and all its slides?")) return;
+    if (!window.confirm("Delete this excerpt?")) return;
     persist(excerpts.filter((e) => e.id !== id));
     if (activeId === id) setActiveId(null);
   }
 
-  function moveSlide(excerptId: string, slideIndex: number, dir: -1 | 1) {
-    updateExcerpt(excerptId, (ex) => {
-      const slides = [...ex.slides];
-      const target = slideIndex + dir;
-      if (target < 0 || target >= slides.length) return ex;
-      [slides[slideIndex], slides[target]] = [slides[target], slides[slideIndex]];
-      return { ...ex, slides };
-    });
+  function addExcerptImage(excerptId: string) {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*";
+    input.multiple = true;
+    input.onchange = async () => {
+      const files = input.files;
+      if (!files || files.length === 0) return;
+      const newImages: ExcerptImage[] = [];
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const dataUrl = await new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.readAsDataURL(file);
+        });
+        newImages.push({
+          id: uid(),
+          imageData: dataUrl,
+          label: file.name.replace(/\.[^.]+$/, ""),
+        });
+      }
+      updateExcerpt(excerptId, (ex) => ({
+        ...ex,
+        excerptImages: [...ex.excerptImages, ...newImages],
+      }));
+    };
+    input.click();
   }
 
-  function deleteSlide(excerptId: string, slideId: string) {
-    if (!window.confirm("Delete this slide?")) return;
+  function removeExcerptImage(excerptId: string, imageId: string) {
     updateExcerpt(excerptId, (ex) => ({
       ...ex,
-      slides: ex.slides.filter((s) => s.id !== slideId),
+      excerptImages: ex.excerptImages.filter((img) => img.id !== imageId),
     }));
   }
 
-  function saveSlide(slide: ExcerptSlide) {
-    if (!activeId) return;
-    updateExcerpt(activeId, (ex) => {
-      const exists = ex.slides.some((s) => s.id === slide.id);
-      return {
-        ...ex,
-        slides: exists
-          ? ex.slides.map((s) => (s.id === slide.id ? slide : s))
-          : [...ex.slides, slide],
-      };
+  function moveExcerptImage(excerptId: string, index: number, dir: -1 | 1) {
+    updateExcerpt(excerptId, (ex) => {
+      const images = [...ex.excerptImages];
+      const target = index + dir;
+      if (target < 0 || target >= images.length) return ex;
+      [images[index], images[target]] = [images[target], images[index]];
+      return { ...ex, excerptImages: images };
     });
-    setEditingSlide(null);
   }
 
   const active = excerpts.find((e) => e.id === activeId);
+  const activeBook = active?.bookId
+    ? books.find((b) => b.id === active.bookId)
+    : undefined;
 
   // Group excerpts by book for sidebar
-  const bookName = (bookId?: string) =>
+  const getBookName = (bookId?: string) =>
     books.find((b) => b.id === bookId)?.name;
   const filtered = excerpts.filter((e) =>
     e.name.toLowerCase().includes(search.toLowerCase())
@@ -168,12 +191,11 @@ export default function ExcerptsPage() {
     if (!byBook.has(key)) byBook.set(key, []);
     byBook.get(key)!.push(e);
   }
-  // Books first (alphabetical), then ungrouped at the end
   const bookIds = [...byBook.keys()]
     .filter((k) => k !== undefined)
-    .sort((a, b) => (bookName(a) || "").localeCompare(bookName(b) || ""));
+    .sort((a, b) => (getBookName(a) || "").localeCompare(getBookName(b) || ""));
   for (const bid of bookIds) {
-    grouped.push({ label: bookName(bid) || "Unknown book", bookId: bid, items: byBook.get(bid)! });
+    grouped.push({ label: getBookName(bid) || "Unknown book", bookId: bid, items: byBook.get(bid)! });
   }
   if (byBook.has(undefined)) {
     grouped.push({ label: "Ungrouped", bookId: undefined, items: byBook.get(undefined)! });
@@ -181,20 +203,23 @@ export default function ExcerptsPage() {
 
   if (!password) return null;
 
+  const slideCount = (ex: Excerpt) =>
+    1 + ex.excerptImages.length + (ex.bookId && books.find((b) => b.id === ex.bookId)?.coverImage ? 1 : 0);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-zinc-900 to-black text-white">
       <div className="mx-auto w-full max-w-5xl px-6 sm:px-10 py-10">
         <AppHeader />
         <HowItWorks>
           <p>
-            <strong>Excerpts</strong> — build mixed-media slideshows combining
-            photos, book excerpts, and covers.
+            <strong>Excerpts</strong> — build mixed-media slideshows from book
+            passages.
           </p>
           <p>
-            Each excerpt is an ordered set of slides. A slide can be a{" "}
-            <strong>photo with text overlay</strong> (e.g. a hook line on a
-            lifestyle image), a <strong>pre-uploaded image</strong> (e.g. a
-            screenshot of a book page), or a <strong>book cover</strong>.
+            Each excerpt has three parts: a <strong>hook slide</strong>{" "}
+            (AI-generated image with overlay text), one or more{" "}
+            <strong>excerpt images</strong> (uploaded screenshots of book
+            pages), and the <strong>book cover</strong> as the final slide.
           </p>
         </HowItWorks>
 
@@ -255,8 +280,7 @@ export default function ExcerptsPage() {
                         {e.name}
                       </div>
                       <div className="text-xs text-zinc-500 mt-0.5">
-                        {e.slides.length} slide
-                        {e.slides.length === 1 ? "" : "s"}
+                        {slideCount(e)} slide{slideCount(e) === 1 ? "" : "s"}
                       </div>
                     </button>
                   ))}
@@ -268,7 +292,7 @@ export default function ExcerptsPage() {
             <main className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6">
               {!active ? (
                 <p className="text-zinc-500 text-sm">
-                  Select an excerpt to manage its slides.
+                  Select an excerpt to edit it.
                 </p>
               ) : (
                 <>
@@ -291,7 +315,7 @@ export default function ExcerptsPage() {
                   </div>
 
                   {/* Book selector */}
-                  <div className="mb-5">
+                  <div className="mb-6">
                     <label className="block text-xs font-medium text-zinc-400 mb-1.5">
                       Book
                     </label>
@@ -305,7 +329,7 @@ export default function ExcerptsPage() {
                       }
                       className="rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20 w-full sm:w-auto"
                     >
-                      <option value="">No book (ungrouped)</option>
+                      <option value="">Select a book...</option>
                       {books.map((b) => (
                         <option key={b.id} value={b.id}>
                           {b.name}
@@ -314,339 +338,171 @@ export default function ExcerptsPage() {
                     </select>
                   </div>
 
-                  {/* Slide list */}
-                  <div className="space-y-3 mb-4">
-                    {active.slides.map((slide, i) => (
-                      <div
-                        key={slide.id}
-                        className="rounded-xl border border-zinc-800 bg-zinc-950 p-4"
-                      >
-                        <div className="flex items-start gap-3">
-                          {/* Thumbnail */}
-                          <div className="shrink-0">
-                            {slide.imageData ? (
-                              <img
-                                src={slide.imageData}
-                                alt=""
-                                className="w-12 h-16 rounded-lg object-cover border border-zinc-700"
-                              />
-                            ) : (
-                              <div className="w-12 h-16 rounded-lg border border-dashed border-zinc-700 flex items-center justify-center">
-                                <span className="text-zinc-600 text-xs">
-                                  {slide.type === "cover"
-                                    ? "CVR"
-                                    : slide.type === "image"
-                                    ? "IMG"
-                                    : "TXT"}
-                                </span>
-                              </div>
-                            )}
-                          </div>
+                  {/* SLIDE 1: Hook */}
+                  <Section number={1} title="Hook slide" subtitle="AI-generated image with overlay text">
+                    <label className="block text-xs font-medium text-zinc-400 mb-1">
+                      Image prompt
+                    </label>
+                    <textarea
+                      value={active.imagePrompt}
+                      onChange={(e) =>
+                        updateExcerpt(active.id, (ex) => ({
+                          ...ex,
+                          imagePrompt: e.target.value,
+                        }))
+                      }
+                      rows={3}
+                      placeholder="e.g. A woman sitting in front of a bookshelf, looking into the camera, warm lighting, shallow depth of field"
+                      className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-white text-sm mb-3 focus:outline-none focus:ring-2 focus:ring-white/20 placeholder:text-zinc-600"
+                    />
+                    <label className="block text-xs font-medium text-zinc-400 mb-1">
+                      Overlay text
+                    </label>
+                    <textarea
+                      value={active.overlayText}
+                      onChange={(e) =>
+                        updateExcerpt(active.id, (ex) => ({
+                          ...ex,
+                          overlayText: e.target.value,
+                        }))
+                      }
+                      rows={2}
+                      placeholder='e.g. Why are you blushing? It&apos;s only a book.'
+                      className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20 placeholder:text-zinc-600"
+                    />
+                  </Section>
 
-                          {/* Info */}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="text-[10px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400">
-                                {slide.type === "text-overlay"
-                                  ? "Text overlay"
-                                  : slide.type === "image"
-                                  ? "Image"
-                                  : "Cover"}
-                              </span>
-                              <span className="text-xs text-zinc-600">
-                                Slide {i + 1}
-                              </span>
-                            </div>
-                            {slide.label && (
+                  {/* SLIDES 2+: Excerpt images */}
+                  <Section
+                    number={2}
+                    title="Excerpt images"
+                    subtitle="Uploaded screenshots of book pages"
+                  >
+                    {active.excerptImages.length > 0 && (
+                      <div className="space-y-3 mb-4">
+                        {active.excerptImages.map((img, i) => (
+                          <div
+                            key={img.id}
+                            className="flex items-start gap-3 rounded-xl border border-zinc-800 bg-zinc-950 p-3"
+                          >
+                            <img
+                              src={img.imageData}
+                              alt=""
+                              className="w-16 h-20 rounded-lg object-cover border border-zinc-700 shrink-0"
+                            />
+                            <div className="flex-1 min-w-0">
                               <div className="text-sm text-zinc-300 truncate">
-                                {slide.label}
+                                {img.label || `Image ${i + 1}`}
                               </div>
-                            )}
-                            {slide.overlayText && (
-                              <p className="text-xs text-zinc-500 truncate mt-0.5">
-                                {slide.overlayText}
-                              </p>
-                            )}
-                          </div>
-
-                          {/* Actions */}
-                          <div className="flex flex-col gap-1 shrink-0">
-                            <div className="flex gap-1">
-                              <button
-                                onClick={() => moveSlide(active.id, i, -1)}
-                                disabled={i === 0}
-                                className="text-xs text-zinc-500 hover:text-white disabled:text-zinc-800 disabled:cursor-not-allowed transition-colors"
-                              >
-                                ↑
-                              </button>
-                              <button
-                                onClick={() => moveSlide(active.id, i, 1)}
-                                disabled={i === active.slides.length - 1}
-                                className="text-xs text-zinc-500 hover:text-white disabled:text-zinc-800 disabled:cursor-not-allowed transition-colors"
-                              >
-                                ↓
-                              </button>
+                              <div className="text-xs text-zinc-600 mt-0.5">
+                                Slide {i + 2}
+                              </div>
                             </div>
-                            <div className="flex gap-2">
+                            <div className="flex flex-col gap-1 shrink-0">
+                              <div className="flex gap-1">
+                                <button
+                                  onClick={() =>
+                                    moveExcerptImage(active.id, i, -1)
+                                  }
+                                  disabled={i === 0}
+                                  className="text-xs text-zinc-500 hover:text-white disabled:text-zinc-800 disabled:cursor-not-allowed transition-colors"
+                                >
+                                  ↑
+                                </button>
+                                <button
+                                  onClick={() =>
+                                    moveExcerptImage(active.id, i, 1)
+                                  }
+                                  disabled={
+                                    i === active.excerptImages.length - 1
+                                  }
+                                  className="text-xs text-zinc-500 hover:text-white disabled:text-zinc-800 disabled:cursor-not-allowed transition-colors"
+                                >
+                                  ↓
+                                </button>
+                              </div>
                               <button
-                                onClick={() => setEditingSlide(slide)}
-                                className="text-xs text-zinc-400 hover:text-white transition-colors"
-                              >
-                                Edit
-                              </button>
-                              <button
-                                onClick={() => deleteSlide(active.id, slide.id)}
+                                onClick={() =>
+                                  removeExcerptImage(active.id, img.id)
+                                }
                                 className="text-xs text-red-500 hover:text-red-400 transition-colors"
                               >
-                                Delete
+                                Remove
                               </button>
                             </div>
                           </div>
-                        </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
+                    )}
+                    <button
+                      onClick={() => addExcerptImage(active.id)}
+                      className="w-full px-4 py-3 rounded-lg border border-dashed border-zinc-700 text-zinc-400 hover:text-white hover:border-zinc-500 transition-colors text-sm"
+                    >
+                      + Upload excerpt image{active.excerptImages.length > 0 ? "s" : ""}
+                    </button>
+                  </Section>
 
-                  {active.slides.length === 0 && (
-                    <p className="text-zinc-600 text-sm mb-4">
-                      No slides yet. Add your first slide below.
-                    </p>
-                  )}
-
-                  <button
-                    onClick={() =>
-                      setEditingSlide({
-                        id: uid(),
-                        type: "text-overlay",
-                      })
-                    }
-                    className="w-full px-5 py-3 rounded-lg border border-dashed border-zinc-700 text-zinc-400 hover:text-white hover:border-zinc-500 transition-colors text-sm font-medium"
+                  {/* FINAL SLIDE: Cover */}
+                  <Section
+                    number={active.excerptImages.length + 2}
+                    title="Book cover"
+                    subtitle="Pulled automatically from the selected book"
                   >
-                    + Add slide
-                  </button>
+                    {!active.bookId ? (
+                      <p className="text-xs text-zinc-600">
+                        Select a book above to use its cover as the final slide.
+                      </p>
+                    ) : activeBook?.coverImage ? (
+                      <div className="flex items-center gap-3">
+                        <img
+                          src={activeBook.coverImage}
+                          alt="Book cover"
+                          className="w-12 h-[72px] rounded-lg object-cover border border-zinc-700"
+                        />
+                        <span className="text-sm text-zinc-400">
+                          {activeBook.name} cover
+                        </span>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-zinc-600">
+                        No cover image set for {activeBook?.name || "this book"}.
+                        Upload one on the Books page.
+                      </p>
+                    )}
+                  </Section>
                 </>
               )}
             </main>
           </div>
         )}
       </div>
-
-      {/* Slide editor modal */}
-      {editingSlide && (
-        <SlideEditorModal
-          slide={editingSlide}
-          password={password || ""}
-          onSave={saveSlide}
-          onCancel={() => setEditingSlide(null)}
-        />
-      )}
     </div>
   );
 }
 
-function SlideEditorModal({
-  slide: initial,
-  password,
-  onSave,
-  onCancel,
+function Section({
+  number,
+  title,
+  subtitle,
+  children,
 }: {
-  slide: ExcerptSlide;
-  password: string;
-  onSave: (slide: ExcerptSlide) => void;
-  onCancel: () => void;
+  number: number;
+  title: string;
+  subtitle: string;
+  children: React.ReactNode;
 }) {
-  const [slide, setSlide] = useState<ExcerptSlide>(initial);
-  const [uploading, setUploading] = useState(false);
-  const [urlInput, setUrlInput] = useState("");
-
-  function handleFileUpload() {
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = "image/*";
-    input.onchange = async () => {
-      const file = input.files?.[0];
-      if (!file) return;
-      setUploading(true);
-      try {
-        const dataUrl = await new Promise<string>((resolve) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result as string);
-          reader.readAsDataURL(file);
-        });
-        setSlide((s) => ({ ...s, imageData: dataUrl }));
-      } catch {
-        window.alert("Failed to read image.");
-      }
-      setUploading(false);
-    };
-    input.click();
-  }
-
-  async function handleUrlFetch() {
-    if (!urlInput.trim()) return;
-    setUploading(true);
-    try {
-      const res = await fetch("/api/fetch-image-url", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-password": password,
-        },
-        body: JSON.stringify({ url: urlInput.trim() }),
-      });
-      const data = await res.json();
-      if (data.coverData) {
-        setSlide((s) => ({ ...s, imageData: data.coverData }));
-        setUrlInput("");
-      } else {
-        window.alert("Could not fetch image from URL.");
-      }
-    } catch {
-      window.alert("Failed to fetch image.");
-    }
-    setUploading(false);
-  }
-
   return (
-    <div
-      className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50"
-      onClick={onCancel}
-    >
-      <div
-        className="w-full max-w-lg rounded-2xl border border-zinc-800 bg-zinc-950 p-6 max-h-[90vh] overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h3 className="text-lg font-semibold mb-4">
-          {initial.imageData || initial.overlayText || initial.label
-            ? "Edit slide"
-            : "New slide"}
-        </h3>
-
-        {/* Type selector */}
-        <label className="block text-xs font-medium text-zinc-400 mb-2">
-          Slide type
-        </label>
-        <div className="flex gap-2 mb-5">
-          {(
-            [
-              ["text-overlay", "Text overlay"],
-              ["image", "Image only"],
-              ["cover", "Cover"],
-            ] as const
-          ).map(([value, label]) => (
-            <button
-              key={value}
-              onClick={() => setSlide((s) => ({ ...s, type: value }))}
-              className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                slide.type === value
-                  ? "bg-white text-black"
-                  : "border border-zinc-700 text-zinc-400 hover:text-white hover:border-zinc-500"
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-
-        {/* Label */}
-        <label className="block text-xs font-medium text-zinc-400 mb-1">
-          Label (optional)
-        </label>
-        <input
-          value={slide.label || ""}
-          onChange={(e) => setSlide((s) => ({ ...s, label: e.target.value }))}
-          placeholder="e.g. Hook slide, Page 42 excerpt"
-          className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-white text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-white/20"
-        />
-
-        {/* Overlay text — only for text-overlay */}
-        {slide.type === "text-overlay" && (
-          <>
-            <label className="block text-xs font-medium text-zinc-400 mb-1">
-              Overlay text
-            </label>
-            <textarea
-              value={slide.overlayText || ""}
-              onChange={(e) =>
-                setSlide((s) => ({ ...s, overlayText: e.target.value }))
-              }
-              rows={3}
-              placeholder="e.g. Why are you blushing? It's only a book."
-              className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-white text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-white/20"
-            />
-          </>
-        )}
-
-        {/* Image upload */}
-        <label className="block text-xs font-medium text-zinc-400 mb-2">
-          Image
-        </label>
-        {slide.imageData ? (
-          <div className="mb-4">
-            <img
-              src={slide.imageData}
-              alt="Slide preview"
-              className="w-full max-h-48 object-contain rounded-lg border border-zinc-800 mb-2"
-            />
-            <button
-              onClick={() => setSlide((s) => ({ ...s, imageData: undefined }))}
-              className="text-xs text-red-500 hover:text-red-400"
-            >
-              Remove image
-            </button>
-          </div>
-        ) : (
-          <div className="mb-4 space-y-3">
-            <button
-              onClick={handleFileUpload}
-              disabled={uploading}
-              className="w-full px-4 py-3 rounded-lg border border-dashed border-zinc-700 text-zinc-400 hover:text-white hover:border-zinc-500 transition-colors text-sm disabled:opacity-40"
-            >
-              {uploading ? "Uploading…" : "Upload image"}
-            </button>
-            <div className="flex items-center gap-3">
-              <div className="flex-1 h-px bg-zinc-800" />
-              <span className="text-xs text-zinc-600">or</span>
-              <div className="flex-1 h-px bg-zinc-800" />
-            </div>
-            <div className="flex gap-2">
-              <input
-                type="url"
-                value={urlInput}
-                onChange={(e) => setUrlInput(e.target.value)}
-                placeholder="Paste image URL"
-                className="flex-1 rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20 placeholder:text-zinc-600"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleUrlFetch();
-                }}
-              />
-              <button
-                onClick={handleUrlFetch}
-                disabled={!urlInput.trim() || uploading}
-                className="px-4 py-2 rounded-lg bg-white text-black text-sm font-medium hover:bg-zinc-200 transition-colors disabled:opacity-40"
-              >
-                Fetch
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Save / Cancel */}
-        <div className="flex gap-3 justify-end mt-2">
-          <button
-            onClick={onCancel}
-            className="px-4 py-2 rounded-lg border border-zinc-700 text-zinc-300 hover:bg-zinc-800 transition-colors text-sm"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={() => onSave(slide)}
-            className="px-4 py-2 rounded-lg bg-white text-black font-semibold hover:bg-zinc-200 transition-colors text-sm"
-          >
-            Save
-          </button>
+    <div className="mb-6">
+      <div className="flex items-center gap-3 mb-3">
+        <span className="w-6 h-6 rounded-full bg-zinc-800 text-zinc-400 text-xs font-semibold flex items-center justify-center shrink-0">
+          {number}
+        </span>
+        <div>
+          <div className="text-sm font-medium">{title}</div>
+          <div className="text-xs text-zinc-500">{subtitle}</div>
         </div>
       </div>
+      <div className="ml-9">{children}</div>
     </div>
   );
 }
