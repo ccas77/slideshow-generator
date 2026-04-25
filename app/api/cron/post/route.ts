@@ -22,18 +22,12 @@ function pickRandom<T>(arr: T[]): T | null {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
-// Returns true if now is within 1 hour before the window start (UTC).
-// This prevents duplicate scheduling when cron runs more than once per day.
+// The cron runs at :07 past each hour. The cron at HH:07 handles every
+// window whose start hour equals HH. One cron per window, no duplicates.
 function shouldProcessWindow(windowStart: string): boolean {
-  const [sh, sm] = windowStart.split(":").map(Number);
-  const now = new Date();
-  const nowMin = now.getUTCHours() * 60 + now.getUTCMinutes();
-  const startMin = sh * 60 + sm;
-  // Check if we're in the 60 minutes before the window starts
-  const diff = startMin - nowMin;
-  // Handle midnight wrap: if diff is very negative, add 24h
-  const adjusted = diff < -60 ? diff + 1440 : diff;
-  return adjusted >= 0 && adjusted < 60;
+  const [sh] = windowStart.split(":").map(Number);
+  const currentHour = new Date().getUTCHours();
+  return sh === currentHour;
 }
 
 function randomTimeInWindow(windowStart: string, windowEnd: string): Date {
