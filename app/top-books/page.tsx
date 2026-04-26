@@ -49,9 +49,16 @@ interface TopNList {
   titleTexts: string[];
   count: number;
   bookIds: string[];
+  genres?: string[];
   captions: string[];
   backgroundPrompts: string[];
+  musicTrackIds?: string[];
   automation?: TopNAutomation;
+}
+
+interface MusicTrack {
+  id: string;
+  name: string;
 }
 
 interface TikTokAccount {
@@ -83,6 +90,7 @@ export default function TopBooksPage() {
   const [fetchingUrl, setFetchingUrl] = useState(false);
   const [fetchUrlError, setFetchUrlError] = useState("");
   const [genreFilter, setGenreFilter] = useState<string>("all");
+  const [bookSearch, setBookSearch] = useState("");
 
   // List form
   const [showListForm, setShowListForm] = useState(false);
@@ -91,8 +99,10 @@ export default function TopBooksPage() {
   const [listTitles, setListTitles] = useState("");
   const [listCount, setListCount] = useState(10);
   const [listBookIds, setListBookIds] = useState<string[]>([]);
+  const [listGenres, setListGenres] = useState<string[]>([]);
   const [listCaptions, setListCaptions] = useState("");
   const [listBgPrompts, setListBgPrompts] = useState("");
+  const [listMusicTrackIds, setListMusicTrackIds] = useState<string[]>([]);
 
   // Publish
   const [publishListId, setPublishListId] = useState<string | null>(null);
@@ -105,12 +115,19 @@ export default function TopBooksPage() {
   const [topnAutoConfig, setTopnAutoConfig] = useState<TopNGlobalAutomation>({ accounts: {} });
   const [selectedTopnAccount, setSelectedTopnAccount] = useState<string | null>(null);
   const [savingAuto, setSavingAuto] = useState(false);
+  const [accountSearch, setAccountSearch] = useState("");
+
+  // Music
+  const [musicTracks, setMusicTracks] = useState<MusicTrack[]>([]);
+  const [uploadingMusic, setUploadingMusic] = useState(false);
 
   // Preview
   const [previewListId, setPreviewListId] = useState<string | null>(null);
+  const [videoPreviewUrl, setVideoPreviewUrl] = useState<string | null>(null);
+  const [generatingVideoForList, setGeneratingVideoForList] = useState<string | null>(null);
 
   // Active tab
-  const [tab, setTab] = useState<"books" | "lists" | "automation">("books");
+  const [tab, setTab] = useState<"books" | "lists" | "music" | "automation">("books");
 
   useEffect(() => {
     const pw = localStorage.getItem("sg.password");
@@ -126,19 +143,21 @@ export default function TopBooksPage() {
     if (!password) return;
     setLoading(true);
     try {
-      const [bRes, lRes, aRes, igRes, fbRes, autoRes] = await Promise.all([
+      const [bRes, lRes, aRes, igRes, fbRes, autoRes, musicRes] = await Promise.all([
         fetch(`/api/top-books?password=${encodeURIComponent(password)}`),
         fetch(`/api/top-n-lists?password=${encodeURIComponent(password)}`),
         fetch(`/api/post-tiktok?password=${encodeURIComponent(password)}`),
         fetch(`/api/post-tiktok?password=${encodeURIComponent(password)}&platform=instagram`),
         fetch(`/api/post-tiktok?password=${encodeURIComponent(password)}&platform=facebook`),
         fetch(`/api/topn-automation?password=${encodeURIComponent(password)}`),
+        fetch(`/api/music-tracks?password=${encodeURIComponent(password)}`),
       ]);
       if (bRes.ok) setBooks((await bRes.json()).books || []);
       if (lRes.ok) setLists((await lRes.json()).lists || []);
       if (aRes.ok) setAccounts((await aRes.json()).accounts || []);
       if (igRes.ok) setIgAccounts((await igRes.json()).accounts || []);
       if (fbRes.ok) setFbAccounts((await fbRes.json()).accounts || []);
+      if (musicRes.ok) setMusicTracks((await musicRes.json()).tracks || []);
       if (autoRes.ok) {
         const autoData = await autoRes.json();
         if (autoData.config) setTopnAutoConfig(autoData.config);
@@ -306,16 +325,20 @@ export default function TopBooksPage() {
       setListTitles((list.titleTexts || []).join("\n"));
       setListCount(list.count);
       setListBookIds(list.bookIds);
+      setListGenres(list.genres || []);
       setListCaptions((list.captions || []).join("\n\n"));
       setListBgPrompts((list.backgroundPrompts || []).join("\n"));
+      setListMusicTrackIds(list.musicTrackIds || []);
     } else {
       setEditListId(null);
       setListName("");
       setListTitles("");
       setListCount(10);
       setListBookIds([]);
+      setListGenres([]);
       setListCaptions("");
       setListBgPrompts("");
+      setListMusicTrackIds([]);
     }
     setShowListForm(true);
   }
@@ -330,7 +353,7 @@ export default function TopBooksPage() {
     if (editListId) {
       updated = updated.map((l: TopNList) =>
         l.id === editListId
-          ? { ...l, name: listName, titleTexts: parsedTitles, count: listCount, bookIds: listBookIds, captions: parsedCaptions, backgroundPrompts: parsedBgPrompts }
+          ? { ...l, name: listName, titleTexts: parsedTitles, count: listCount, bookIds: listBookIds, genres: listGenres, captions: parsedCaptions, backgroundPrompts: parsedBgPrompts, musicTrackIds: listMusicTrackIds }
           : l
       );
     } else {
@@ -340,8 +363,10 @@ export default function TopBooksPage() {
         titleTexts: parsedTitles,
         count: listCount,
         bookIds: listBookIds,
+        genres: listGenres,
         captions: parsedCaptions,
         backgroundPrompts: parsedBgPrompts,
+        musicTrackIds: listMusicTrackIds,
       });
     }
     await fetch(`/api/top-n-lists?password=${encodeURIComponent(password || "")}`, {
@@ -365,6 +390,113 @@ export default function TopBooksPage() {
     setListBookIds((prev) =>
       prev.includes(bookId) ? prev.filter((id) => id !== bookId) : [...prev, bookId]
     );
+  }
+
+  // ── Music ──
+
+  async function handleMusicUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingMusic(true);
+    try {
+      // Convert to base64 in chunks to avoid call stack overflow
+      const buf = await file.arrayBuffer();
+      const bytes = new Uint8Array(buf);
+      let binary = "";
+      const chunkSize = 8192;
+      for (let i = 0; i < bytes.length; i += chunkSize) {
+        binary += String.fromCharCode(...bytes.slice(i, i + chunkSize));
+      }
+      const base64 = btoa(binary);
+      const mimeType = file.type || "audio/mpeg";
+      const audioData = `data:${mimeType};base64,${base64}`;
+
+      // Upload in chunks if large (Vercel body limit ~4.5MB)
+      const name = file.name.replace(/\.[^.]+$/, "");
+      const CHUNK_SIZE = 3_000_000; // ~3MB per chunk (safe under body limit with JSON overhead)
+
+      if (audioData.length <= CHUNK_SIZE) {
+        await fetch("/api/music-tracks", {
+          method: "POST",
+          headers: headers(),
+          body: JSON.stringify({ name, audioData }),
+        });
+      } else {
+        // First request: create track with first chunk
+        const totalChunks = Math.ceil(audioData.length / CHUNK_SIZE);
+        const firstChunk = audioData.slice(0, CHUNK_SIZE);
+        const res = await fetch("/api/music-tracks", {
+          method: "POST",
+          headers: headers(),
+          body: JSON.stringify({ name, audioData: firstChunk, chunked: true, chunkIndex: 0, totalChunks }),
+        });
+        const { id } = await res.json();
+
+        // Subsequent chunks
+        for (let i = 1; i < totalChunks; i++) {
+          const chunk = audioData.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
+          await fetch("/api/music-tracks", {
+            method: "POST",
+            headers: headers(),
+            body: JSON.stringify({ id, audioData: chunk, chunked: true, chunkIndex: i, totalChunks }),
+          });
+        }
+      }
+      await load();
+    } catch (err) {
+      alert("Upload failed: " + (err instanceof Error ? err.message : "Unknown error"));
+    }
+    setUploadingMusic(false);
+    e.target.value = "";
+  }
+
+  async function deleteMusic(id: string) {
+    if (!window.confirm("Delete this track?")) return;
+    await fetch("/api/music-tracks", {
+      method: "POST",
+      headers: headers(),
+      body: JSON.stringify({ action: "delete", id }),
+    });
+    await load();
+  }
+
+  function toggleMusicInList(trackId: string) {
+    setListMusicTrackIds((prev) =>
+      prev.includes(trackId) ? prev.filter((id) => id !== trackId) : [...prev, trackId]
+    );
+  }
+
+  // ── Video Preview ──
+
+  async function generateVideoPreview(listId: string) {
+    setGeneratingVideoForList(listId);
+    if (videoPreviewUrl) URL.revokeObjectURL(videoPreviewUrl);
+    setVideoPreviewUrl(null);
+    try {
+      const res = await fetch(`/api/top-n-preview?password=${encodeURIComponent(password || "")}&listId=${listId}`, {
+        signal: AbortSignal.timeout(300000),
+      });
+      const contentType = res.headers.get("content-type") || "";
+      if (!res.ok || !contentType.includes("video")) {
+        const text = await res.text();
+        let errMsg = `${res.status} ${res.statusText}`;
+        try {
+          const data = JSON.parse(text);
+          errMsg = data.error || errMsg;
+        } catch {
+          if (text.length < 500) errMsg = text || errMsg;
+        }
+        alert("Preview failed: " + errMsg);
+        setGeneratingVideoForList(null);
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      setVideoPreviewUrl(url);
+    } catch (err) {
+      alert("Preview failed: " + (err instanceof Error ? err.message : "Unknown error"));
+    }
+    setGeneratingVideoForList(null);
   }
 
   // ── Publish ──
@@ -496,9 +628,16 @@ export default function TopBooksPage() {
     return g ? g.split(",").map((s) => s.trim()).filter(Boolean) : [];
   }
   const genres = Array.from(new Set(books.flatMap((b) => parseGenres(b.genre) || ["Uncategorized"]))).sort();
-  const filteredBooks = genreFilter === "all" ? books : books.filter((b) => {
-    const bg = parseGenres(b.genre);
-    return bg.length === 0 ? genreFilter === "Uncategorized" : bg.includes(genreFilter);
+  const filteredBooks = books.filter((b) => {
+    if (genreFilter !== "all") {
+      const bg = parseGenres(b.genre);
+      if (!(bg.length === 0 ? genreFilter === "Uncategorized" : bg.includes(genreFilter))) return false;
+    }
+    if (bookSearch.trim()) {
+      const q = bookSearch.toLowerCase();
+      if (!b.title.toLowerCase().includes(q) && !b.author.toLowerCase().includes(q) && !b.genre.toLowerCase().includes(q)) return false;
+    }
+    return true;
   });
 
   return (
@@ -521,9 +660,9 @@ export default function TopBooksPage() {
 
         {/* Tabs */}
         <div className="flex gap-1 mb-6 bg-zinc-900 rounded-lg p-1 w-fit">
-          {(["books", "lists", "automation"] as const).map((t) => {
+          {(["books", "lists", "music", "automation"] as const).map((t) => {
             const configuredCount = Object.values(topnAutoConfig.accounts).filter((c) => c.enabled).length;
-            const label = t === "books" ? `Books (${books.length})` : t === "lists" ? `Lists (${lists.length})` : `Automation${configuredCount > 0 ? ` (${configuredCount})` : ""}`;
+            const label = t === "books" ? `Books (${books.length})` : t === "lists" ? `Lists (${lists.length})` : t === "music" ? `Music (${musicTracks.length})` : `Automation${configuredCount > 0 ? ` (${configuredCount})` : ""}`;
             return (
               <button
                 key={t}
@@ -541,13 +680,19 @@ export default function TopBooksPage() {
         {/* ═══ BOOKS TAB ═══ */}
         {tab === "books" && (
           <>
-            <div className="flex items-center gap-3 mb-6 flex-wrap">
+            <div className="flex items-center gap-3 mb-4 flex-wrap">
               <button
                 onClick={() => openBookForm()}
                 className="rounded-lg bg-white text-black px-4 py-2 text-sm font-medium hover:bg-zinc-200 transition-colors"
               >
                 + Add Book
               </button>
+              <input
+                value={bookSearch}
+                onChange={(e) => setBookSearch(e.target.value)}
+                placeholder="Search by title, author, or genre..."
+                className="flex-1 min-w-[200px] rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-white text-sm placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-white/20"
+              />
               {genres.length > 1 && (
                 <div className="flex gap-1 bg-zinc-900 rounded-lg p-1 flex-wrap">
                   <button
@@ -610,7 +755,14 @@ export default function TopBooksPage() {
             ) : (
               <div className="space-y-3">
                 {lists.map((l) => {
-                  const listBooks = l.bookIds.map((id) => books.find((b) => b.id === id)).filter(Boolean) as TopBook[];
+                  const manualBooks = l.bookIds.map((id) => books.find((b) => b.id === id)).filter(Boolean) as TopBook[];
+                  const genreBooks = (l.genres && l.genres.length > 0)
+                    ? books.filter((b) => {
+                        const bg = parseGenres(b.genre);
+                        return bg.some((g) => l.genres!.some((lg) => lg.toLowerCase() === g.toLowerCase())) && !l.bookIds.includes(b.id);
+                      })
+                    : [];
+                  const listBooks = [...manualBooks, ...genreBooks];
                   return (
                     <div key={l.id} className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-4">
                       <div className="flex items-start justify-between gap-3">
@@ -620,6 +772,7 @@ export default function TopBooksPage() {
                           </div>
                           <div className="text-sm text-zinc-400 mt-1">
                             {(l.titleTexts || []).length} title{(l.titleTexts || []).length !== 1 ? "s" : ""} &middot; {l.count} books from {listBooks.length} in pool
+                            {l.genres && l.genres.length > 0 && <span className="text-green-400"> ({l.genres.join(", ")})</span>}
                           </div>
                           {listBooks.length > 0 && (
                             <div className="flex gap-1 mt-2 flex-wrap">
@@ -638,6 +791,13 @@ export default function TopBooksPage() {
                             className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
                           >
                             Preview
+                          </button>
+                          <button
+                            onClick={() => generateVideoPreview(l.id)}
+                            disabled={generatingVideoForList !== null}
+                            className="text-xs text-purple-400 hover:text-purple-300 transition-colors disabled:text-zinc-600"
+                          >
+                            {generatingVideoForList === l.id ? "Generating..." : "Preview Video"}
                           </button>
                           <button
                             onClick={() => { setPublishListId(l.id); setPublishAccounts([]); setPublishResult(null); setScheduledAt(""); }}
@@ -662,6 +822,43 @@ export default function TopBooksPage() {
         )}
 
         {/* ═══ AUTOMATION TAB ═══ */}
+        {tab === "music" && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-white">Music Tracks</h2>
+              <label className={`px-4 py-2 rounded-lg text-sm font-medium cursor-pointer transition-colors ${uploadingMusic ? "bg-zinc-700 text-zinc-400" : "bg-white text-black hover:bg-zinc-200"}`}>
+                {uploadingMusic ? "Uploading..." : "+ Upload Track"}
+                <input type="file" accept="audio/*" onChange={handleMusicUpload} className="hidden" disabled={uploadingMusic} />
+              </label>
+            </div>
+            <p className="text-xs text-zinc-500">Upload MP3 or M4A files. Assign them to lists in the list editor. A random track is picked for each video post.</p>
+            {musicTracks.length === 0 ? (
+              <p className="text-zinc-500 text-sm text-center py-8">No music tracks yet. Upload one to get started.</p>
+            ) : (
+              <div className="space-y-3">
+                {musicTracks.map((t) => {
+                  const usedIn = lists.filter((l) => l.musicTrackIds?.includes(t.id)).map((l) => l.name);
+                  const audioUrl = `/api/music-tracks?password=${encodeURIComponent(password || "")}&id=${t.id}`;
+                  return (
+                    <div key={t.id} className="bg-zinc-900 rounded-lg px-4 py-3 border border-zinc-800 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <span className="text-white text-sm">{t.name}</span>
+                          {usedIn.length > 0 && (
+                            <span className="text-xs text-purple-400 ml-2">Used in: {usedIn.join(", ")}</span>
+                          )}
+                        </div>
+                        <button onClick={() => deleteMusic(t.id)} className="text-xs text-red-400 hover:text-red-300 transition-colors">Delete</button>
+                      </div>
+                      <audio controls preload="none" src={audioUrl} className="w-full h-8 [&::-webkit-media-controls-panel]:bg-zinc-800" />
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
         {tab === "automation" && (() => {
           const allAccts: { id: number; username: string; platformLabel: string }[] = [
             ...accounts.map((a) => ({ ...a, platformLabel: "TikTok" })),
@@ -685,29 +882,35 @@ export default function TopBooksPage() {
                 </div>
               ) : (
                 <>
-                  {/* Account selector */}
+                  {/* Account selector with search */}
                   <div className="mb-4">
                     <label className="text-xs text-zinc-400 block mb-2">Select account to configure</label>
-                    <select
-                      value={selectedTopnAccount || ""}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        if (val) ensureAccountConfig(val);
-                        else setSelectedTopnAccount(null);
-                      }}
-                      className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20"
-                    >
-                      <option value="">-- Choose an account --</option>
-                      {allAccts.map((a) => {
-                        const cfg = topnAutoConfig.accounts[String(a.id)];
-                        const badge = cfg?.enabled ? " [ON]" : "";
-                        return (
-                          <option key={`${a.platformLabel}-${a.id}`} value={String(a.id)}>
-                            @{a.username} ({a.platformLabel}){badge}
-                          </option>
-                        );
-                      })}
-                    </select>
+                    <input
+                      placeholder="Search accounts..."
+                      value={accountSearch}
+                      onChange={(e) => setAccountSearch(e.target.value)}
+                      className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-white text-sm placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-white/20 mb-2"
+                    />
+                    <div className="max-h-48 overflow-y-auto rounded-lg border border-zinc-700 bg-zinc-800">
+                      {allAccts
+                        .filter((a) => !accountSearch.trim() || a.username.toLowerCase().includes(accountSearch.toLowerCase()))
+                        .map((a) => {
+                          const cfg = topnAutoConfig.accounts[String(a.id)];
+                          const isSelected = selectedTopnAccount === String(a.id);
+                          return (
+                            <button
+                              key={`${a.platformLabel}-${a.id}`}
+                              onClick={() => { ensureAccountConfig(String(a.id)); setAccountSearch(""); }}
+                              className={`w-full text-left px-3 py-2 text-sm border-b border-zinc-700/50 last:border-0 transition-colors ${
+                                isSelected ? "bg-zinc-700 text-white" : "text-zinc-300 hover:bg-zinc-700/50"
+                              }`}
+                            >
+                              @{a.username} <span className="text-zinc-500">({a.platformLabel})</span>
+                              {cfg?.enabled && <span className="text-green-400 ml-1">[ON]</span>}
+                            </button>
+                          );
+                        })}
+                    </div>
                   </div>
 
                   {/* Per-account config */}
@@ -724,12 +927,20 @@ export default function TopBooksPage() {
                         Enable auto-posting
                       </label>
 
-                      {/* Platform (auto-detected, read-only) */}
+                      {/* Platform */}
                       <div>
                         <label className="text-xs text-zinc-400 block mb-1">Platform</label>
-                        <div className="text-sm text-zinc-300 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2">
-                          {selectedCfg.platform}
-                        </div>
+                        <select
+                          value={selectedCfg.platform}
+                          onChange={(e) => updateAccountConfig(selectedTopnAccount, { platform: e.target.value as TopNAccountConfig["platform"] })}
+                          className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20"
+                        >
+                          <option value="tiktok-carousel">TikTok Carousel</option>
+                          <option value="tiktok-video">TikTok Video</option>
+                          <option value="ig-carousel">Instagram Carousel</option>
+                          <option value="ig-video">Instagram Video</option>
+                          <option value="fb-video">Facebook Video</option>
+                        </select>
                       </div>
 
                       {/* Frequency */}
@@ -913,6 +1124,62 @@ export default function TopBooksPage() {
               </div>
               <div>
                 <label className="text-xs text-zinc-400 block mb-2">
+                  Music tracks for video posts ({listMusicTrackIds.length} selected)
+                </label>
+                {musicTracks.length > 0 ? (
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {musicTracks.map((t) => {
+                      const selected = listMusicTrackIds.includes(t.id);
+                      return (
+                        <button
+                          key={t.id}
+                          onClick={() => toggleMusicInList(t.id)}
+                          className={`px-3 py-1 rounded-full text-xs transition-colors ${
+                            selected
+                              ? "bg-purple-500/20 border-purple-500 text-purple-400 border"
+                              : "border border-zinc-700 text-zinc-400 hover:border-zinc-600"
+                          }`}
+                        >
+                          {t.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-[11px] text-zinc-500 mb-2">No music tracks uploaded yet. Upload tracks below.</p>
+                )}
+                <p className="text-[11px] text-zinc-600">Random pick per video publish. Only used for video platform types.</p>
+              </div>
+              <div>
+                <label className="text-xs text-zinc-400 block mb-2">
+                  Auto-select by genre ({listGenres.length} selected)
+                </label>
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {genres.map((g) => {
+                    const selected = listGenres.includes(g);
+                    return (
+                      <button
+                        key={g}
+                        onClick={() => setListGenres(selected ? listGenres.filter((x) => x !== g) : [...listGenres, g])}
+                        className={`px-3 py-1 rounded-full text-xs transition-colors ${
+                          selected
+                            ? "bg-green-500/20 border-green-500 text-green-400 border"
+                            : "border border-zinc-700 text-zinc-400 hover:border-zinc-600"
+                        }`}
+                      >
+                        {g}
+                      </button>
+                    );
+                  })}
+                </div>
+                {listGenres.length > 0 && (
+                  <p className="text-[11px] text-zinc-600 mb-3">
+                    Books matching these genres will be automatically included. You can also manually select additional books below.
+                  </p>
+                )}
+              </div>
+              <div>
+                <label className="text-xs text-zinc-400 block mb-2">
                   Select books ({listBookIds.length} selected, {books.filter((b) => b.pinned).length} pinned)
                 </label>
                 <div className="grid grid-cols-3 gap-2 max-h-60 overflow-y-auto">
@@ -1013,13 +1280,49 @@ export default function TopBooksPage() {
         )}
 
 
+        {/* ═══ VIDEO GENERATING OVERLAY ═══ */}
+        {generatingVideoForList && !videoPreviewUrl && (
+          <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm">
+            <div className="animate-spin w-10 h-10 border-4 border-purple-500 border-t-transparent rounded-full mb-4" />
+            <p className="text-white text-sm">Generating video preview...</p>
+            <p className="text-zinc-500 text-xs mt-1">This can take up to a minute</p>
+          </div>
+        )}
+
+        {/* ═══ VIDEO PREVIEW MODAL ═══ */}
+        {videoPreviewUrl && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm" onClick={() => { URL.revokeObjectURL(videoPreviewUrl); setVideoPreviewUrl(null); }}>
+            <div className="relative w-full max-w-sm mx-4" onClick={(e) => e.stopPropagation()}>
+              <video
+                src={videoPreviewUrl}
+                controls
+                autoPlay
+                className="w-full rounded-2xl shadow-2xl"
+              />
+              <button
+                onClick={() => { URL.revokeObjectURL(videoPreviewUrl); setVideoPreviewUrl(null); }}
+                className="w-full text-xs text-zinc-500 hover:text-white transition-colors py-2 mt-2"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* ═══ LIST PREVIEW MODAL ═══ */}
         {previewListId && (() => {
           const list = lists.find((l) => l.id === previewListId);
           if (!list) return null;
-          const poolBooks = list.bookIds
+          const manualPool = list.bookIds
             .map((id) => books.find((b) => b.id === id))
             .filter(Boolean) as TopBook[];
+          const genrePool = (list.genres && list.genres.length > 0)
+            ? books.filter((b) => {
+                const bg = parseGenres(b.genre);
+                return bg.some((g) => list.genres!.some((lg) => lg.toLowerCase() === g.toLowerCase())) && !list.bookIds.includes(b.id);
+              })
+            : [];
+          const poolBooks = [...manualPool, ...genrePool];
           const pinned = poolBooks.filter((b) => b.pinned);
           const unpinned = poolBooks.filter((b) => !b.pinned).sort(() => Math.random() - 0.5);
           const selected = [...pinned];
