@@ -26,15 +26,8 @@ interface TimeWindow {
 
 interface AutomationConfig {
   enabled: boolean;
-  windowStart: string; // UTC HH:MM (legacy)
-  windowEnd: string; // UTC HH:MM (legacy)
-  windowStart2?: string;
-  windowEnd2?: string;
-  postsPerDay?: number;
-  intervals?: TimeWindow[];
-  bookId?: string;
-  slideshowIds?: string[];
-  selections?: Array<{ bookId: string; slideshowId: string }>;
+  intervals: TimeWindow[];
+  selections: Array<{ bookId: string; slideshowId: string }>;
 }
 
 interface NamedItem {
@@ -82,8 +75,8 @@ const LS = {
 
 const DEFAULT_CONFIG: AutomationConfig = {
   enabled: false,
-  windowStart: "17:00",
-  windowEnd: "19:00",
+  intervals: [{ start: "17:00", end: "19:00" }],
+  selections: [],
 };
 
 // Convert UTC "HH:MM" to local "HH:MM" for display
@@ -877,7 +870,7 @@ export default function Home() {
                               <button
                                 onClick={() => {
                                   const intervals = [
-                                    ...(config.intervals || []),
+                                    ...config.intervals,
                                     { start: "18:00", end: "20:00" },
                                   ];
                                   setConfig({ ...config, intervals });
@@ -887,9 +880,7 @@ export default function Home() {
                                 + Add interval
                               </button>
                             </div>
-                            {(config.intervals && config.intervals.length > 0
-                              ? config.intervals
-                              : [{ start: config.windowStart || "18:00", end: config.windowEnd || "20:00" }]
+                            {(config.intervals
                             ).map((win, idx) => (
                               <div
                                 key={idx}
@@ -904,7 +895,7 @@ export default function Home() {
                                     value={utcToLocal(win.start)}
                                     onChange={(e) => {
                                       const intervals = [
-                                        ...(config.intervals || [{ start: config.windowStart || "18:00", end: config.windowEnd || "20:00" }]),
+                                        ...(config.intervals),
                                       ];
                                       intervals[idx] = {
                                         ...intervals[idx],
@@ -924,7 +915,7 @@ export default function Home() {
                                     value={utcToLocal(win.end)}
                                     onChange={(e) => {
                                       const intervals = [
-                                        ...(config.intervals || [{ start: config.windowStart || "18:00", end: config.windowEnd || "20:00" }]),
+                                        ...(config.intervals),
                                       ];
                                       intervals[idx] = {
                                         ...intervals[idx],
@@ -938,7 +929,7 @@ export default function Home() {
                                 <button
                                   onClick={() => {
                                     const intervals = [
-                                      ...(config.intervals || [{ start: config.windowStart || "18:00", end: config.windowEnd || "20:00" }]),
+                                      ...(config.intervals),
                                     ];
                                     if (intervals.length <= 1) return;
                                     intervals.splice(idx, 1);
@@ -980,7 +971,7 @@ export default function Home() {
                           page first.
                         </p>
                       ) : (() => {
-                        const sels = config.selections || [];
+                        const sels = config.selections;
                         const selectedBooks = books.filter((b) =>
                           expandedBooks.includes(b.id)
                         );

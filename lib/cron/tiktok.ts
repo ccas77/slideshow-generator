@@ -32,21 +32,7 @@ export async function runTikTokPhase(
       accountData.set(acc.id, data);
       if (!data.config.enabled) continue;
 
-      let windows: Array<{ start: string; end: string }> = [];
-      if (data.config.intervals && data.config.intervals.length > 0) {
-        windows = data.config.intervals;
-      } else {
-        windows.push({
-          start: data.config.windowStart,
-          end: data.config.windowEnd,
-        });
-        if (data.config.windowStart2 && data.config.windowEnd2) {
-          windows.push({
-            start: data.config.windowStart2,
-            end: data.config.windowEnd2,
-          });
-        }
-      }
+      const windows = data.config.intervals;
 
       for (const win of windows) {
         if (!shouldProcessWindow(win.start)) continue;
@@ -58,28 +44,17 @@ export async function runTikTokPhase(
         let source = "";
         let coverImage: string | undefined;
 
-        const { bookId, slideshowIds, selections } = data.config;
         const candidates: Array<{
           book: (typeof books)[0];
           slideshow: (typeof books)[0]["slideshows"][0];
         }> = [];
 
-        if (selections && selections.length > 0) {
-          for (const sel of selections) {
-            const book = books.find((b) => b.id === sel.bookId);
-            const slideshow = book?.slideshows.find(
-              (s) => s.id === sel.slideshowId
-            );
-            if (book && slideshow) candidates.push({ book, slideshow });
-          }
-        } else if (bookId && slideshowIds && slideshowIds.length > 0) {
-          const book = books.find((b) => b.id === bookId);
-          if (book) {
-            for (const sid of slideshowIds) {
-              const slideshow = book.slideshows.find((s) => s.id === sid);
-              if (slideshow) candidates.push({ book, slideshow });
-            }
-          }
+        for (const sel of data.config.selections) {
+          const book = books.find((b) => b.id === sel.bookId);
+          const slideshow = book?.slideshows.find(
+            (s) => s.id === sel.slideshowId
+          );
+          if (book && slideshow) candidates.push({ book, slideshow });
         }
 
         if (candidates.length > 0) {
