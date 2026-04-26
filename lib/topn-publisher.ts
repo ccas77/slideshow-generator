@@ -1,4 +1,4 @@
-import { TopBook, getTopBooks, getTopNLists } from "@/lib/kv";
+import { TopBook, getTopBooks, getTopNLists, getMusicTrack } from "@/lib/kv";
 import { generateImage } from "@/lib/gemini";
 import { renderTitleSlide, renderBookSlide } from "@/lib/render-topn-slide";
 import { uploadPng, uploadVideo, pbFetch } from "@/lib/post-bridge";
@@ -27,31 +27,34 @@ export interface PublishTopNResult {
 }
 
 /**
- * Generate a Top N slideshow and schedule/publish it via PostBridge.
- * Used by both the one-off publish endpoint and the cron automation.
+ * Internal: generates slides + optional video for a list.
+ * Shared by publishTopN and previewTopN.
+ * @param maxBooks - cap number of books (for preview to avoid memory issues)
  */
-export async function publishTopN(
-  opts: PublishTopNOptions
-): Promise<PublishTopNResult> {
-  const { listId, accountIds, scheduledAt } = opts;
-
+async function generateTopNSlides(listId: string, maxBooks?: number) {
   const [lists, allBooks] = await Promise.all([getTopNLists(), getTopBooks()]);
   const list = lists.find((l) => l.id === listId);
   if (!list) throw new Error("List not found");
 
-  const poolBooks = list.bookIds
+  const manualBooks = list.bookIds
     .map((id) => allBooks.find((b) => b.id === id))
     .filter((b): b is TopBook => !!b);
+  const genreBooks = (list.genres && list.genres.length > 0)
+    ? allBooks.filter((b) => {
+        if (list.bookIds.includes(b.id)) return false;
+        const bookGenres = b.genre ? b.genre.split(",").map((s) => s.trim().toLowerCase()).filter(Boolean) : [];
+        return bookGenres.some((g) => list.genres!.some((lg) => lg.toLowerCase() === g));
+      })
+    : [];
+  const poolBooks = [...manualBooks, ...genreBooks];
 
-  // Pinned books are guaranteed to be *included* (never dropped when the pool
-  // is larger than list.count), but their *position* is randomized alongside
-  // everything else — always putting them first is too obvious on TikTok.
   const pinned = poolBooks.filter((b) => b.pinned);
   const unpinned = shuffle(poolBooks.filter((b) => !b.pinned));
 
+  const limit = maxBooks ?? list.count;
   const selected: TopBook[] = [...pinned];
   for (const b of unpinned) {
-    if (selected.length >= list.count) break;
+    if (selected.length >= limit) break;
     selected.push(b);
   }
   if (selected.length === 0) throw new Error("No books selected");
@@ -70,7 +73,6 @@ export async function publishTopN(
 
   const titleBuf = await renderTitleSlide(titleText, bgImage);
 
-  // Sharp Pango text rendering is not parallel-safe; render sequentially.
   const slideBufs: Buffer[] = [titleBuf];
   for (const book of finalOrder) {
     const b64 = book.coverData.includes(",") ? book.coverData.split(",")[1] : book.coverData;
@@ -79,16 +81,37 @@ export async function publishTopN(
     slideBufs.push(buf);
   }
 
+  // Fetch a random music track if the list has any assigned
+  let audioBuffer: Buffer | undefined;
+  if (list.musicTrackIds && list.musicTrackIds.length > 0) {
+    const trackId = list.musicTrackIds[Math.floor(Math.random() * list.musicTrackIds.length)];
+    const track = await getMusicTrack(trackId);
+    if (track) {
+      const b64 = track.audioData.includes(",") ? track.audioData.split(",")[1] : track.audioData;
+      audioBuffer = Buffer.from(b64, "base64");
+    }
+  }
+
+  return { list, slideBufs, finalOrder, audioBuffer };
+}
+
+/**
+ * Generate a Top N slideshow and schedule/publish it via PostBridge.
+ */
+export async function publishTopN(
+  opts: PublishTopNOptions
+): Promise<PublishTopNResult> {
+  const { listId, accountIds, scheduledAt } = opts;
+  const { list, slideBufs, finalOrder, audioBuffer } = await generateTopNSlides(listId);
+
   const isVideo = opts.platform === "tiktok-video" || opts.platform === "fb-video" || opts.platform === "ig-video";
 
   const mediaIds: string[] = [];
   if (isVideo) {
-    // Stitch slides into a video with 2-second crossfade transitions
-    const videoBuf = await renderVideo(slideBufs, { durationPerSlide: 4, transitionDuration: 2 });
+    const videoBuf = await renderVideo(slideBufs, { durationPerSlide: 4, transitionDuration: 2, audioBuffer });
     const mediaId = await uploadVideo(videoBuf, "topn-video.mp4");
     mediaIds.push(mediaId);
   } else {
-    // Upload as carousel images
     for (let j = 0; j < slideBufs.length; j++) {
       const mediaId = await uploadPng(slideBufs[j], `topn-slide-${j}.png`);
       mediaIds.push(mediaId);
@@ -98,7 +121,6 @@ export async function publishTopN(
   const captions = list.captions && list.captions.length > 0 ? list.captions : [""];
   const caption = captions[Math.floor(Math.random() * captions.length)];
 
-  // Determine platform configuration based on platform type
   const platformConfigurations: Record<string, unknown> = {};
   if (opts.platform === "tiktok-video" || opts.platform === "tiktok-carousel") {
     platformConfigurations.tiktok = { draft: false, is_aigc: true };
@@ -107,7 +129,6 @@ export async function publishTopN(
   } else if (opts.platform === "fb-video") {
     platformConfigurations.facebook = {};
   } else {
-    // Default: both tiktok and instagram
     platformConfigurations.tiktok = { draft: false, is_aigc: true };
     platformConfigurations.instagram = {};
   }
@@ -130,4 +151,13 @@ export async function publishTopN(
     slides: slideBufs.length,
     books: finalOrder.map((b) => b.title),
   };
+}
+
+/**
+ * Generate a preview video for a list (no upload, no posting).
+ * Returns the MP4 buffer.
+ */
+export async function previewTopN(listId: string): Promise<Buffer> {
+  const { slideBufs, audioBuffer } = await generateTopNSlides(listId);
+  return renderVideo(slideBufs, { durationPerSlide: 4, transitionDuration: 2, audioBuffer });
 }
