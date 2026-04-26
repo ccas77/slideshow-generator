@@ -9,6 +9,7 @@ import {
   getIgAutomation,
   getIgSlideshows,
   setIgAutomation,
+  redis,
 } from "@/lib/kv";
 import { generateImage } from "@/lib/gemini";
 import { renderSlide } from "@/lib/render-slide";
@@ -22,12 +23,33 @@ function pickRandom<T>(arr: T[]): T | null {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
-// The cron runs at :07 past each hour. The cron at HH:07 handles every
-// window whose start hour equals HH. One cron per window, no duplicates.
+// Check if a window should be processed: start hour matches current hour.
 function shouldProcessWindow(windowStart: string): boolean {
   const [sh] = windowStart.split(":").map(Number);
   const currentHour = new Date().getUTCHours();
   return sh === currentHour;
+}
+
+// Track which (account, window) combos have been scheduled today to avoid duplicates.
+const scheduledTodayKey = () => {
+  const d = new Date().toISOString().slice(0, 10);
+  return `cron-scheduled:${d}`;
+};
+
+async function getScheduledToday(): Promise<Set<string>> {
+  const data = await redis.get<string[]>(scheduledTodayKey());
+  return new Set(data || []);
+}
+
+async function markScheduled(entries: string[]): Promise<void> {
+  if (entries.length === 0) return;
+  const key = scheduledTodayKey();
+  const existing = await redis.get<string[]>(key);
+  const merged = [...(existing || []), ...entries];
+  const now = new Date();
+  const midnight = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 1, 0, 0));
+  const ttl = Math.ceil((midnight.getTime() - now.getTime()) / 1000);
+  await redis.set(key, merged, { ex: ttl });
 }
 
 function randomTimeInWindow(windowStart: string, windowEnd: string): Date {
@@ -64,6 +86,7 @@ interface Job {
   captionText: string;
   source: string;
   coverImage?: string;
+  schedKey: string;
 }
 
 export async function GET(req: NextRequest) {
@@ -82,6 +105,17 @@ export async function GET(req: NextRequest) {
   }> = [];
 
   try {
+    // Acquire a Redis lock to prevent concurrent cron runs from creating duplicates.
+    const CRON_LOCK_KEY = "cron-lock";
+    const lockAcquired = await redis.set(CRON_LOCK_KEY, Date.now(), { nx: true, ex: 300 });
+    if (!lockAcquired) {
+      return NextResponse.json({ ok: true, skipped: true, reason: "Another cron run in progress" });
+    }
+
+    let cronResult;
+    try {
+
+    const scheduledToday = await getScheduledToday();
     const accounts = await listTikTokAccounts();
     const books = await getBooks();
 
@@ -113,6 +147,8 @@ export async function GET(req: NextRequest) {
 
         for (const win of windows) {
           if (!shouldProcessWindow(win.start)) continue;
+          const schedKey = `${acc.id}:${win.start}`;
+          if (scheduledToday.has(schedKey)) continue;
           let imagePrompt = "";
           let slideTexts: string[] = [];
           let captionText = "";
@@ -192,7 +228,7 @@ export async function GET(req: NextRequest) {
 
           if (slideTexts.length < 2) continue;
 
-          jobs.push({ acc, win, imagePrompt, slideTexts, captionText, source, coverImage });
+          jobs.push({ acc, win, imagePrompt, slideTexts, captionText, source, coverImage, schedKey });
         }
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
@@ -202,6 +238,12 @@ export async function GET(req: NextRequest) {
           status: `error: ${msg}`,
         });
       }
+    }
+
+    // Mark all job keys as scheduled NOW — before heavy work starts.
+    const allSchedKeys = jobs.map((j) => j.schedKey);
+    if (allSchedKeys.length > 0) {
+      await markScheduled(allSchedKeys);
     }
 
     // Phase 2: Generate all images in parallel (Gemini API, no sharp involved)
@@ -340,13 +382,20 @@ export async function GET(req: NextRequest) {
         }
         if (pool.length === 0) continue;
 
-        // Check if any window is active this hour
-        const activeWindows = accConfig.intervals.filter((w) => shouldProcessWindow(w.start));
+        // Check if any window is active this hour and not already scheduled
+        const activeWindows = accConfig.intervals.filter((w) => {
+          const sk = `topn:${accIdStr}:${w.start}`;
+          return shouldProcessWindow(w.start) && !scheduledToday.has(sk);
+        });
         if (activeWindows.length === 0) continue;
 
         // Round-robin: pick one list
         const listIndex = accConfig.pointer % pool.length;
         const selectedList = pool[listIndex];
+
+        // Mark all TopN window keys for this account before heavy work
+        const topnSchedKeys = activeWindows.map((w) => `topn:${accIdStr}:${w.start}`);
+        await markScheduled(topnSchedKeys);
 
         for (const win of activeWindows) {
           try {
@@ -409,8 +458,15 @@ export async function GET(req: NextRequest) {
 
             let pointer = accConfig.pointer;
 
+            // Mark IG schedule keys upfront
+            const igSchedKeys = accConfig.intervals
+              .filter((w) => shouldProcessWindow(w.start) && !scheduledToday.has(`ig:${accIdStr}:${w.start}`))
+              .map((w) => `ig:${accIdStr}:${w.start}`);
+            if (igSchedKeys.length > 0) await markScheduled(igSchedKeys);
+
             for (const win of accConfig.intervals) {
               if (!shouldProcessWindow(win.start)) continue;
+              if (scheduledToday.has(`ig:${accIdStr}:${win.start}`)) continue;
               const ss = pool[pointer % pool.length];
               const prompt = pickRandom(ss.imagePrompts);
               const caption = pickRandom(ss.captions);
@@ -479,7 +535,13 @@ export async function GET(req: NextRequest) {
       igAutoResults.push({ status: `IG automation error: ${msg}` });
     }
 
-    return NextResponse.json({ ok: true, results, topNResults, igAutoResults });
+    cronResult = NextResponse.json({ ok: true, results, topNResults, igAutoResults });
+
+    } finally {
+      await redis.del(CRON_LOCK_KEY).catch(() => {});
+    }
+
+    return cronResult;
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     return NextResponse.json({ error: msg }, { status: 500 });
