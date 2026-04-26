@@ -72,8 +72,26 @@ function randomTimeInWindow(windowStart: string, windowEnd: string): Date {
       0
     )
   );
-  if (target.getTime() <= now.getTime() + 60_000) {
-    target.setUTCDate(target.getUTCDate() + 1);
+  const earliest = now.getTime() + 60_000;
+  if (target.getTime() < earliest) {
+    // Clamp into the future, but stay within today's window if possible
+    const windowEndToday = new Date(
+      Date.UTC(
+        now.getUTCFullYear(),
+        now.getUTCMonth(),
+        now.getUTCDate(),
+        eh,
+        em,
+        0,
+        0
+      )
+    );
+    if (earliest <= windowEndToday.getTime()) {
+      target.setTime(earliest);
+    } else {
+      // Window has already passed — push to tomorrow's window
+      target.setUTCDate(target.getUTCDate() + 1);
+    }
   }
   return target;
 }
@@ -90,11 +108,12 @@ interface Job {
 }
 
 export async function GET(req: NextRequest) {
+  const secret = process.env.CRON_SECRET;
+  if (!secret) {
+    return NextResponse.json({ error: "CRON_SECRET not configured" }, { status: 500 });
+  }
   const auth = req.headers.get("authorization");
-  if (
-    process.env.CRON_SECRET &&
-    auth !== `Bearer ${process.env.CRON_SECRET}`
-  ) {
+  if (auth !== `Bearer ${secret}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
