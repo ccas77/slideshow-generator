@@ -263,7 +263,7 @@ export default function BooksPage() {
         <HowItWorks>
           <p><strong>Books</strong> — organize your content into books, each containing slideshows, image prompts, and captions.</p>
           <p>A <strong>book</strong> groups related content together. Each book has a pool of <strong>image prompts</strong> (used to generate cover images via AI) and <strong>captions</strong> (posted with your slideshow).</p>
-          <p>Each book contains <strong>slideshows</strong> — sets of slide texts that become TikTok carousels. A slideshow picks from the book's prompt and caption pools when posting.</p>
+          <p>Each book contains <strong>slideshows</strong> — sets of slide texts that become TikTok carousels. A slideshow picks from the book&apos;s prompt and caption pools when posting.</p>
         </HowItWorks>
 
         <div className="flex items-center justify-between mb-6">

@@ -82,7 +82,7 @@ export default function SettingsPage() {
         <AppHeader />
         <HowItWorks>
           <p><strong>Settings</strong> — choose which TikTok accounts are available across the app.</p>
-          <p>Check the accounts you want to use for posting and automation. Unchecked accounts won't appear in account pickers on other pages.</p>
+          <p>Check the accounts you want to use for posting and automation. Unchecked accounts won&apos;t appear in account pickers on other pages.</p>
         </HowItWorks>
 
         <div className="flex items-center justify-between mb-6">
@@ -113,7 +113,6 @@ export default function SettingsPage() {
           ) : (
             <div className="space-y-2">
               {allAccounts.map((a) => {
-                const checked = allowedIds.length === 0 || allowedIds.includes(a.id);
                 const explicit = allowedIds.includes(a.id);
                 return (
                   <label

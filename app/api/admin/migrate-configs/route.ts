@@ -3,7 +3,6 @@ import {
   redis,
   getAccountData,
   setAccountData,
-  migrateAutomationConfig,
 } from "@/lib/kv";
 import { listTikTokAccounts } from "@/lib/post-bridge";
 

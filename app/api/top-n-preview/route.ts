@@ -62,8 +62,8 @@ export async function GET(req: NextRequest) {
       }
 
       // Test ffmpeg
-      const { execFileSync } = require("child_process");
-      const ffmpegPath: string = require("ffmpeg-static");
+      const { execFileSync } = await import("child_process");
+      const ffmpegPath: string = (await import("ffmpeg-static")).default as string;
       const ver = execFileSync(ffmpegPath, ["-version"], { timeout: 5000, maxBuffer: 1024 * 1024 }).toString().split("\n")[0];
       steps.push(`ffmpeg: ${ver}`);
 

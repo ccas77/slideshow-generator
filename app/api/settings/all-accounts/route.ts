@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
       },
     });
     if (!res.ok) {
-      const body = await res.text();
+      await res.text();
       return NextResponse.json({ error: `PostBridge error: ${res.status}` }, { status: 500 });
     }
     const data = await res.json();

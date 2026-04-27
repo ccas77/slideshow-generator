@@ -344,8 +344,6 @@ export default function InstagramPage() {
     setSaving(false);
   }
 
-  const importBook = books.find((b) => b.id === importBookId);
-
   if (!password) return null;
 
   const tabs: { key: Tab; label: string }[] = [
