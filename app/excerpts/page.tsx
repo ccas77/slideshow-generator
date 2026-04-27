@@ -57,7 +57,10 @@ export default function ExcerptsPage() {
         fetch(`/api/excerpts?password=${encodeURIComponent(password)}`),
         fetch(`/api/books?password=${encodeURIComponent(password)}`),
       ]);
-      if (exRes.ok) setExcerpts((await exRes.json()).excerpts || []);
+      if (exRes.ok) {
+        const raw: Excerpt[] = (await exRes.json()).excerpts || [];
+        setExcerpts(raw.map((e) => ({ ...e, excerptImages: e.excerptImages || [] })));
+      }
       if (bkRes.ok) setBooks((await bkRes.json()).books || []);
     } catch (e) {
       console.error("Excerpts fetch error:", e);
