@@ -17,6 +17,7 @@ interface Excerpt {
   bookId?: string;
   imagePrompt: string;     // AI prompt for generating the hook image
   overlayText: string;     // text displayed on the hook image
+  hookImage?: string;      // uploaded base64 data URL — overrides AI prompt
   excerptImages: ExcerptImage[]; // uploaded book page screenshots
 }
 
@@ -127,6 +128,23 @@ export default function ExcerptsPage() {
     if (!window.confirm("Delete this excerpt?")) return;
     persist(excerpts.filter((e) => e.id !== id));
     if (activeId === id) setActiveId(null);
+  }
+
+  function uploadHookImage(excerptId: string) {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*";
+    input.onchange = async () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      const dataUrl = await new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.readAsDataURL(file);
+      });
+      updateExcerpt(excerptId, (ex) => ({ ...ex, hookImage: dataUrl }));
+    };
+    input.click();
   }
 
   function addExcerptImage(excerptId: string) {
@@ -371,8 +389,33 @@ export default function ExcerptsPage() {
                       }
                       rows={2}
                       placeholder='e.g. Why are you blushing? It&apos;s only a book.'
-                      className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20 placeholder:text-zinc-600"
+                      className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-white text-sm mb-3 focus:outline-none focus:ring-2 focus:ring-white/20 placeholder:text-zinc-600"
                     />
+                    <label className="block text-xs font-medium text-zinc-400 mb-1">
+                      Uploaded image {active.hookImage && <span className="text-zinc-600">(overrides AI prompt)</span>}
+                    </label>
+                    {active.hookImage ? (
+                      <div className="flex items-center gap-3">
+                        <img
+                          src={active.hookImage}
+                          alt="Hook"
+                          className="w-16 h-20 rounded-lg object-cover border border-zinc-700 shrink-0"
+                        />
+                        <button
+                          onClick={() => updateExcerpt(active.id, (ex) => ({ ...ex, hookImage: undefined }))}
+                          className="text-xs text-red-500 hover:text-red-400 transition-colors"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => uploadHookImage(active.id)}
+                        className="w-full px-4 py-3 rounded-lg border border-dashed border-zinc-700 text-zinc-400 hover:text-white hover:border-zinc-500 transition-colors text-sm"
+                      >
+                        + Upload hook image
+                      </button>
+                    )}
                   </Section>
 
                   {/* SLIDES 2+: Excerpt images */}

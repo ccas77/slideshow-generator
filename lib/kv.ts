@@ -490,6 +490,7 @@ export interface Excerpt {
   bookId?: string;         // link to a book for grouping + cover slide
   imagePrompt: string;     // AI prompt for generating the hook image
   overlayText: string;     // text displayed on the hook image
+  hookImage?: string;      // uploaded base64 data URL — overrides AI prompt
   excerptImages: ExcerptImage[]; // uploaded book page screenshots
 }
 
