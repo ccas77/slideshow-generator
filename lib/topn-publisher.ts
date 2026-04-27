@@ -101,8 +101,12 @@ async function generateTopNSlides(listId: string, maxBooks?: number) {
 export async function publishTopN(
   opts: PublishTopNOptions
 ): Promise<PublishTopNResult> {
+  const startMs = Date.now();
+  let slideCount = 0;
+  try {
   const { listId, accountIds, scheduledAt } = opts;
   const { list, slideBufs, finalOrder, audioBuffer } = await generateTopNSlides(listId);
+  slideCount = slideBufs.length;
 
   const isVideo = opts.platform === "tiktok-video" || opts.platform === "fb-video" || opts.platform === "ig-video";
 
@@ -151,6 +155,9 @@ export async function publishTopN(
     slides: slideBufs.length,
     books: finalOrder.map((b) => b.title),
   };
+  } finally {
+    console.log(`[topn-publisher] publishTopN done slides=${slideCount} elapsedMs=${Date.now() - startMs}`);
+  }
 }
 
 /**
@@ -158,6 +165,13 @@ export async function publishTopN(
  * Returns the MP4 buffer.
  */
 export async function previewTopN(listId: string): Promise<Buffer> {
-  const { slideBufs, audioBuffer } = await generateTopNSlides(listId);
-  return renderVideo(slideBufs, { durationPerSlide: 4, transitionDuration: 2, audioBuffer });
+  const startMs = Date.now();
+  let slideCount = 0;
+  try {
+    const { slideBufs, audioBuffer } = await generateTopNSlides(listId);
+    slideCount = slideBufs.length;
+    return renderVideo(slideBufs, { durationPerSlide: 4, transitionDuration: 2, audioBuffer });
+  } finally {
+    console.log(`[topn-publisher] previewTopN done slides=${slideCount} elapsedMs=${Date.now() - startMs}`);
+  }
 }

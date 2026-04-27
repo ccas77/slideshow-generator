@@ -29,6 +29,8 @@ export async function renderVideo(
     audioBuffer?: Buffer;
   }
 ): Promise<Buffer> {
+  const startMs = Date.now();
+  let outputSize = 0;
   const durationPerSlide = options?.durationPerSlide ?? 4;
 
   if (slides.length === 0) throw new Error("No slides to render");
@@ -107,8 +109,14 @@ export async function renderVideo(
       ], { timeout: 120000, maxBuffer: MAX_BUF });
     }
 
-    return await readFile(outputPath);
+    const result = await readFile(outputPath);
+    outputSize = result.length;
+    return result;
   } finally {
     await rm(workDir, { recursive: true, force: true }).catch(() => {});
+    const elapsedMs = Date.now() - startMs;
+    console.log(
+      `[render-video] ffmpeg done frames=${slides.length} hasAudio=${!!options?.audioBuffer} sizeMB=${(outputSize / 1048576).toFixed(1)} elapsedMs=${elapsedMs}`
+    );
   }
 }
