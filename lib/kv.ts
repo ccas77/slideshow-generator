@@ -25,6 +25,8 @@ export interface LegacyAutomationConfig {
   bookId?: string;
   slideshowIds?: string[];
   selections?: Array<{ bookId: string; slideshowId: string }>;
+  pointer?: number;
+  promptPointer?: number;
 }
 
 // Canonical shape — all consumers receive this after migration.
@@ -32,6 +34,8 @@ export interface AutomationConfig {
   enabled: boolean;
   intervals: TimeWindow[];
   selections: Array<{ bookId: string; slideshowId: string }>;
+  pointer: number;
+  promptPointer: number;
 }
 
 // Migrate any stored config (legacy, new, or mixed) to the canonical shape.
@@ -49,7 +53,7 @@ export interface AutomationConfig {
 //
 export function migrateAutomationConfig(raw: unknown): AutomationConfig {
   if (!raw || typeof raw !== "object") {
-    return { enabled: false, intervals: [{ start: "18:00", end: "20:00" }], selections: [] };
+    return { enabled: false, intervals: [{ start: "18:00", end: "20:00" }], selections: [], pointer: 0, promptPointer: 0 };
   }
   const r = raw as LegacyAutomationConfig;
 
@@ -82,7 +86,7 @@ export function migrateAutomationConfig(raw: unknown): AutomationConfig {
     selections = [];
   }
 
-  return { enabled, intervals, selections };
+  return { enabled, intervals, selections, pointer: r.pointer ?? 0, promptPointer: r.promptPointer ?? 0 };
 }
 
 export interface NamedItem {
@@ -200,7 +204,7 @@ export interface AccountData {
 }
 
 const defaultData = (): AccountData => ({
-  config: { enabled: false, intervals: [{ start: "18:00", end: "20:00" }], selections: [] },
+  config: { enabled: false, intervals: [{ start: "18:00", end: "20:00" }], selections: [], pointer: 0, promptPointer: 0 },
   prompts: [],
   texts: [],
   captions: [],

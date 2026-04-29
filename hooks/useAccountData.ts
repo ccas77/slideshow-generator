@@ -131,6 +131,8 @@ export function useAccountData(
   useEffect(() => {
     if (!hydrated || accountId == null || loadingAccount) return;
     const t = setTimeout(() => {
+      // Strip pointer/promptPointer — these are managed by the cron, not the UI.
+      const { pointer: _p, promptPointer: _pp, ...configWithoutPointers } = config;
       fetch("/api/account-data", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -138,7 +140,7 @@ export function useAccountData(
           password,
           accountId,
           data: {
-            config,
+            config: configWithoutPointers,
             prompts: savedPrompts,
             texts: savedTexts,
             captions: savedCaptions,

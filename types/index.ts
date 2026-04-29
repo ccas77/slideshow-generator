@@ -22,6 +22,8 @@ export interface AutomationConfig {
   enabled: boolean;
   intervals: TimeWindow[];
   selections: Array<{ bookId: string; slideshowId: string }>;
+  pointer?: number;
+  promptPointer?: number;
 }
 
 export interface NamedItem {

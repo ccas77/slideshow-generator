@@ -25,6 +25,8 @@ export async function runTikTokPhase(
   // Phase 1: Build all jobs (fast, no I/O-heavy work)
   const jobs: Job[] = [];
   const accountData = new Map<number, Awaited<ReturnType<typeof getAccountData>>>();
+  const pointerUpdates = new Map<number, number>(); // accId → new pointer
+  const promptPointerUpdates = new Map<number, number>(); // accId → new promptPointer
 
   for (const acc of accounts) {
     try {
@@ -58,7 +60,11 @@ export async function runTikTokPhase(
         }
 
         if (candidates.length > 0) {
-          const picked = pickRandom(candidates);
+          // Round-robin: use pointer to cycle through candidates
+          const currentPointer = pointerUpdates.get(acc.id) ?? (data.config.pointer || 0);
+          const pickedIdx = currentPointer % candidates.length;
+          const picked = candidates[pickedIdx];
+          pointerUpdates.set(acc.id, currentPointer + 1);
           if (!picked || !picked.slideshow.slideTexts.trim()) continue;
           const { book, slideshow: pickedSlideshow } = picked;
           // If the slideshow explicitly links prompts/captions, rotate only
@@ -74,7 +80,9 @@ export async function runTikTokPhase(
             linkedPrompts.length > 0 ? linkedPrompts : book.imagePrompts || [];
           const allowedCaptions =
             linkedCaptions.length > 0 ? linkedCaptions : book.captions || [];
-          const pickedPrompt = pickRandom(allowedPrompts);
+          const currentPromptPointer = promptPointerUpdates.get(acc.id) ?? (data.config.promptPointer || 0);
+          const pickedPrompt = allowedPrompts.length > 0 ? allowedPrompts[currentPromptPointer % allowedPrompts.length] : null;
+          promptPointerUpdates.set(acc.id, currentPromptPointer + 1);
           const pickedCaption = pickRandom(allowedCaptions);
           if (!pickedPrompt) continue;
           imagePrompt = pickedPrompt.value;
@@ -213,8 +221,15 @@ export async function runTikTokPhase(
     try {
       const data = accountData.get(accId);
       if (data) {
+        const newPointer = pointerUpdates.get(accId);
+        const newPromptPointer = promptPointerUpdates.get(accId);
         await setAccountData(accId, {
           ...data,
+          config: {
+            ...data.config,
+            ...(newPointer !== undefined ? { pointer: newPointer } : {}),
+            ...(newPromptPointer !== undefined ? { promptPointer: newPromptPointer } : {}),
+          },
           lastRun: new Date().toISOString(),
           lastStatus: status,
         });
