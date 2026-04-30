@@ -88,14 +88,16 @@ export async function renderSlide(
   }).png().toBuffer();
 
   const textMeta = await sharp(textPng).metadata();
+  const textW = textMeta.width || (SLIDE_W - 80);
   const textH = textMeta.height || 0;
   const topOffset = Math.max(0, Math.round((SLIDE_H - textH) / 2));
+  const leftOffset = Math.max(0, Math.round((SLIDE_W - textW) / 2));
 
   return sharp(baseBuffer)
     .composite([
       { input: gradientPng },
-      { input: shadowPng, top: topOffset, left: 40 },
-      { input: textPng, top: topOffset, left: 40 },
+      { input: shadowPng, top: topOffset, left: leftOffset },
+      { input: textPng, top: topOffset, left: leftOffset },
     ])
     .png()
     .toBuffer();
