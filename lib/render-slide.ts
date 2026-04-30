@@ -1,16 +1,36 @@
 import sharp from "sharp";
 import fs from "fs";
+import path from "path";
 import { INTER_BOLD_TTF_B64 } from "./font-data";
 
 const SLIDE_W = 1080;
 const SLIDE_H = 1920;
 const TMP_FONT = "/tmp/Inter-Bold.ttf";
+const TMP_EMOJI = "/tmp/NotoColorEmoji.ttf";
+const TMP_FC_CONF = "/tmp/fonts.conf";
 
-function ensureFont(): string {
+function ensureFonts(): void {
   if (!fs.existsSync(TMP_FONT)) {
     fs.writeFileSync(TMP_FONT, Buffer.from(INTER_BOLD_TTF_B64, "base64"));
   }
-  return TMP_FONT;
+  if (!fs.existsSync(TMP_EMOJI)) {
+    const bundled = path.join(process.cwd(), "lib/fonts/NotoColorEmoji.ttf");
+    if (fs.existsSync(bundled)) {
+      fs.copyFileSync(bundled, TMP_EMOJI);
+    }
+  }
+  if (!fs.existsSync(TMP_FC_CONF)) {
+    fs.writeFileSync(
+      TMP_FC_CONF,
+      `<?xml version="1.0"?>
+<!DOCTYPE fontconfig SYSTEM "fonts.dtd">
+<fontconfig>
+  <dir>/tmp</dir>
+  <cachedir>/tmp/fc-cache</cachedir>
+</fontconfig>`
+    );
+  }
+  process.env.FONTCONFIG_FILE = TMP_FC_CONF;
 }
 
 function escapeMarkup(s: string): string {
@@ -39,7 +59,7 @@ export async function renderSlide(
   imageDataUrl: string | null,
   text: string
 ): Promise<Buffer> {
-  const fontFile = ensureFont();
+  ensureFonts();
 
   // 1. Base image
   let baseBuffer: Buffer;
@@ -70,21 +90,22 @@ export async function renderSlide(
     .toBuffer();
 
   // 3. Text overlay — white text with soft black shadow, centered
+  // Use font_family instead of fontfile so Pango/fontconfig handles emoji fallback
   const escaped = escapeMarkup(text);
   const fontSize = 36;
   const pSize = fontSize * 1024;
 
   // Black shadow text (rendered slightly larger via blur for a glow effect)
-  const shadowMarkup = `<span foreground="black" font_weight="bold" font_size="${pSize}">${escaped}</span>`;
+  const shadowMarkup = `<span font_family="Inter" foreground="black" font_weight="bold" font_size="${pSize}">${escaped}</span>`;
   const shadowRaw = await sharp({
-    text: { text: shadowMarkup, fontfile: fontFile, width: SLIDE_W - 80, align: "centre", rgba: true, dpi: 150 },
+    text: { text: shadowMarkup, width: SLIDE_W - 80, align: "centre", rgba: true, dpi: 150 },
   }).png().toBuffer();
   const shadowPng = await sharp(shadowRaw).blur(6).png().toBuffer();
 
   // White foreground text
-  const textMarkup = `<span foreground="white" font_weight="bold" font_size="${pSize}">${escaped}</span>`;
+  const textMarkup = `<span font_family="Inter" foreground="white" font_weight="bold" font_size="${pSize}">${escaped}</span>`;
   const textPng = await sharp({
-    text: { text: textMarkup, fontfile: fontFile, width: SLIDE_W - 80, align: "centre", rgba: true, dpi: 150 },
+    text: { text: textMarkup, width: SLIDE_W - 80, align: "centre", rgba: true, dpi: 150 },
   }).png().toBuffer();
 
   const textMeta = await sharp(textPng).metadata();
