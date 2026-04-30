@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
       const scheduledToday = await getScheduledToday();
 
       // Phases 1–4: TikTok automation
-      const { results } = await runTikTokPhase(scheduledToday);
+      const { results, debugLog } = await runTikTokPhase(scheduledToday);
 
       // Phase 5: Top N list automation
       const topNResults = await runTopNPhase(scheduledToday);
@@ -37,7 +37,7 @@ export async function GET(req: NextRequest) {
       // Phase 6: IG slideshow automation
       const igAutoResults = await runInstagramPhase(scheduledToday);
 
-      cronResult = NextResponse.json({ ok: true, results, topNResults, igAutoResults });
+      cronResult = NextResponse.json({ ok: true, results, topNResults, igAutoResults, debugLog });
     } finally {
       await releaseLock();
     }

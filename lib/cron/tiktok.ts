@@ -17,10 +17,12 @@ function pickRandom<T>(arr: T[]): T | null {
 
 export async function runTikTokPhase(
   scheduledToday: Set<string>
-): Promise<{ results: CronAccountResult[]; accounts: { id: number; username: string }[] }> {
+): Promise<{ results: CronAccountResult[]; accounts: { id: number; username: string }[]; debugLog: string[] }> {
   const results: CronAccountResult[] = [];
+  const debugLog: string[] = [];
   const accounts = await listTikTokAccounts();
   const books = await getBooks();
+  debugLog.push(`${accounts.length} accounts, ${books.length} books, scheduledToday: ${JSON.stringify([...scheduledToday])}`);
 
   // Phase 1: Build all jobs (fast, no I/O-heavy work)
   const jobs: Job[] = [];
@@ -32,14 +34,21 @@ export async function runTikTokPhase(
     try {
       const data = await getAccountData(acc.id);
       accountData.set(acc.id, data);
-      if (!data.config.enabled) continue;
+      if (!data.config.enabled) {
+        debugLog.push(`${acc.username} (${acc.id}): disabled`);
+        continue;
+      }
 
       const windows = data.config.intervals;
+      debugLog.push(`${acc.username} (${acc.id}): enabled, windows=${JSON.stringify(windows)}`);
 
       for (const win of windows) {
-        if (!shouldProcessWindow(win.start)) continue;
+        const willProcess = shouldProcessWindow(win.start);
         const schedKey = `${acc.id}:${win.start}`;
-        if (scheduledToday.has(schedKey)) continue;
+        const alreadyScheduled = scheduledToday.has(schedKey);
+        debugLog.push(`  ${win.start}-${win.end}: shouldProcess=${willProcess}, alreadyScheduled=${alreadyScheduled}`);
+        if (!willProcess) continue;
+        if (alreadyScheduled) continue;
         let imagePrompt = "";
         let slideTexts: string[] = [];
         let captionText = "";
@@ -248,5 +257,5 @@ export async function runTikTokPhase(
     }
   }
 
-  return { results, accounts };
+  return { results, accounts, debugLog };
 }
