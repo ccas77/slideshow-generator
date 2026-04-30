@@ -1,8 +1,10 @@
-// Check if a window should be processed: start hour matches current hour.
+// Check if a window should be scheduled: any window whose start hour is >= current hour
+// (i.e., all remaining windows today). Duplicate prevention is handled by the
+// scheduled-today tracking.
 export function shouldProcessWindow(windowStart: string): boolean {
   const [sh] = windowStart.split(":").map(Number);
   const currentHour = new Date().getUTCHours();
-  return sh === currentHour;
+  return sh >= currentHour;
 }
 
 export function randomTimeInWindow(windowStart: string, windowEnd: string): Date {
