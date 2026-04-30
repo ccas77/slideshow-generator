@@ -112,7 +112,7 @@ export async function GET(req: NextRequest) {
         if (!postUrl && pd?.id && pd?.username) {
           const match = pd.id.match(/v2\.(\d+)/);
           if (match) {
-            postUrl = `https://www.tiktok.com/@${pd.username}/photo/${match[1]}`;
+            postUrl = `https://www.tiktok.com/@${pd.username}/video/${match[1]}`;
           }
         }
         const entry = {
