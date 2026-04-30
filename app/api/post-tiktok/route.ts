@@ -45,27 +45,80 @@ export async function GET(req: NextRequest) {
 
     if (action === "posts") {
       const accountId = url.searchParams.get("accountId");
-      const [postsResp, resultsResp] = await Promise.all([
+      const [postsResp, resultsResp, analyticsResp] = await Promise.all([
         pbFetch("/v1/posts?limit=50"),
-        pbFetch("/v1/post-results?limit=100").catch(() => ({ data: [] })),
+        pbFetch("/v1/post-results?limit=200").catch(() => ({ data: [] })),
+        pbFetch("/v1/analytics?limit=200").catch(() => ({ data: [] })),
       ]);
 
-      // Build per-post result info (account-level profile URLs)
+      // Build analytics lookup: post_result_id → analytics data
+      const analyticsMap = new Map<string, {
+        view_count: number;
+        like_count: number;
+        comment_count: number;
+        share_count: number;
+        cover_image_url: string | null;
+        share_url: string | null;
+      }>();
+      for (const a of (analyticsResp.data || []) as Array<{
+        post_result_id: string;
+        view_count: number;
+        like_count: number;
+        comment_count: number;
+        share_count: number;
+        cover_image_url?: string;
+        share_url?: string;
+      }>) {
+        analyticsMap.set(a.post_result_id, {
+          view_count: a.view_count,
+          like_count: a.like_count,
+          comment_count: a.comment_count,
+          share_count: a.share_count,
+          cover_image_url: a.cover_image_url || null,
+          share_url: a.share_url || null,
+        });
+      }
+
+      // Build per-post result info with analytics
       const postResults = new Map<string, Array<{
         accountId: number;
         username: string | null;
         profileUrl: string | null;
+        postUrl: string | null;
+        success: boolean;
+        error: string | null;
+        analytics: {
+          view_count: number;
+          like_count: number;
+          comment_count: number;
+          share_count: number;
+          cover_image_url: string | null;
+        } | null;
       }>>();
       for (const r of (resultsResp.data || []) as Array<{
+        id: string;
         post_id: string;
+        success: boolean;
+        error: string | null;
         social_account_id: number;
         platform_data?: { url?: string; username?: string; id?: string };
       }>) {
         const pd = r.platform_data;
+        const analytics = analyticsMap.get(r.id) || null;
         const entry = {
           accountId: r.social_account_id,
           username: pd?.username || null,
           profileUrl: pd?.username ? `https://www.tiktok.com/@${pd.username}` : null,
+          postUrl: analytics?.share_url || null,
+          success: r.success,
+          error: r.error,
+          analytics: analytics ? {
+            view_count: analytics.view_count,
+            like_count: analytics.like_count,
+            comment_count: analytics.comment_count,
+            share_count: analytics.share_count,
+            cover_image_url: analytics.cover_image_url,
+          } : null,
         };
         const existing = postResults.get(r.post_id) || [];
         existing.push(entry);

@@ -10,10 +10,22 @@ interface TikTokAccount {
   username: string;
 }
 
+interface PostAnalytics {
+  view_count: number;
+  like_count: number;
+  comment_count: number;
+  share_count: number;
+  cover_image_url: string | null;
+}
+
 interface PostResult {
   accountId: number;
   username: string | null;
   profileUrl: string | null;
+  postUrl: string | null;
+  success: boolean;
+  error: string | null;
+  analytics: PostAnalytics | null;
 }
 
 interface Post {
@@ -27,6 +39,20 @@ interface Post {
   results: PostResult[];
 }
 
+function formatCount(n: number): string {
+  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1).replace(/\.0$/, "") + "M";
+  if (n >= 1_000) return (n / 1_000).toFixed(1).replace(/\.0$/, "") + "K";
+  return String(n);
+}
+
+function captionFirstLine(caption: string): string {
+  // Return text before the first hashtag, or the first line
+  const beforeHash = caption.split("#")[0].trim();
+  if (beforeHash) return beforeHash;
+  const firstLine = caption.split("\n")[0].trim();
+  return firstLine || caption;
+}
+
 export default function PostsPage() {
   const router = useRouter();
   const [password, setPassword] = useState<string | null>(null);
@@ -37,6 +63,7 @@ export default function PostsPage() {
   const [filterStatus, setFilterStatus] = useState<"all" | "scheduled" | "posted">(
     "all"
   );
+  const [expandedCaptions, setExpandedCaptions] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     const pw = localStorage.getItem("sg.password");
@@ -106,8 +133,8 @@ export default function PostsPage() {
       <div className="mx-auto w-full max-w-4xl px-6 sm:px-10 py-10">
         <AppHeader />
         <HowItWorks>
-          <p><strong>Posts</strong> — view all your scheduled and published posts.</p>
-          <p>Filter by account to see what&apos;s been posted or what&apos;s coming up. Each entry shows the caption, slide count, and when it was scheduled or posted.</p>
+          <p><strong>Posts</strong> — view all your scheduled and published posts with engagement stats.</p>
+          <p>Filter by account or status. Posted entries show views, likes, comments, and shares from TikTok. Click the post link to view it on TikTok.</p>
         </HowItWorks>
 
         <div className="flex items-center justify-between mb-6">
@@ -116,7 +143,7 @@ export default function PostsPage() {
             onClick={load}
             className="text-sm text-zinc-500 hover:text-white transition-colors"
           >
-            {loading ? "Loading…" : "Refresh"}
+            {loading ? "Loading..." : "Refresh"}
           </button>
         </div>
 
@@ -158,19 +185,52 @@ export default function PostsPage() {
           <ul className="space-y-3">
             {filtered.map((p) => {
               const isScheduled = p.status === "scheduled";
+              const isPosted = p.status === "posted";
+              // Aggregate analytics across all results for this post
+              const hasAnalytics = p.results.some((r) => r.analytics);
+              const totals = p.results.reduce(
+                (acc, r) => {
+                  if (r.analytics) {
+                    acc.views += r.analytics.view_count;
+                    acc.likes += r.analytics.like_count;
+                    acc.comments += r.analytics.comment_count;
+                    acc.shares += r.analytics.share_count;
+                  }
+                  return acc;
+                },
+                { views: 0, likes: 0, comments: 0, shares: 0 }
+              );
+              const coverUrl = p.results.find((r) => r.analytics?.cover_image_url)?.analytics?.cover_image_url;
+              const errors = p.results.filter((r) => !r.success && r.error);
+              const captionExpanded = expandedCaptions.has(p.id);
+              const shortCaption = captionFirstLine(p.caption);
+              const hasMoreCaption = p.caption.trim() !== shortCaption;
+
               return (
                 <li
                   key={p.id}
                   className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-4"
                 >
-                  <div className="flex items-start justify-between gap-3">
+                  <div className="flex gap-3">
+                    {/* Cover thumbnail */}
+                    {coverUrl && (
+                      <div className="shrink-0">
+                        <img
+                          src={coverUrl}
+                          alt=""
+                          className="w-16 h-24 rounded-lg object-cover bg-zinc-800"
+                        />
+                      </div>
+                    )}
+
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-2 flex-wrap">
+                      {/* Top row: status + slides + date */}
+                      <div className="flex items-center gap-2 mb-1.5 flex-wrap">
                         <span
                           className={`text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded ${
                             isScheduled
                               ? "bg-blue-500/20 text-blue-300"
-                              : p.status === "posted"
+                              : isPosted
                               ? "bg-green-500/20 text-green-300"
                               : "bg-zinc-700 text-zinc-300"
                           }`}
@@ -180,36 +240,36 @@ export default function PostsPage() {
                         <span className="text-xs text-zinc-500">
                           {p.slide_count} slides
                         </span>
-                      </div>
-
-                      {/* Date/time info */}
-                      <div className="flex flex-col gap-0.5 mb-2">
-                        {p.status === "posted" && p.posted_at && (
+                        {isPosted && p.posted_at && (
                           <span className="text-xs text-zinc-500">
-                            Posted {new Date(p.posted_at).toLocaleString()}
+                            {new Date(p.posted_at).toLocaleDateString()}
                           </span>
                         )}
                         {isScheduled && p.scheduled_at && (
                           <span className="text-xs text-zinc-500">
-                            Scheduled for {new Date(p.scheduled_at).toLocaleString()}
+                            {new Date(p.scheduled_at).toLocaleString()}
                           </span>
                         )}
-                        {p.status === "posted" && !p.posted_at && p.scheduled_at && (
-                          <span className="text-xs text-zinc-500">
-                            Scheduled {new Date(p.scheduled_at).toLocaleString()}
-                          </span>
+                        {isScheduled && (
+                          <button
+                            onClick={() => cancelPost(p.id)}
+                            className="text-[10px] text-red-400 hover:text-red-300 transition-colors ml-auto"
+                          >
+                            Cancel
+                          </button>
                         )}
                       </div>
 
-                      {/* Account links */}
-                      <div className="flex flex-wrap gap-2 mb-2">
-                        {p.results && p.results.length > 0 ? (
+                      {/* Account links — link to the actual post, not just profile */}
+                      <div className="flex flex-wrap gap-2 mb-1.5">
+                        {p.results.length > 0 ? (
                           p.results.map((r, idx) => {
                             const name = r.username || accountUsername(r.accountId);
-                            return r.profileUrl ? (
+                            const href = r.postUrl || r.profileUrl;
+                            return href ? (
                               <a
                                 key={idx}
-                                href={r.profileUrl}
+                                href={href}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
@@ -231,18 +291,53 @@ export default function PostsPage() {
                         )}
                       </div>
 
-                      <p className="text-sm text-zinc-300 line-clamp-3 whitespace-pre-wrap">
-                        {p.caption || "(no caption)"}
-                      </p>
+                      {/* Caption — first line only, expandable */}
+                      {p.caption && (
+                        <div className="mb-1.5">
+                          <p className="text-sm text-zinc-300">
+                            {captionExpanded ? p.caption : shortCaption}
+                          </p>
+                          {hasMoreCaption && (
+                            <button
+                              onClick={() => setExpandedCaptions((prev) => {
+                                const next = new Set(prev);
+                                if (next.has(p.id)) next.delete(p.id);
+                                else next.add(p.id);
+                                return next;
+                              })}
+                              className="text-[11px] text-zinc-500 hover:text-zinc-300 mt-0.5"
+                            >
+                              {captionExpanded ? "Show less" : "Show full caption"}
+                            </button>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Engagement stats */}
+                      {hasAnalytics && (
+                        <div className="flex gap-4 text-xs text-zinc-400">
+                          <span>{formatCount(totals.views)} views</span>
+                          <span>{formatCount(totals.likes)} likes</span>
+                          {totals.comments > 0 && (
+                            <span>{formatCount(totals.comments)} comments</span>
+                          )}
+                          {totals.shares > 0 && (
+                            <span>{formatCount(totals.shares)} shares</span>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Errors */}
+                      {errors.length > 0 && (
+                        <div className="mt-1.5">
+                          {errors.map((r, idx) => (
+                            <p key={idx} className="text-xs text-red-400">
+                              @{r.username || accountUsername(r.accountId)}: {r.error}
+                            </p>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                    {isScheduled && (
-                      <button
-                        onClick={() => cancelPost(p.id)}
-                        className="text-xs text-red-400 hover:text-red-300 transition-colors shrink-0"
-                      >
-                        Cancel
-                      </button>
-                    )}
                   </div>
                 </li>
               );
