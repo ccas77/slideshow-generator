@@ -107,11 +107,19 @@ export async function GET(req: NextRequest) {
       }>) {
         const pd = r.platform_data;
         const analytics = analyticsMap.get(r.id) || null;
+        // Build post URL: prefer analytics share_url, fall back to platform_data
+        let postUrl = analytics?.share_url || null;
+        if (!postUrl && pd?.id && pd?.username) {
+          const match = pd.id.match(/v2\.(\d+)/);
+          if (match) {
+            postUrl = `https://www.tiktok.com/@${pd.username}/photo/${match[1]}`;
+          }
+        }
         const entry = {
           accountId: r.social_account_id,
           username: pd?.username || null,
           profileUrl: pd?.username ? `https://www.tiktok.com/@${pd.username}` : null,
-          postUrl: analytics?.share_url || null,
+          postUrl,
           success: r.success,
           error: r.error,
           analytics: analytics ? {
@@ -156,8 +164,12 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ posts });
     }
 
-    const platform = url.searchParams.get("platform") || "tiktok";
-    const accountsResp = await pbFetch(`/v1/social-accounts?platform=${platform}&limit=100`);
+    const platform = url.searchParams.get("platform");
+    const accountsResp = await pbFetch(
+      platform
+        ? `/v1/social-accounts?platform=${platform}&limit=100`
+        : `/v1/social-accounts?limit=100`
+    );
     const accounts = (accountsResp.data || []).map(
       (a: { id: number; username: string }) => ({
         id: a.id,
