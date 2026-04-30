@@ -47,9 +47,11 @@ export async function GET(req: NextRequest) {
       const accountId = url.searchParams.get("accountId");
       const [postsResp, resultsResp, analyticsResp] = await Promise.all([
         pbFetch("/v1/posts?limit=50"),
-        pbFetch("/v1/post-results?limit=200").catch(() => ({ data: [] })),
-        pbFetch("/v1/analytics?limit=200").catch(() => ({ data: [] })),
+        pbFetch("/v1/post-results?limit=100").catch(() => ({ data: [] })),
+        pbFetch("/v1/analytics?limit=100").catch(() => ({ data: [] })),
       ]);
+      const resultsAll = resultsResp.data || [];
+      const analyticsAll = analyticsResp.data || [];
 
       // Build analytics lookup: post_result_id → analytics data
       const analyticsMap = new Map<string, {
@@ -60,7 +62,7 @@ export async function GET(req: NextRequest) {
         cover_image_url: string | null;
         share_url: string | null;
       }>();
-      for (const a of (analyticsResp.data || []) as Array<{
+      for (const a of analyticsAll as Array<{
         post_result_id: string;
         view_count: number;
         like_count: number;
@@ -95,7 +97,7 @@ export async function GET(req: NextRequest) {
           cover_image_url: string | null;
         } | null;
       }>>();
-      for (const r of (resultsResp.data || []) as Array<{
+      for (const r of resultsAll as Array<{
         id: string;
         post_id: string;
         success: boolean;
