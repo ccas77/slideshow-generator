@@ -372,6 +372,8 @@ export interface IgAccountConfig {
   bookIds: string[];        // which books to pull from (empty = all)
   slideshowIds: string[];   // specific slideshows (empty = all from selected books)
   pointer: number;          // round-robin index for this account
+  format?: "carousel" | "video"; // default "carousel"
+  musicTrackIds?: string[]; // music tracks for video format (random pick)
 }
 
 export interface IgGlobalAutomation {

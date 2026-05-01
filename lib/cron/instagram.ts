@@ -2,10 +2,12 @@ import {
   getIgAutomation,
   getIgSlideshows,
   setIgAutomation,
+  getMusicTrack,
 } from "@/lib/kv";
 import { generateImage } from "@/lib/gemini";
 import { renderSlide } from "@/lib/render-slide";
-import { pbFetch, uploadPng } from "@/lib/post-bridge";
+import { renderVideo } from "@/lib/render-video";
+import { pbFetch, uploadPng, uploadVideo } from "@/lib/post-bridge";
 import { shouldProcessWindow, randomTimeInWindow } from "./window";
 import { markScheduled } from "./scheduled-today";
 import type { IgAutoResult } from "./types";
@@ -70,9 +72,32 @@ export async function runInstagramPhase(
               for (const text of texts) {
                 slideBufs.push(await renderSlide(image, text));
               }
+
+              const isVideo = accConfig.format === "video";
               const mediaIds: string[] = [];
-              for (let j = 0; j < slideBufs.length; j++) {
-                mediaIds.push(await uploadPng(slideBufs[j], `ig-auto-${accIdStr}-${j + 1}.png`));
+
+              if (isVideo) {
+                // Pick a random music track if configured
+                let audioBuffer: Buffer | undefined;
+                const trackIds = accConfig.musicTrackIds || [];
+                if (trackIds.length > 0) {
+                  const trackId = trackIds[Math.floor(Math.random() * trackIds.length)];
+                  const track = await getMusicTrack(trackId);
+                  if (track?.audioData) {
+                    const base64 = track.audioData.replace(/^data:[^;]+;base64,/, "");
+                    audioBuffer = Buffer.from(base64, "base64");
+                  }
+                }
+                const videoBuf = await renderVideo(slideBufs, {
+                  durationPerSlide: 2,
+                  audioBuffer,
+                });
+                const mediaId = await uploadVideo(videoBuf, `ig-auto-${accIdStr}.mp4`);
+                mediaIds.push(mediaId);
+              } else {
+                for (let j = 0; j < slideBufs.length; j++) {
+                  mediaIds.push(await uploadPng(slideBufs[j], `ig-auto-${accIdStr}-${j + 1}.png`));
+                }
               }
 
               // Determine platform config based on account type
@@ -94,8 +119,9 @@ export async function runInstagramPhase(
                 }),
               });
               const postId = postResp.id || postResp.data?.id || "unknown";
+              const formatLabel = isVideo ? "video" : "carousel";
               igAutoResults.push({
-                status: `${ss.name} → ${accIdStr} at ${scheduledAt.toISOString()} [post:${postId}]`,
+                status: `${ss.name} → ${accIdStr} ${formatLabel} at ${scheduledAt.toISOString()} [post:${postId}]`,
               });
             } catch (err) {
               const msg = err instanceof Error ? err.message : String(err);

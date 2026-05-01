@@ -52,6 +52,13 @@ interface IgAccountConfig {
   bookIds: string[];
   slideshowIds: string[];
   pointer: number;
+  format?: "carousel" | "video";
+  musicTrackIds?: string[];
+}
+
+interface MusicTrack {
+  id: string;
+  name: string;
 }
 
 interface IgGlobalAutomation {
@@ -108,6 +115,7 @@ export default function InstagramPage() {
   });
   const [selectedAutoAccount, setSelectedAutoAccount] = useState<string>("");
   const [autoSaved, setAutoSaved] = useState(false);
+  const [musicTracks, setMusicTracks] = useState<MusicTrack[]>([]);
 
   useEffect(() => {
     const pw = localStorage.getItem("sg.password");
@@ -122,12 +130,13 @@ export default function InstagramPage() {
     if (!password) return;
     setLoading(true);
     try {
-      const [igRes, booksRes, ttRes, igAccRes, autoRes] = await Promise.all([
+      const [igRes, booksRes, ttRes, igAccRes, autoRes, musicRes] = await Promise.all([
         fetch("/api/ig-slideshows"),
         fetch(`/api/books?password=${encodeURIComponent(password)}`),
         fetch(`/api/post-tiktok?password=${encodeURIComponent(password)}`),
         fetch(`/api/post-tiktok?password=${encodeURIComponent(password)}&platform=instagram`),
         fetch("/api/ig-automation"),
+        fetch("/api/music-tracks"),
       ]);
       if (igRes.ok) setIgSlideshows((await igRes.json()).slideshows || []);
       if (booksRes.ok) setBooks((await booksRes.json()).books || []);
@@ -136,6 +145,10 @@ export default function InstagramPage() {
       if (autoRes.ok) {
         const raw = (await autoRes.json()).config;
         setAutoConfig({ enabled: raw?.enabled ?? false, accounts: raw?.accounts ?? {} });
+      }
+      if (musicRes.ok) {
+        const tracks = (await musicRes.json()).tracks || [];
+        setMusicTracks(tracks.map((t: { id: string; name: string }) => ({ id: t.id, name: t.name })));
       }
     } catch (e) {
       console.error("Load error:", e);
@@ -866,13 +879,13 @@ export default function InstagramPage() {
               const selConfig = selectedAutoAccount ? autoConfig.accounts[selectedAutoAccount] : null;
               const updateAccConfig = (patch: Partial<IgAccountConfig>) => {
                 if (!selectedAutoAccount) return;
-                const current = autoConfig.accounts[selectedAutoAccount] || { enabled: false, intervals: [{ start: "18:00", end: "20:00" }], bookIds: [], slideshowIds: [], pointer: 0 };
+                const current = autoConfig.accounts[selectedAutoAccount] || { enabled: false, intervals: [{ start: "18:00", end: "20:00" }], bookIds: [], slideshowIds: [], pointer: 0, format: "carousel", musicTrackIds: [] };
                 setAutoConfig({
                   ...autoConfig,
                   accounts: { ...autoConfig.accounts, [selectedAutoAccount]: { ...current, ...patch } },
                 });
               };
-              const currentConfig = selConfig || { enabled: false, intervals: [{ start: "18:00", end: "20:00" }], bookIds: [], slideshowIds: [], pointer: 0 };
+              const currentConfig = selConfig || { enabled: false, intervals: [{ start: "18:00", end: "20:00" }], bookIds: [], slideshowIds: [], pointer: 0, format: "carousel", musicTrackIds: [] };
               const configuredCount = Object.values(autoConfig.accounts).filter((c) => c.enabled).length;
 
               return (
@@ -989,6 +1002,70 @@ export default function InstagramPage() {
                           </>
                         );
                       })()}
+                    </div>
+                    )}
+
+                    {/* Format */}
+                    <div>
+                      <h4 className="text-xs font-semibold text-zinc-400 uppercase tracking-wide mb-2">Format</h4>
+                      <div className="flex gap-3">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="format"
+                            checked={(currentConfig.format || "carousel") === "carousel"}
+                            onChange={() => updateAccConfig({ format: "carousel" })}
+                            className="accent-white"
+                          />
+                          <span className="text-sm text-zinc-300">Carousel</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="format"
+                            checked={currentConfig.format === "video"}
+                            onChange={() => updateAccConfig({ format: "video" })}
+                            className="accent-white"
+                          />
+                          <span className="text-sm text-zinc-300">Video (2s/slide)</span>
+                        </label>
+                      </div>
+                    </div>
+
+                    {/* Music tracks — only for video format */}
+                    {currentConfig.format === "video" && (
+                    <div>
+                      <h4 className="text-xs font-semibold text-zinc-400 uppercase tracking-wide mb-2">Music</h4>
+                      {musicTracks.length === 0 ? (
+                        <p className="text-xs text-zinc-500">No music tracks uploaded. Add tracks in Top Books → Music.</p>
+                      ) : (
+                        <>
+                          <p className="text-[11px] text-zinc-500 mb-2">
+                            {(currentConfig.musicTrackIds || []).length === 0
+                              ? "No music (silent video)"
+                              : `${(currentConfig.musicTrackIds || []).length} track${(currentConfig.musicTrackIds || []).length !== 1 ? "s" : ""} — random pick per post`}
+                          </p>
+                          <div className="space-y-1 max-h-40 overflow-y-auto">
+                            {musicTracks.map((t) => (
+                              <label key={t.id} className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-zinc-800 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={(currentConfig.musicTrackIds || []).includes(t.id)}
+                                  onChange={() => {
+                                    const ids = currentConfig.musicTrackIds || [];
+                                    const next = ids.includes(t.id)
+                                      ? ids.filter((x) => x !== t.id)
+                                      : [...ids, t.id];
+                                    updateAccConfig({ musicTrackIds: next });
+                                  }}
+                                  className="accent-white w-3.5 h-3.5"
+                                />
+                                <span className="text-sm text-zinc-300">{t.name}</span>
+                              </label>
+                            ))}
+                          </div>
+                        </>
+                      )}
                     </div>
                     )}
 
