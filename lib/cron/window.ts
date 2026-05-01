@@ -12,7 +12,8 @@ export function randomTimeInWindow(windowStart: string, windowEnd: string): Date
   const [eh, em] = windowEnd.split(":").map(Number);
   const startMin = sh * 60 + sm;
   let endMin = eh * 60 + em;
-  if (endMin <= startMin) endMin = startMin + 60;
+  // Midnight wrap: e.g. 22:00→00:30 becomes 1320→1470 (next day)
+  if (endMin <= startMin) endMin += 1440;
   const pickMin = startMin + Math.floor(Math.random() * (endMin - startMin));
 
   const now = new Date();
@@ -27,26 +28,8 @@ export function randomTimeInWindow(windowStart: string, windowEnd: string): Date
       0
     )
   );
-  const earliest = now.getTime() + 60_000;
-  if (target.getTime() < earliest) {
-    // Clamp into the future, but stay within today's window if possible
-    const windowEndToday = new Date(
-      Date.UTC(
-        now.getUTCFullYear(),
-        now.getUTCMonth(),
-        now.getUTCDate(),
-        eh,
-        em,
-        0,
-        0
-      )
-    );
-    if (earliest <= windowEndToday.getTime()) {
-      target.setTime(earliest);
-    } else {
-      // Window has already passed — push to tomorrow's window
-      target.setUTCDate(target.getUTCDate() + 1);
-    }
+  if (target.getTime() <= now.getTime() + 60_000) {
+    target.setUTCDate(target.getUTCDate() + 1);
   }
   return target;
 }
