@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
           parts: [
             { inlineData: { data: b64, mimeType } },
             {
-              text: "Describe this image as an AI image generation prompt. Focus on the subject, composition, lighting, mood, colors, and style. Write a single paragraph prompt that could recreate a similar image. Respond with ONLY the prompt text, nothing else.",
+              text: "Describe this image as an AI image generation prompt. Focus on the subject, composition, lighting, mood, colors, and style. IGNORE any text, words, captions, or overlay text visible in the image — do NOT include or reference any text content. Write a single paragraph prompt that could recreate a similar image without any text. Respond with ONLY the prompt text, nothing else.",
             },
           ],
         },

@@ -13,7 +13,7 @@ export async function generateImage(prompt: string): Promise<string | null> {
     try {
       const response = await ai.models.generateContent({
         model,
-        contents: `Generate an image: ${prompt}`,
+        contents: `Generate an image with NO text, words, letters, or writing anywhere in the image: ${prompt}`,
         config: { responseModalities: ["IMAGE"] },
       });
       if (response.candidates?.[0]?.content?.parts) {
