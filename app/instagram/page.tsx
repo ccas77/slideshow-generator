@@ -153,7 +153,7 @@ export default function InstagramPage() {
         fetch(`/api/post-tiktok?password=${encodeURIComponent(password)}&platform=instagram`),
         fetch("/api/ig-automation"),
         fetch("/api/video-automation"),
-        fetch("/api/video-music"),
+        fetch(`/api/video-music?password=${encodeURIComponent(password)}`),
       ]);
       if (igRes.ok) setIgSlideshows((await igRes.json()).slideshows || []);
       if (booksRes.ok) setBooks((await booksRes.json()).books || []);
@@ -399,10 +399,11 @@ export default function InstagramPage() {
       const name = file.name.replace(/\.[^.]+$/, "");
       const CHUNK_SIZE = 3_000_000;
 
+      const authHeaders = { "Content-Type": "application/json", "x-password": password || "" };
       if (audioData.length <= CHUNK_SIZE) {
         await fetch("/api/video-music", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: authHeaders,
           body: JSON.stringify({ name, audioData }),
         });
       } else {
@@ -410,7 +411,7 @@ export default function InstagramPage() {
         const firstChunk = audioData.slice(0, CHUNK_SIZE);
         const res = await fetch("/api/video-music", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: authHeaders,
           body: JSON.stringify({ name, audioData: firstChunk, chunked: true, chunkIndex: 0, totalChunks }),
         });
         const { id } = await res.json();
@@ -419,7 +420,7 @@ export default function InstagramPage() {
           const chunk = audioData.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
           await fetch("/api/video-music", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: authHeaders,
             body: JSON.stringify({ id, audioData: chunk, chunked: true, chunkIndex: i, totalChunks }),
           });
         }
@@ -436,7 +437,7 @@ export default function InstagramPage() {
     if (!window.confirm("Delete this track?")) return;
     await fetch("/api/video-music", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "x-password": password || "" },
       body: JSON.stringify({ action: "delete", id }),
     });
     // Also remove from any video account configs
