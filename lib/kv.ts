@@ -479,6 +479,44 @@ export async function deleteMusicTrack(id: string): Promise<void> {
   await redis.set(MUSIC_INDEX_KEY, ids.filter((i) => i !== id));
 }
 
+// ── Video Music Tracks (separate from Top N music) ──
+
+const VIDEO_MUSIC_INDEX_KEY = "video-music-index";
+
+function videoMusicKey(id: string) {
+  return `video-music:${id}`;
+}
+
+export async function getVideoMusicTracks(): Promise<MusicTrack[]> {
+  const ids = await redis.get<string[]>(VIDEO_MUSIC_INDEX_KEY);
+  if (!ids || ids.length === 0) return [];
+  const tracks: MusicTrack[] = [];
+  for (const id of ids) {
+    const track = await redis.get<MusicTrack>(videoMusicKey(id));
+    if (track) tracks.push(track);
+  }
+  return tracks;
+}
+
+export async function getVideoMusicTrack(id: string): Promise<MusicTrack | null> {
+  return await redis.get<MusicTrack>(videoMusicKey(id));
+}
+
+export async function setVideoMusicTrack(track: MusicTrack): Promise<void> {
+  await redis.set(videoMusicKey(track.id), track);
+  const ids = (await redis.get<string[]>(VIDEO_MUSIC_INDEX_KEY)) || [];
+  if (!ids.includes(track.id)) {
+    ids.push(track.id);
+    await redis.set(VIDEO_MUSIC_INDEX_KEY, ids);
+  }
+}
+
+export async function deleteVideoMusicTrack(id: string): Promise<void> {
+  await redis.del(videoMusicKey(id));
+  const ids = (await redis.get<string[]>(VIDEO_MUSIC_INDEX_KEY)) || [];
+  await redis.set(VIDEO_MUSIC_INDEX_KEY, ids.filter((i) => i !== id));
+}
+
 // ── Settings ──
 
 const SETTINGS_KEY = "app-settings";

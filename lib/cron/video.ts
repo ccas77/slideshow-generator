@@ -2,7 +2,7 @@ import {
   getVideoAutomation,
   setVideoAutomation,
   getIgSlideshows,
-  getMusicTrack,
+  getVideoMusicTrack,
 } from "@/lib/kv";
 import { generateImage } from "@/lib/gemini";
 import { renderSlide } from "@/lib/render-slide";
@@ -81,7 +81,7 @@ export async function runVideoPhase(
           const trackIds = accConfig.musicTrackIds || [];
           if (trackIds.length > 0) {
             const trackId = trackIds[Math.floor(Math.random() * trackIds.length)];
-            const track = await getMusicTrack(trackId);
+            const track = await getVideoMusicTrack(trackId);
             if (track?.audioData) {
               const base64 = track.audioData.replace(/^data:[^;]+;base64,/, "");
               audioBuffer = Buffer.from(base64, "base64");

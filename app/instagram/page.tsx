@@ -127,10 +127,11 @@ export default function InstagramPage() {
   });
   const [selectedAutoAccount, setSelectedAutoAccount] = useState<string>("");
   const [autoSaved, setAutoSaved] = useState(false);
-  const [musicTracks, setMusicTracks] = useState<MusicTrack[]>([]);
   const [videoConfig, setVideoConfig] = useState<VideoAutomation>({ accounts: {} });
   const [selectedVideoAccount, setSelectedVideoAccount] = useState<string>("");
   const [videoSaved, setVideoSaved] = useState(false);
+  const [videoMusicTracks, setVideoMusicTracks] = useState<MusicTrack[]>([]);
+  const [uploadingVideoMusic, setUploadingVideoMusic] = useState(false);
 
   useEffect(() => {
     const pw = localStorage.getItem("sg.password");
@@ -145,14 +146,14 @@ export default function InstagramPage() {
     if (!password) return;
     setLoading(true);
     try {
-      const [igRes, booksRes, ttRes, igAccRes, autoRes, musicRes, videoRes] = await Promise.all([
+      const [igRes, booksRes, ttRes, igAccRes, autoRes, videoRes, videoMusicRes] = await Promise.all([
         fetch("/api/ig-slideshows"),
         fetch(`/api/books?password=${encodeURIComponent(password)}`),
         fetch(`/api/post-tiktok?password=${encodeURIComponent(password)}`),
         fetch(`/api/post-tiktok?password=${encodeURIComponent(password)}&platform=instagram`),
         fetch("/api/ig-automation"),
-        fetch("/api/music-tracks"),
         fetch("/api/video-automation"),
+        fetch("/api/video-music"),
       ]);
       if (igRes.ok) setIgSlideshows((await igRes.json()).slideshows || []);
       if (booksRes.ok) setBooks((await booksRes.json()).books || []);
@@ -162,13 +163,13 @@ export default function InstagramPage() {
         const raw = (await autoRes.json()).config;
         setAutoConfig({ enabled: raw?.enabled ?? false, accounts: raw?.accounts ?? {} });
       }
-      if (musicRes.ok) {
-        const tracks = (await musicRes.json()).tracks || [];
-        setMusicTracks(tracks.map((t: { id: string; name: string }) => ({ id: t.id, name: t.name })));
-      }
       if (videoRes.ok) {
         const raw = (await videoRes.json()).config;
         setVideoConfig({ accounts: raw?.accounts ?? {} });
+      }
+      if (videoMusicRes.ok) {
+        const tracks = (await videoMusicRes.json()).tracks || [];
+        setVideoMusicTracks(tracks.map((t: { id: string; name: string }) => ({ id: t.id, name: t.name })));
       }
     } catch (e) {
       console.error("Load error:", e);
@@ -1226,8 +1227,50 @@ export default function InstagramPage() {
                     {/* Music */}
                     <div>
                       <h4 className="text-xs font-semibold text-zinc-400 uppercase tracking-wide mb-2">Music</h4>
-                      {musicTracks.length === 0 ? (
-                        <p className="text-xs text-zinc-500">No music tracks uploaded. Add tracks in Top Books.</p>
+
+                      {/* Upload */}
+                      <div className="mb-3">
+                        <label className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-zinc-700 bg-zinc-900 text-xs text-zinc-300 hover:bg-zinc-800 cursor-pointer">
+                          {uploadingVideoMusic ? "Uploading..." : "+ Upload MP3"}
+                          <input
+                            type="file"
+                            accept="audio/mpeg,audio/*"
+                            className="hidden"
+                            disabled={uploadingVideoMusic}
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0];
+                              if (!file) return;
+                              setUploadingVideoMusic(true);
+                              try {
+                                const reader = new FileReader();
+                                const dataUrl: string = await new Promise((res) => { reader.onload = () => res(reader.result as string); reader.readAsDataURL(file); });
+                                const CHUNK_SIZE = 400_000;
+                                const totalChunks = Math.ceil(dataUrl.length / CHUNK_SIZE);
+                                const trackName = file.name.replace(/\.[^.]+$/, "");
+                                let trackId = "";
+                                for (let i = 0; i < totalChunks; i++) {
+                                  const chunk = dataUrl.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
+                                  const resp = await fetch("/api/video-music", {
+                                    method: "POST",
+                                    headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify({ chunked: true, chunkIndex: i, totalChunks, id: trackId || undefined, name: trackName, audioData: chunk }),
+                                  });
+                                  const data = await resp.json();
+                                  if (i === 0) trackId = data.id;
+                                }
+                                setVideoMusicTracks((prev) => [...prev, { id: trackId, name: trackName }]);
+                              } catch (err) {
+                                window.alert(err instanceof Error ? err.message : "Upload failed");
+                              }
+                              setUploadingVideoMusic(false);
+                              e.target.value = "";
+                            }}
+                          />
+                        </label>
+                      </div>
+
+                      {videoMusicTracks.length === 0 ? (
+                        <p className="text-xs text-zinc-500">No video music tracks uploaded yet.</p>
                       ) : (
                         <>
                           <p className="text-[11px] text-zinc-500 mb-2">
@@ -1236,21 +1279,45 @@ export default function InstagramPage() {
                               : `${currentConfig.musicTrackIds.length} track${currentConfig.musicTrackIds.length !== 1 ? "s" : ""} — random pick per post`}
                           </p>
                           <div className="space-y-1 max-h-40 overflow-y-auto">
-                            {musicTracks.map((t) => (
-                              <label key={t.id} className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-zinc-800 cursor-pointer">
-                                <input
-                                  type="checkbox"
-                                  checked={currentConfig.musicTrackIds.includes(t.id)}
-                                  onChange={() => {
-                                    const next = currentConfig.musicTrackIds.includes(t.id)
-                                      ? currentConfig.musicTrackIds.filter((x) => x !== t.id)
-                                      : [...currentConfig.musicTrackIds, t.id];
-                                    updateVideoAccConfig({ musicTrackIds: next });
+                            {videoMusicTracks.map((t) => (
+                              <div key={t.id} className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-zinc-800">
+                                <label className="flex items-center gap-2 flex-1 cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    checked={currentConfig.musicTrackIds.includes(t.id)}
+                                    onChange={() => {
+                                      const next = currentConfig.musicTrackIds.includes(t.id)
+                                        ? currentConfig.musicTrackIds.filter((x) => x !== t.id)
+                                        : [...currentConfig.musicTrackIds, t.id];
+                                      updateVideoAccConfig({ musicTrackIds: next });
+                                    }}
+                                    className="accent-white w-3.5 h-3.5"
+                                  />
+                                  <span className="text-sm text-zinc-300">{t.name}</span>
+                                </label>
+                                <button
+                                  onClick={async () => {
+                                    if (!confirm(`Delete "${t.name}"?`)) return;
+                                    await fetch("/api/video-music", {
+                                      method: "POST",
+                                      headers: { "Content-Type": "application/json" },
+                                      body: JSON.stringify({ action: "delete", id: t.id }),
+                                    });
+                                    setVideoMusicTracks((prev) => prev.filter((x) => x.id !== t.id));
+                                    // Also remove from any account configs
+                                    const updated = { ...videoConfig };
+                                    for (const [k, v] of Object.entries(updated.accounts)) {
+                                      if (v.musicTrackIds.includes(t.id)) {
+                                        updated.accounts[k] = { ...v, musicTrackIds: v.musicTrackIds.filter((x) => x !== t.id) };
+                                      }
+                                    }
+                                    setVideoConfig(updated);
                                   }}
-                                  className="accent-white w-3.5 h-3.5"
-                                />
-                                <span className="text-sm text-zinc-300">{t.name}</span>
-                              </label>
+                                  className="text-xs text-red-500 hover:text-red-400"
+                                >
+                                  Delete
+                                </button>
+                              </div>
                             ))}
                           </div>
                         </>
