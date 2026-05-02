@@ -52,13 +52,25 @@ interface IgAccountConfig {
   bookIds: string[];
   slideshowIds: string[];
   pointer: number;
-  format?: "carousel" | "video";
-  musicTrackIds?: string[];
 }
 
 interface MusicTrack {
   id: string;
   name: string;
+}
+
+interface VideoAccountConfig {
+  enabled: boolean;
+  intervals: TimeWindow[];
+  bookIds: string[];
+  slideshowIds: string[];
+  pointer: number;
+  musicTrackIds: string[];
+  durationPerSlide: number;
+}
+
+interface VideoAutomation {
+  accounts: Record<string, VideoAccountConfig>;
 }
 
 interface IgGlobalAutomation {
@@ -76,7 +88,7 @@ interface TikTokAccount {
   username: string;
 }
 
-type Tab = "slideshows" | "import" | "automation";
+type Tab = "slideshows" | "import" | "automation" | "video";
 
 function uid() {
   return Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
@@ -116,6 +128,9 @@ export default function InstagramPage() {
   const [selectedAutoAccount, setSelectedAutoAccount] = useState<string>("");
   const [autoSaved, setAutoSaved] = useState(false);
   const [musicTracks, setMusicTracks] = useState<MusicTrack[]>([]);
+  const [videoConfig, setVideoConfig] = useState<VideoAutomation>({ accounts: {} });
+  const [selectedVideoAccount, setSelectedVideoAccount] = useState<string>("");
+  const [videoSaved, setVideoSaved] = useState(false);
 
   useEffect(() => {
     const pw = localStorage.getItem("sg.password");
@@ -130,13 +145,14 @@ export default function InstagramPage() {
     if (!password) return;
     setLoading(true);
     try {
-      const [igRes, booksRes, ttRes, igAccRes, autoRes, musicRes] = await Promise.all([
+      const [igRes, booksRes, ttRes, igAccRes, autoRes, musicRes, videoRes] = await Promise.all([
         fetch("/api/ig-slideshows"),
         fetch(`/api/books?password=${encodeURIComponent(password)}`),
         fetch(`/api/post-tiktok?password=${encodeURIComponent(password)}`),
         fetch(`/api/post-tiktok?password=${encodeURIComponent(password)}&platform=instagram`),
         fetch("/api/ig-automation"),
         fetch("/api/music-tracks"),
+        fetch("/api/video-automation"),
       ]);
       if (igRes.ok) setIgSlideshows((await igRes.json()).slideshows || []);
       if (booksRes.ok) setBooks((await booksRes.json()).books || []);
@@ -149,6 +165,10 @@ export default function InstagramPage() {
       if (musicRes.ok) {
         const tracks = (await musicRes.json()).tracks || [];
         setMusicTracks(tracks.map((t: { id: string; name: string }) => ({ id: t.id, name: t.name })));
+      }
+      if (videoRes.ok) {
+        const raw = (await videoRes.json()).config;
+        setVideoConfig({ accounts: raw?.accounts ?? {} });
       }
     } catch (e) {
       console.error("Load error:", e);
@@ -357,12 +377,27 @@ export default function InstagramPage() {
     setSaving(false);
   }
 
+  async function saveVideoAutomation() {
+    setSaving(true);
+    try {
+      await fetch("/api/video-automation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ config: videoConfig }),
+      });
+      setVideoSaved(true);
+      setTimeout(() => setVideoSaved(false), 2000);
+    } catch {}
+    setSaving(false);
+  }
+
   if (!password) return null;
 
   const tabs: { key: Tab; label: string }[] = [
     { key: "slideshows", label: `Slideshows (${igSlideshows.length})` },
     { key: "import", label: "Import" },
     { key: "automation", label: (() => { const count = Object.values(autoConfig.accounts).filter((c) => c.enabled).length; return count > 0 ? `Automation (${count})` : "Automation"; })() },
+    { key: "video", label: (() => { const count = Object.values(videoConfig.accounts).filter((c) => c.enabled).length; return count > 0 ? `Video (${count})` : "Video"; })() },
   ];
 
   return (
@@ -879,13 +914,13 @@ export default function InstagramPage() {
               const selConfig = selectedAutoAccount ? autoConfig.accounts[selectedAutoAccount] : null;
               const updateAccConfig = (patch: Partial<IgAccountConfig>) => {
                 if (!selectedAutoAccount) return;
-                const current = autoConfig.accounts[selectedAutoAccount] || { enabled: false, intervals: [{ start: "18:00", end: "20:00" }], bookIds: [], slideshowIds: [], pointer: 0, format: "carousel", musicTrackIds: [] };
+                const current = autoConfig.accounts[selectedAutoAccount] || { enabled: false, intervals: [{ start: "18:00", end: "20:00" }], bookIds: [], slideshowIds: [], pointer: 0 };
                 setAutoConfig({
                   ...autoConfig,
                   accounts: { ...autoConfig.accounts, [selectedAutoAccount]: { ...current, ...patch } },
                 });
               };
-              const currentConfig = selConfig || { enabled: false, intervals: [{ start: "18:00", end: "20:00" }], bookIds: [], slideshowIds: [], pointer: 0, format: "carousel", musicTrackIds: [] };
+              const currentConfig = selConfig || { enabled: false, intervals: [{ start: "18:00", end: "20:00" }], bookIds: [], slideshowIds: [], pointer: 0 };
               const configuredCount = Object.values(autoConfig.accounts).filter((c) => c.enabled).length;
 
               return (
@@ -1005,70 +1040,6 @@ export default function InstagramPage() {
                     </div>
                     )}
 
-                    {/* Format */}
-                    <div>
-                      <h4 className="text-xs font-semibold text-zinc-400 uppercase tracking-wide mb-2">Format</h4>
-                      <div className="flex gap-3">
-                        <label className="flex items-center gap-2 cursor-pointer">
-                          <input
-                            type="radio"
-                            name="format"
-                            checked={(currentConfig.format || "carousel") === "carousel"}
-                            onChange={() => updateAccConfig({ format: "carousel" })}
-                            className="accent-white"
-                          />
-                          <span className="text-sm text-zinc-300">Carousel</span>
-                        </label>
-                        <label className="flex items-center gap-2 cursor-pointer">
-                          <input
-                            type="radio"
-                            name="format"
-                            checked={currentConfig.format === "video"}
-                            onChange={() => updateAccConfig({ format: "video" })}
-                            className="accent-white"
-                          />
-                          <span className="text-sm text-zinc-300">Video (2s/slide)</span>
-                        </label>
-                      </div>
-                    </div>
-
-                    {/* Music tracks — only for video format */}
-                    {currentConfig.format === "video" && (
-                    <div>
-                      <h4 className="text-xs font-semibold text-zinc-400 uppercase tracking-wide mb-2">Music</h4>
-                      {musicTracks.length === 0 ? (
-                        <p className="text-xs text-zinc-500">No music tracks uploaded. Add tracks in Top Books → Music.</p>
-                      ) : (
-                        <>
-                          <p className="text-[11px] text-zinc-500 mb-2">
-                            {(currentConfig.musicTrackIds || []).length === 0
-                              ? "No music (silent video)"
-                              : `${(currentConfig.musicTrackIds || []).length} track${(currentConfig.musicTrackIds || []).length !== 1 ? "s" : ""} — random pick per post`}
-                          </p>
-                          <div className="space-y-1 max-h-40 overflow-y-auto">
-                            {musicTracks.map((t) => (
-                              <label key={t.id} className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-zinc-800 cursor-pointer">
-                                <input
-                                  type="checkbox"
-                                  checked={(currentConfig.musicTrackIds || []).includes(t.id)}
-                                  onChange={() => {
-                                    const ids = currentConfig.musicTrackIds || [];
-                                    const next = ids.includes(t.id)
-                                      ? ids.filter((x) => x !== t.id)
-                                      : [...ids, t.id];
-                                    updateAccConfig({ musicTrackIds: next });
-                                  }}
-                                  className="accent-white w-3.5 h-3.5"
-                                />
-                                <span className="text-sm text-zinc-300">{t.name}</span>
-                              </label>
-                            ))}
-                          </div>
-                        </>
-                      )}
-                    </div>
-                    )}
-
                     {/* Time windows */}
                     <div>
                       <h4 className="text-xs font-semibold text-zinc-400 uppercase tracking-wide mb-2">Posting Windows (UTC)</h4>
@@ -1118,6 +1089,223 @@ export default function InstagramPage() {
                     Save Automation
                   </button>
                   {autoSaved && <span className="text-xs text-green-400">Saved</span>}
+                </div>
+              </div>
+              );
+            })()}
+
+            {tab === "video" && (() => {
+              const allAccs = [...igAccounts.map((a) => ({ ...a, platform: "instagram" as const })), ...accounts.map((a) => ({ ...a, platform: "tiktok" as const }))];
+              const selConfig = selectedVideoAccount ? videoConfig.accounts[selectedVideoAccount] : null;
+              const updateVideoAccConfig = (patch: Partial<VideoAccountConfig>) => {
+                if (!selectedVideoAccount) return;
+                const current = videoConfig.accounts[selectedVideoAccount] || { enabled: false, intervals: [{ start: "18:00", end: "20:00" }], bookIds: [], slideshowIds: [], pointer: 0, musicTrackIds: [], durationPerSlide: 2 };
+                setVideoConfig({
+                  ...videoConfig,
+                  accounts: { ...videoConfig.accounts, [selectedVideoAccount]: { ...current, ...patch } },
+                });
+              };
+              const currentConfig = selConfig || { enabled: false, intervals: [{ start: "18:00", end: "20:00" }], bookIds: [], slideshowIds: [], pointer: 0, musicTrackIds: [], durationPerSlide: 2 };
+              const configuredCount = Object.values(videoConfig.accounts).filter((c) => c.enabled).length;
+
+              return (
+              <div className="space-y-6">
+                <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6">
+                  <p className="text-xs text-zinc-500">
+                    {configuredCount} account{configuredCount !== 1 ? "s" : ""} enabled for video posts. Each account round-robins through its assigned slideshows, rendering a video (2s/slide) with music.
+                  </p>
+                </div>
+
+                {/* Account selector */}
+                <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6">
+                  <h3 className="text-sm font-semibold mb-3">Configure Account</h3>
+                  {allAccs.length === 0 ? (
+                    <p className="text-xs text-zinc-500">No accounts connected in PostBridge.</p>
+                  ) : (
+                    <select
+                      value={selectedVideoAccount}
+                      onChange={(e) => setSelectedVideoAccount(e.target.value)}
+                      className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+                    >
+                      <option value="">Select an account...</option>
+                      {allAccs.map((a) => {
+                        const cfg = videoConfig.accounts[String(a.id)];
+                        return (
+                          <option key={a.id} value={String(a.id)}>
+                            @{a.username} ({a.platform}){cfg?.enabled ? " \u2713" : ""}
+                          </option>
+                        );
+                      })}
+                    </select>
+                  )}
+                </div>
+
+                {/* Per-account config */}
+                {selectedVideoAccount && (
+                  <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6 space-y-5">
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={currentConfig.enabled}
+                        onChange={(e) => updateVideoAccConfig({ enabled: e.target.checked })}
+                        className="accent-white w-4 h-4"
+                      />
+                      <span className="text-sm font-medium">Enable video posts for this account</span>
+                    </label>
+
+                    {/* Books */}
+                    <div>
+                      <h4 className="text-xs font-semibold text-zinc-400 uppercase tracking-wide mb-2">Books</h4>
+                      <p className="text-[11px] text-zinc-500 mb-2">
+                        {currentConfig.bookIds.length === 0 ? "All books (none selected = all)" : `${currentConfig.bookIds.length} selected`}
+                      </p>
+                      <div className="space-y-1 max-h-40 overflow-y-auto">
+                        {books.map((b) => (
+                          <label key={b.id} className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-zinc-800 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={currentConfig.bookIds.includes(b.id)}
+                              onChange={() => {
+                                const removing = currentConfig.bookIds.includes(b.id);
+                                const next = removing
+                                  ? currentConfig.bookIds.filter((x) => x !== b.id)
+                                  : [...currentConfig.bookIds, b.id];
+                                const nextSlideshows = removing
+                                  ? currentConfig.slideshowIds.filter((sid) => {
+                                      const ss = igSlideshows.find((s) => s.id === sid);
+                                      return ss?.sourceBookId !== b.id;
+                                    })
+                                  : currentConfig.slideshowIds;
+                                updateVideoAccConfig({ bookIds: next, slideshowIds: nextSlideshows });
+                              }}
+                              className="accent-white w-3.5 h-3.5"
+                            />
+                            <span className="text-sm text-zinc-300">{b.name}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Slideshows */}
+                    {currentConfig.bookIds.length > 0 && (
+                    <div>
+                      <h4 className="text-xs font-semibold text-zinc-400 uppercase tracking-wide mb-2">Slideshows</h4>
+                      {(() => {
+                        const pool = igSlideshows.filter((s) => s.sourceBookId && currentConfig.bookIds.includes(s.sourceBookId));
+                        return pool.length === 0 ? (
+                          <p className="text-xs text-zinc-500">No slideshows available for selected books.</p>
+                        ) : (
+                          <>
+                            <p className="text-[11px] text-zinc-500 mb-2">
+                              {currentConfig.slideshowIds.length === 0 ? `All ${pool.length} slideshows` : `${currentConfig.slideshowIds.length} of ${pool.length} selected`}
+                            </p>
+                            <div className="space-y-1 max-h-48 overflow-y-auto">
+                              {pool.map((s) => (
+                                <label key={s.id} className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-zinc-800 cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    checked={currentConfig.slideshowIds.includes(s.id)}
+                                    onChange={() => {
+                                      const next = currentConfig.slideshowIds.includes(s.id)
+                                        ? currentConfig.slideshowIds.filter((x) => x !== s.id)
+                                        : [...currentConfig.slideshowIds, s.id];
+                                      updateVideoAccConfig({ slideshowIds: next });
+                                    }}
+                                    className="accent-white w-3.5 h-3.5"
+                                  />
+                                  <span className="text-sm text-zinc-300 truncate">{s.name}</span>
+                                </label>
+                              ))}
+                            </div>
+                          </>
+                        );
+                      })()}
+                    </div>
+                    )}
+
+                    {/* Music */}
+                    <div>
+                      <h4 className="text-xs font-semibold text-zinc-400 uppercase tracking-wide mb-2">Music</h4>
+                      {musicTracks.length === 0 ? (
+                        <p className="text-xs text-zinc-500">No music tracks uploaded. Add tracks in Top Books.</p>
+                      ) : (
+                        <>
+                          <p className="text-[11px] text-zinc-500 mb-2">
+                            {currentConfig.musicTrackIds.length === 0
+                              ? "No music (silent video)"
+                              : `${currentConfig.musicTrackIds.length} track${currentConfig.musicTrackIds.length !== 1 ? "s" : ""} — random pick per post`}
+                          </p>
+                          <div className="space-y-1 max-h-40 overflow-y-auto">
+                            {musicTracks.map((t) => (
+                              <label key={t.id} className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-zinc-800 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={currentConfig.musicTrackIds.includes(t.id)}
+                                  onChange={() => {
+                                    const next = currentConfig.musicTrackIds.includes(t.id)
+                                      ? currentConfig.musicTrackIds.filter((x) => x !== t.id)
+                                      : [...currentConfig.musicTrackIds, t.id];
+                                    updateVideoAccConfig({ musicTrackIds: next });
+                                  }}
+                                  className="accent-white w-3.5 h-3.5"
+                                />
+                                <span className="text-sm text-zinc-300">{t.name}</span>
+                              </label>
+                            ))}
+                          </div>
+                        </>
+                      )}
+                    </div>
+
+                    {/* Time windows */}
+                    <div>
+                      <h4 className="text-xs font-semibold text-zinc-400 uppercase tracking-wide mb-2">Posting Windows (UTC)</h4>
+                      <div className="space-y-2 mb-3">
+                        {currentConfig.intervals.map((w, i) => (
+                          <div key={i} className="flex items-center gap-2">
+                            <input
+                              type="time"
+                              value={w.start}
+                              onChange={(e) => updateVideoAccConfig({ intervals: currentConfig.intervals.map((x, j) => j === i ? { ...x, start: e.target.value } : x) })}
+                              className="rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+                            />
+                            <span className="text-xs text-zinc-600">&rarr;</span>
+                            <input
+                              type="time"
+                              value={w.end}
+                              onChange={(e) => updateVideoAccConfig({ intervals: currentConfig.intervals.map((x, j) => j === i ? { ...x, end: e.target.value } : x) })}
+                              className="rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+                            />
+                            {currentConfig.intervals.length > 1 && (
+                              <button
+                                onClick={() => updateVideoAccConfig({ intervals: currentConfig.intervals.filter((_, j) => j !== i) })}
+                                className="text-xs text-red-500 hover:text-red-400"
+                              >
+                                Remove
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                      <button
+                        onClick={() => updateVideoAccConfig({ intervals: [...currentConfig.intervals, { start: "12:00", end: "14:00" }] })}
+                        className="text-xs text-blue-400 hover:text-blue-300"
+                      >
+                        + Add window
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Save */}
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={saveVideoAutomation}
+                    className="px-5 py-2.5 rounded-lg bg-white text-black font-semibold hover:bg-zinc-200 transition-colors text-sm"
+                  >
+                    Save Video Automation
+                  </button>
+                  {videoSaved && <span className="text-xs text-green-400">Saved</span>}
                 </div>
               </div>
               );

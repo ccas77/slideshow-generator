@@ -4,6 +4,7 @@ import { getScheduledToday } from "@/lib/cron/scheduled-today";
 import { runTikTokPhase } from "@/lib/cron/tiktok";
 import { runTopNPhase } from "@/lib/cron/topn";
 import { runInstagramPhase } from "@/lib/cron/instagram";
+import { runVideoPhase } from "@/lib/cron/video";
 
 export const maxDuration = 300; // 5 min for Hobby
 
@@ -34,10 +35,13 @@ export async function GET(req: NextRequest) {
       // Phase 5: Top N list automation
       const topNResults = await runTopNPhase(scheduledToday);
 
-      // Phase 6: IG slideshow automation
+      // Phase 6: IG slideshow automation (carousels)
       const igAutoResults = await runInstagramPhase(scheduledToday);
 
-      cronResult = NextResponse.json({ ok: true, results, topNResults, igAutoResults, debugLog });
+      // Phase 7: Video automation
+      const videoResults = await runVideoPhase(scheduledToday);
+
+      cronResult = NextResponse.json({ ok: true, results, topNResults, igAutoResults, videoResults, debugLog });
     } finally {
       await releaseLock();
     }

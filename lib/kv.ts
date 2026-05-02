@@ -372,8 +372,33 @@ export interface IgAccountConfig {
   bookIds: string[];        // which books to pull from (empty = all)
   slideshowIds: string[];   // specific slideshows (empty = all from selected books)
   pointer: number;          // round-robin index for this account
-  format?: "carousel" | "video"; // default "carousel"
-  musicTrackIds?: string[]; // music tracks for video format (random pick)
+}
+
+// ── Video Automation (separate stream from carousel) ──
+
+export interface VideoAccountConfig {
+  enabled: boolean;
+  intervals: TimeWindow[];
+  bookIds: string[];
+  slideshowIds: string[];
+  pointer: number;
+  musicTrackIds: string[];  // random pick per post
+  durationPerSlide: number; // seconds per slide (default 2)
+}
+
+export interface VideoAutomation {
+  accounts: Record<string, VideoAccountConfig>;
+}
+
+const VIDEO_AUTOMATION_KEY = "video-automation";
+
+export async function getVideoAutomation(): Promise<VideoAutomation> {
+  const data = await redis.get<VideoAutomation>(VIDEO_AUTOMATION_KEY);
+  return data ?? { accounts: {} };
+}
+
+export async function setVideoAutomation(config: VideoAutomation): Promise<void> {
+  await redis.set(VIDEO_AUTOMATION_KEY, config);
 }
 
 export interface IgGlobalAutomation {

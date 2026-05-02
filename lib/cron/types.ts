@@ -23,3 +23,7 @@ export interface TopNResult {
 export interface IgAutoResult {
   status: string;
 }
+
+export interface VideoAutoResult {
+  status: string;
+}
