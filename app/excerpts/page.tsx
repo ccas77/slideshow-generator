@@ -21,17 +21,10 @@ interface Excerpt {
   excerptImages: ExcerptImage[]; // uploaded book page screenshots
 }
 
-interface NamedItem {
-  id: string;
-  name: string;
-  value: string;
-}
-
 interface Book {
   id: string;
   name: string;
   coverImage?: string;
-  imagePrompts: NamedItem[];
 }
 
 interface TikTokAccount {
@@ -489,7 +482,7 @@ export default function ExcerptsPage() {
                     />
 
                     {/* Extract prompt from image or URL */}
-                    <div className="flex flex-wrap gap-2 mb-3">
+                    <div className="mb-3">
                       <button
                         onClick={() => uploadAndExtractPrompt(active.id)}
                         disabled={extracting}
@@ -497,24 +490,6 @@ export default function ExcerptsPage() {
                       >
                         {extracting ? "Extracting..." : "Extract prompt from image"}
                       </button>
-                      {activeBook && activeBook.imagePrompts.length > 0 && (
-                        <select
-                          value=""
-                          onChange={(e) => {
-                            if (e.target.value) {
-                              updateExcerpt(active.id, (ex) => ({ ...ex, imagePrompt: e.target.value }));
-                            }
-                          }}
-                          className="rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-1.5 text-xs text-zinc-300 focus:outline-none focus:ring-2 focus:ring-white/20"
-                        >
-                          <option value="">Use book prompt...</option>
-                          {activeBook.imagePrompts.map((p) => (
-                            <option key={p.id} value={p.value}>
-                              {p.name || p.value.slice(0, 50)}
-                            </option>
-                          ))}
-                        </select>
-                      )}
                     </div>
                     <div className="flex gap-2 mb-3">
                       <input
