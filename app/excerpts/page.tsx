@@ -289,10 +289,18 @@ export default function ExcerptsPage() {
         headers: { "Content-Type": "application/json", "x-password": password || "" },
         body: JSON.stringify({ excerptId: active.id }),
       });
-      const data = await res.json();
+      const text = await res.text();
+      let data: Record<string, unknown>;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        window.alert(`Server returned ${res.status} — ${text.slice(0, 200)}`);
+        setGenerating(false);
+        return;
+      }
       if (res.ok && data.slides) {
-        setGeneratedSlides(data.slides);
-        setGenerationId(data.generationId);
+        setGeneratedSlides(data.slides as GeneratedSlide[]);
+        setGenerationId(data.generationId as string);
       } else {
         window.alert(data.error || "Generation failed");
       }
@@ -317,7 +325,15 @@ export default function ExcerptsPage() {
           ...(scheduledAt ? { scheduledAt: new Date(scheduledAt).toISOString() } : {}),
         }),
       });
-      const data = await res.json();
+      const text = await res.text();
+      let data: Record<string, unknown>;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        setPostResult(`Error: Server returned ${res.status} — ${text.slice(0, 200)}`);
+        setPosting(false);
+        return;
+      }
       if (res.ok) {
         setPostResult(`Posted ${data.slides} slides [post:${data.postId}]`);
       } else {
