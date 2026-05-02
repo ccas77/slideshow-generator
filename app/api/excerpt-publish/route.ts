@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
     }
 
     const postBody: Record<string, unknown> = {
-      caption: "",
+      caption: " ",
       media: mediaIds,
       social_accounts: accountIds,
       platform_configurations: platformConfig,
