@@ -55,6 +55,7 @@ export default function ExcerptsPage() {
   const [imageUrl, setImageUrl] = useState("");
   // Generate + post flow
   const [generatedSlides, setGeneratedSlides] = useState<GeneratedSlide[] | null>(null);
+  const [generationId, setGenerationId] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
   const [posting, setPosting] = useState(false);
   const [postResult, setPostResult] = useState<string | null>(null);
@@ -279,6 +280,7 @@ export default function ExcerptsPage() {
     if (!active) return;
     setGenerating(true);
     setGeneratedSlides(null);
+    setGenerationId(null);
     setPostResult(null);
     setPreviewIndex(0);
     try {
@@ -290,6 +292,7 @@ export default function ExcerptsPage() {
       const data = await res.json();
       if (res.ok && data.slides) {
         setGeneratedSlides(data.slides);
+        setGenerationId(data.generationId);
       } else {
         window.alert(data.error || "Generation failed");
       }
@@ -300,7 +303,7 @@ export default function ExcerptsPage() {
   }
 
   async function postSlideshow(accountId: number, platform: "tiktok" | "instagram", scheduledAt?: string) {
-    if (!generatedSlides) return;
+    if (!generationId) return;
     setPosting(true);
     setPostResult(null);
     try {
@@ -308,7 +311,7 @@ export default function ExcerptsPage() {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-password": password || "" },
         body: JSON.stringify({
-          slides: generatedSlides,
+          generationId,
           accountIds: [accountId],
           platform,
           ...(scheduledAt ? { scheduledAt: new Date(scheduledAt).toISOString() } : {}),

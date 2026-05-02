@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { redis } from "@/lib/kv";
 import { uploadPng, pbFetch } from "@/lib/post-bridge";
 
 export const maxDuration = 300;
@@ -15,15 +16,20 @@ export async function POST(req: NextRequest) {
   const authErr = checkAuth(req);
   if (authErr) return authErr;
 
-  const { slides, accountIds, scheduledAt, platform } = (await req.json()) as {
-    slides: { imageData: string }[];
+  const { generationId, accountIds, scheduledAt, platform } = (await req.json()) as {
+    generationId: string;
     accountIds: number[];
     scheduledAt?: string;
     platform?: "tiktok" | "instagram";
   };
 
-  if (!slides?.length || !accountIds?.length) {
-    return NextResponse.json({ error: "slides and accountIds required" }, { status: 400 });
+  if (!generationId || !accountIds?.length) {
+    return NextResponse.json({ error: "generationId and accountIds required" }, { status: 400 });
+  }
+
+  const slides = await redis.get<{ label: string; imageData: string }[]>(generationId);
+  if (!slides?.length) {
+    return NextResponse.json({ error: "Generation expired or not found. Please regenerate." }, { status: 404 });
   }
 
   if (slides.length < 2) {

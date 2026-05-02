@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getExcerpts, getBooks } from "@/lib/kv";
+import { getExcerpts, getBooks, redis } from "@/lib/kv";
 import { generateImage } from "@/lib/gemini";
 import { renderSlide } from "@/lib/render-slide";
 
@@ -69,7 +69,13 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    return NextResponse.json({ ok: true, slides });
+    // Store slides in Redis (1 hour TTL) so publish route can read them
+    // without the client needing to send the full base64 data back.
+    const generationId = `excerpt-gen:${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    await redis.set(generationId, slides, { ex: 3600 });
+
+    // Return slides for preview + the generationId for posting
+    return NextResponse.json({ ok: true, generationId, slides });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     return NextResponse.json({ error: msg }, { status: 500 });
