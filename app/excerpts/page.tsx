@@ -76,7 +76,7 @@ export default function ExcerptsPage() {
       const [exRes, bkRes, ttRes, igRes] = await Promise.all([
         fetch(`/api/excerpts?password=${encodeURIComponent(password)}`),
         fetch(`/api/books?password=${encodeURIComponent(password)}`),
-        fetch(`/api/post-tiktok?password=${encodeURIComponent(password)}`),
+        fetch(`/api/post-tiktok?password=${encodeURIComponent(password)}&platform=tiktok`),
         fetch(`/api/post-tiktok?password=${encodeURIComponent(password)}&platform=instagram`),
       ]);
       if (exRes.ok) {

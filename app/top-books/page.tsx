@@ -146,7 +146,7 @@ export default function TopBooksPage() {
       const [bRes, lRes, aRes, igRes, fbRes, autoRes, musicRes] = await Promise.all([
         fetch(`/api/top-books?password=${encodeURIComponent(password)}`),
         fetch(`/api/top-n-lists?password=${encodeURIComponent(password)}`),
-        fetch(`/api/post-tiktok?password=${encodeURIComponent(password)}`),
+        fetch(`/api/post-tiktok?password=${encodeURIComponent(password)}&platform=tiktok`),
         fetch(`/api/post-tiktok?password=${encodeURIComponent(password)}&platform=instagram`),
         fetch(`/api/post-tiktok?password=${encodeURIComponent(password)}&platform=facebook`),
         fetch(`/api/topn-automation?password=${encodeURIComponent(password)}`),
