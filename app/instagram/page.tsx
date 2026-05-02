@@ -132,6 +132,13 @@ export default function InstagramPage() {
   const [videoSaved, setVideoSaved] = useState(false);
   const [videoMusicTracks, setVideoMusicTracks] = useState<MusicTrack[]>([]);
   const [uploadingVideoMusic, setUploadingVideoMusic] = useState(false);
+  // Manual video generate + post
+  const [videoGenSlideshowId, setVideoGenSlideshowId] = useState("");
+  const [videoGenMusicId, setVideoGenMusicId] = useState("");
+  const [videoGenerating, setVideoGenerating] = useState(false);
+  const [videoGenResult, setVideoGenResult] = useState<{ generationId: string; caption: string; slideCount: number; name: string } | null>(null);
+  const [videoPosting, setVideoPosting] = useState(false);
+  const [videoPostResult, setVideoPostResult] = useState<string | null>(null);
 
   useEffect(() => {
     const pw = localStorage.getItem("sg.password");
@@ -463,6 +470,78 @@ export default function InstagramPage() {
       setTimeout(() => setVideoSaved(false), 2000);
     } catch {}
     setSaving(false);
+  }
+
+  async function generateOneVideo() {
+    if (!videoGenSlideshowId) return;
+    setVideoGenerating(true);
+    setVideoGenResult(null);
+    setVideoPostResult(null);
+    try {
+      const res = await fetch("/api/video-generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-password": password || "" },
+        body: JSON.stringify({
+          slideshowId: videoGenSlideshowId,
+          musicTrackId: videoGenMusicId || undefined,
+          durationPerSlide: 2,
+        }),
+      });
+      const text = await res.text();
+      let data: Record<string, unknown>;
+      try { data = JSON.parse(text); } catch {
+        window.alert(`Server returned ${res.status} — ${text.slice(0, 200)}`);
+        setVideoGenerating(false);
+        return;
+      }
+      if (res.ok) {
+        setVideoGenResult({
+          generationId: data.generationId as string,
+          caption: data.caption as string,
+          slideCount: data.slideCount as number,
+          name: data.slideshowName as string,
+        });
+      } else {
+        window.alert(data.error || "Generation failed");
+      }
+    } catch (e) {
+      window.alert(e instanceof Error ? e.message : "Failed");
+    }
+    setVideoGenerating(false);
+  }
+
+  async function postOneVideo(accountId: number, platform: "tiktok" | "instagram", caption: string, scheduledAt?: string) {
+    if (!videoGenResult) return;
+    setVideoPosting(true);
+    setVideoPostResult(null);
+    try {
+      const res = await fetch("/api/video-publish", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-password": password || "" },
+        body: JSON.stringify({
+          generationId: videoGenResult.generationId,
+          accountId,
+          platform,
+          caption,
+          ...(scheduledAt ? { scheduledAt: new Date(scheduledAt).toISOString() } : {}),
+        }),
+      });
+      const text = await res.text();
+      let data: Record<string, unknown>;
+      try { data = JSON.parse(text); } catch {
+        setVideoPostResult(`Error: Server returned ${res.status}`);
+        setVideoPosting(false);
+        return;
+      }
+      if (res.ok) {
+        setVideoPostResult(`Posted [post:${data.postId}]`);
+      } else {
+        setVideoPostResult(`Error: ${data.error}`);
+      }
+    } catch (e) {
+      setVideoPostResult(`Error: ${e instanceof Error ? e.message : "Failed"}`);
+    }
+    setVideoPosting(false);
   }
 
   if (!password) return null;
@@ -1225,6 +1304,127 @@ export default function InstagramPage() {
 
               return (
               <div className="space-y-6">
+                {/* Manual video generate + post */}
+                <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6 space-y-4">
+                  <h3 className="text-sm font-semibold">Generate One Video</h3>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs text-zinc-400 mb-1">Slideshow</label>
+                      <select
+                        value={videoGenSlideshowId}
+                        onChange={(e) => setVideoGenSlideshowId(e.target.value)}
+                        className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+                      >
+                        <option value="">Select slideshow...</option>
+                        {igSlideshows.map((s) => (
+                          <option key={s.id} value={s.id}>{s.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-zinc-400 mb-1">Music (optional)</label>
+                      <select
+                        value={videoGenMusicId}
+                        onChange={(e) => setVideoGenMusicId(e.target.value)}
+                        className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+                      >
+                        <option value="">No music</option>
+                        {videoMusicTracks.map((t) => (
+                          <option key={t.id} value={t.id}>{t.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={generateOneVideo}
+                    disabled={videoGenerating || !videoGenSlideshowId}
+                    className="px-5 py-2.5 rounded-lg bg-white text-black font-semibold hover:bg-zinc-200 transition-colors text-sm disabled:opacity-40"
+                  >
+                    {videoGenerating ? "Generating..." : "Generate Video"}
+                  </button>
+
+                  {videoGenResult && (
+                    <div className="space-y-4 pt-2">
+                      <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4">
+                        <p className="text-xs text-zinc-400 mb-2">{videoGenResult.name} — {videoGenResult.slideCount} slides</p>
+                        <video
+                          controls
+                          className="w-full max-w-[320px] mx-auto rounded-lg border border-zinc-700"
+                          src={`/api/video-preview?id=${encodeURIComponent(videoGenResult.generationId)}&password=${encodeURIComponent(password || "")}`}
+                        />
+                      </div>
+
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-xs text-zinc-400 mb-1">Post to account</label>
+                          <select
+                            id="video-post-account"
+                            defaultValue=""
+                            className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+                          >
+                            <option value="" disabled>Select account...</option>
+                            {accounts.length > 0 && (
+                              <optgroup label="TikTok">
+                                {accounts.map((a) => (
+                                  <option key={`tt-${a.id}`} value={`tiktok:${a.id}`}>@{a.username}</option>
+                                ))}
+                              </optgroup>
+                            )}
+                            {igAccounts.length > 0 && (
+                              <optgroup label="Instagram">
+                                {igAccounts.map((a) => (
+                                  <option key={`ig-${a.id}`} value={`instagram:${a.id}`}>@{a.username}</option>
+                                ))}
+                              </optgroup>
+                            )}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-xs text-zinc-400 mb-1">Caption</label>
+                          <input
+                            id="video-post-caption"
+                            type="text"
+                            defaultValue={videoGenResult.caption}
+                            className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-white/20 placeholder:text-zinc-600"
+                            placeholder="Caption..."
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-zinc-500 mb-1">Schedule (optional)</label>
+                          <input
+                            id="video-post-schedule"
+                            type="datetime-local"
+                            className="rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+                          />
+                        </div>
+                        <button
+                          onClick={() => {
+                            const sel = (document.getElementById("video-post-account") as HTMLSelectElement).value;
+                            if (!sel) { window.alert("Select an account"); return; }
+                            const [plat, idStr] = sel.split(":");
+                            const caption = (document.getElementById("video-post-caption") as HTMLInputElement).value;
+                            const schedule = (document.getElementById("video-post-schedule") as HTMLInputElement).value;
+                            postOneVideo(Number(idStr), plat as "tiktok" | "instagram", caption, schedule || undefined);
+                          }}
+                          disabled={videoPosting}
+                          className="px-5 py-2.5 rounded-lg bg-white text-black font-semibold hover:bg-zinc-200 transition-colors text-sm disabled:opacity-40"
+                        >
+                          {videoPosting ? "Posting..." : "Post"}
+                        </button>
+                      </div>
+
+                      {videoPostResult && (
+                        <div className={`text-sm p-3 rounded-lg ${videoPostResult.startsWith("Error") ? "bg-red-900/30 text-red-400" : "bg-green-900/30 text-green-400"}`}>
+                          {videoPostResult}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Automation config */}
                 <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6">
                   <p className="text-xs text-zinc-500">
                     {configuredCount} account{configuredCount !== 1 ? "s" : ""} enabled for video posts. Each account round-robins through its assigned slideshows, rendering a video (2s/slide) with music.
