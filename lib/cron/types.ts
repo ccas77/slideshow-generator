@@ -27,3 +27,7 @@ export interface IgAutoResult {
 export interface VideoAutoResult {
   status: string;
 }
+
+export interface ExcerptAutoResult {
+  status: string;
+}

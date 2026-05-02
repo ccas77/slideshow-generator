@@ -583,3 +583,28 @@ export async function getExcerpts(): Promise<Excerpt[]> {
 export async function setExcerpts(excerpts: Excerpt[]): Promise<void> {
   await redis.set(EXCERPTS_KEY, excerpts);
 }
+
+// ── Excerpt Automation ──
+
+export interface ExcerptAccountConfig {
+  enabled: boolean;
+  intervals: TimeWindow[];
+  excerptIds: string[];   // which excerpts to post (empty = all)
+  pointer: number;        // round-robin index
+  platform: "tiktok" | "instagram";
+}
+
+export interface ExcerptAutomation {
+  accounts: Record<string, ExcerptAccountConfig>; // accountId → config
+}
+
+const EXCERPT_AUTOMATION_KEY = "excerpt-automation";
+
+export async function getExcerptAutomation(): Promise<ExcerptAutomation> {
+  const data = await redis.get<ExcerptAutomation>(EXCERPT_AUTOMATION_KEY);
+  return data ?? { accounts: {} };
+}
+
+export async function setExcerptAutomation(config: ExcerptAutomation): Promise<void> {
+  await redis.set(EXCERPT_AUTOMATION_KEY, config);
+}

@@ -5,6 +5,7 @@ import { runTikTokPhase } from "@/lib/cron/tiktok";
 import { runTopNPhase } from "@/lib/cron/topn";
 import { runInstagramPhase } from "@/lib/cron/instagram";
 import { runVideoPhase } from "@/lib/cron/video";
+import { runExcerptPhase } from "@/lib/cron/excerpts";
 
 export const maxDuration = 300; // 5 min for Hobby
 
@@ -41,7 +42,10 @@ export async function GET(req: NextRequest) {
       // Phase 7: Video automation
       const videoResults = await runVideoPhase(scheduledToday);
 
-      cronResult = NextResponse.json({ ok: true, results, topNResults, igAutoResults, videoResults, debugLog });
+      // Phase 8: Excerpt automation
+      const excerptResults = await runExcerptPhase(scheduledToday);
+
+      cronResult = NextResponse.json({ ok: true, results, topNResults, igAutoResults, videoResults, excerptResults, debugLog });
     } finally {
       await releaseLock();
     }

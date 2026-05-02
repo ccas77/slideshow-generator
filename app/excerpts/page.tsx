@@ -36,6 +36,18 @@ interface TikTokAccount {
   username: string;
 }
 
+interface ExcerptAccountConfig {
+  enabled: boolean;
+  intervals: { start: string; end: string }[];
+  excerptIds: string[];
+  pointer: number;
+  platform: "tiktok" | "instagram";
+}
+
+interface ExcerptAutomation {
+  accounts: Record<string, ExcerptAccountConfig>;
+}
+
 function uid() {
   return Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
 }
@@ -53,6 +65,10 @@ export default function ExcerptsPage() {
   const [igAccounts, setIgAccounts] = useState<TikTokAccount[]>([]);
   const [extracting, setExtracting] = useState(false);
   const [imageUrl, setImageUrl] = useState("");
+  // Automation
+  const [autoConfig, setAutoConfig] = useState<ExcerptAutomation>({ accounts: {} });
+  const [selectedAutoAccount, setSelectedAutoAccount] = useState<string>("");
+  const [savingAuto, setSavingAuto] = useState(false);
   // Generate + post flow
   const [generatedSlides, setGeneratedSlides] = useState<GeneratedSlide[] | null>(null);
   const [generationId, setGenerationId] = useState<string | null>(null);
@@ -74,11 +90,12 @@ export default function ExcerptsPage() {
     if (!password) return;
     setLoading(true);
     try {
-      const [exRes, bkRes, ttRes, igRes] = await Promise.all([
+      const [exRes, bkRes, ttRes, igRes, autoRes] = await Promise.all([
         fetch(`/api/excerpts?password=${encodeURIComponent(password)}`),
         fetch(`/api/books?password=${encodeURIComponent(password)}`),
         fetch(`/api/post-tiktok?password=${encodeURIComponent(password)}&platform=tiktok`),
         fetch(`/api/post-tiktok?password=${encodeURIComponent(password)}&platform=instagram`),
+        fetch(`/api/excerpt-automation?password=${encodeURIComponent(password)}`),
       ]);
       if (exRes.ok) {
         const raw = (await exRes.json()).excerpts || [];
@@ -92,6 +109,7 @@ export default function ExcerptsPage() {
       if (bkRes.ok) setBooks((await bkRes.json()).books || []);
       if (ttRes.ok) setAccounts((await ttRes.json()).accounts || []);
       if (igRes.ok) setIgAccounts((await igRes.json()).accounts || []);
+      if (autoRes.ok) setAutoConfig((await autoRes.json()).config || { accounts: {} });
     } catch (e) {
       console.error("Excerpts fetch error:", e);
     }
@@ -344,6 +362,40 @@ export default function ExcerptsPage() {
     }
     setPosting(false);
   }
+
+  async function saveAutoConfig(next: ExcerptAutomation) {
+    setAutoConfig(next);
+    setSavingAuto(true);
+    try {
+      await fetch("/api/excerpt-automation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-password": password || "" },
+        body: JSON.stringify({ config: next }),
+      });
+    } catch (e) {
+      console.error("Automation save error:", e);
+    }
+    setSavingAuto(false);
+  }
+
+  function updateAutoAccount(accId: string, patch: Partial<ExcerptAccountConfig>) {
+    const existing = autoConfig.accounts[accId] || {
+      enabled: false,
+      intervals: [{ start: "18:00", end: "20:00" }],
+      excerptIds: [],
+      pointer: 0,
+      platform: "tiktok" as const,
+    };
+    saveAutoConfig({
+      ...autoConfig,
+      accounts: { ...autoConfig.accounts, [accId]: { ...existing, ...patch } },
+    });
+  }
+
+  const allAutoAccounts = [
+    ...accounts.map((a) => ({ ...a, source: "tiktok" as const })),
+    ...igAccounts.map((a) => ({ ...a, source: "instagram" as const })),
+  ];
 
   const active = excerpts.find((e) => e.id === activeId);
   const activeBook = active?.bookId
@@ -812,6 +864,170 @@ export default function ExcerptsPage() {
                 </>
               )}
             </main>
+          </div>
+        )}
+
+        {/* Automation */}
+        {!loading && excerpts.length > 0 && (
+          <div className="mt-10 rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold">Automation</h2>
+              {savingAuto && <span className="text-xs text-zinc-500">Saving…</span>}
+            </div>
+
+            {allAutoAccounts.length === 0 ? (
+              <p className="text-sm text-zinc-500">No accounts connected.</p>
+            ) : (
+              <>
+                <div className="mb-4">
+                  <label className="block text-xs text-zinc-400 mb-1">Account</label>
+                  <select
+                    value={selectedAutoAccount}
+                    onChange={(e) => setSelectedAutoAccount(e.target.value)}
+                    className="rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+                  >
+                    <option value="">Select account...</option>
+                    {accounts.length > 0 && (
+                      <optgroup label="TikTok">
+                        {accounts.map((a) => (
+                          <option key={`tt-${a.id}`} value={String(a.id)}>@{a.username}</option>
+                        ))}
+                      </optgroup>
+                    )}
+                    {igAccounts.length > 0 && (
+                      <optgroup label="Instagram">
+                        {igAccounts.map((a) => (
+                          <option key={`ig-${a.id}`} value={String(a.id)}>@{a.username}</option>
+                        ))}
+                      </optgroup>
+                    )}
+                  </select>
+                </div>
+
+                {selectedAutoAccount && (() => {
+                  const cfg = autoConfig.accounts[selectedAutoAccount] || {
+                    enabled: false,
+                    intervals: [{ start: "18:00", end: "20:00" }],
+                    excerptIds: [],
+                    pointer: 0,
+                    platform: igAccounts.find((a) => String(a.id) === selectedAutoAccount) ? "instagram" : "tiktok",
+                  };
+                  const readyExcerpts = excerpts.filter(
+                    (e) => e.imagePrompts.length > 0 && e.excerptImages.length > 0
+                  );
+                  return (
+                    <div className="space-y-4">
+                      {/* Enable toggle */}
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={cfg.enabled}
+                          onChange={(e) => updateAutoAccount(selectedAutoAccount, { enabled: e.target.checked })}
+                          className="accent-white w-4 h-4"
+                        />
+                        <span className="text-sm">Enabled</span>
+                      </label>
+
+                      {/* Platform */}
+                      <div>
+                        <label className="block text-xs text-zinc-400 mb-1">Platform</label>
+                        <div className="flex gap-2">
+                          {(["tiktok", "instagram"] as const).map((p) => (
+                            <button
+                              key={p}
+                              onClick={() => updateAutoAccount(selectedAutoAccount, { platform: p })}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${cfg.platform === p ? "bg-white text-black" : "bg-zinc-800 text-zinc-400 hover:text-white"}`}
+                            >
+                              {p === "tiktok" ? "TikTok" : "Instagram"}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Time windows */}
+                      <div>
+                        <label className="block text-xs text-zinc-400 mb-1">
+                          Time windows (UTC) — one post per window per day
+                        </label>
+                        <div className="space-y-2">
+                          {cfg.intervals.map((w, i) => (
+                            <div key={i} className="flex items-center gap-2">
+                              <input
+                                type="time"
+                                value={w.start}
+                                onChange={(e) => {
+                                  const next = [...cfg.intervals];
+                                  next[i] = { ...next[i], start: e.target.value };
+                                  updateAutoAccount(selectedAutoAccount, { intervals: next });
+                                }}
+                                className="rounded-lg border border-zinc-800 bg-zinc-950 px-2 py-1.5 text-sm text-white focus:outline-none"
+                              />
+                              <span className="text-zinc-500 text-xs">to</span>
+                              <input
+                                type="time"
+                                value={w.end}
+                                onChange={(e) => {
+                                  const next = [...cfg.intervals];
+                                  next[i] = { ...next[i], end: e.target.value };
+                                  updateAutoAccount(selectedAutoAccount, { intervals: next });
+                                }}
+                                className="rounded-lg border border-zinc-800 bg-zinc-950 px-2 py-1.5 text-sm text-white focus:outline-none"
+                              />
+                              {cfg.intervals.length > 1 && (
+                                <button
+                                  onClick={() => {
+                                    const next = cfg.intervals.filter((_, j) => j !== i);
+                                    updateAutoAccount(selectedAutoAccount, { intervals: next });
+                                  }}
+                                  className="text-xs text-red-500 hover:text-red-400"
+                                >
+                                  Remove
+                                </button>
+                              )}
+                            </div>
+                          ))}
+                          <button
+                            onClick={() => updateAutoAccount(selectedAutoAccount, { intervals: [...cfg.intervals, { start: "12:00", end: "14:00" }] })}
+                            className="text-xs text-zinc-400 hover:text-white transition-colors"
+                          >
+                            + Add window
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Excerpt selection */}
+                      <div>
+                        <label className="block text-xs text-zinc-400 mb-1">
+                          Excerpts to post (empty = all ready excerpts, round-robin)
+                        </label>
+                        {readyExcerpts.length === 0 ? (
+                          <p className="text-xs text-zinc-600">No excerpts ready (need at least 1 prompt + 1 excerpt image).</p>
+                        ) : (
+                          <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                            {readyExcerpts.map((e) => (
+                              <label key={e.id} className="flex items-center gap-2 text-sm text-zinc-300 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={cfg.excerptIds.includes(e.id)}
+                                  onChange={() => {
+                                    const next = cfg.excerptIds.includes(e.id)
+                                      ? cfg.excerptIds.filter((id) => id !== e.id)
+                                      : [...cfg.excerptIds, e.id];
+                                    updateAutoAccount(selectedAutoAccount, { excerptIds: next });
+                                  }}
+                                  className="accent-white w-3.5 h-3.5"
+                                />
+                                {e.name}
+                              </label>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
+              </>
+            )}
           </div>
         )}
       </div>
