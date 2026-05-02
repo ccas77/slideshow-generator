@@ -557,17 +557,27 @@ export interface Excerpt {
   id: string;
   name: string;
   bookId?: string;         // link to a book for grouping + cover slide
-  imagePrompt: string;     // AI prompt for generating the hook image
-  overlayText: string;     // text displayed on the hook image
-  hookImage?: string;      // uploaded base64 data URL — overrides AI prompt
+  imagePrompts: string[];  // AI prompts for generating the hook image (random pick)
+  overlayTexts: string[];  // hook texts displayed on the hook image (random pick)
   excerptImages: ExcerptImage[]; // uploaded book page screenshots
+  // Legacy single-value fields (migrated to arrays on read)
+  imagePrompt?: string;
+  overlayText?: string;
+  hookImage?: string;
 }
 
 const EXCERPTS_KEY = "excerpts";
 
 export async function getExcerpts(): Promise<Excerpt[]> {
   const data = await redis.get<Excerpt[]>(EXCERPTS_KEY);
-  return data ?? [];
+  if (!data) return [];
+  // Migrate legacy single-value fields to arrays
+  return data.map((e) => ({
+    ...e,
+    imagePrompts: e.imagePrompts?.length ? e.imagePrompts : e.imagePrompt ? [e.imagePrompt] : [],
+    overlayTexts: e.overlayTexts?.length ? e.overlayTexts : e.overlayText ? [e.overlayText] : [],
+    excerptImages: e.excerptImages || [],
+  }));
 }
 
 export async function setExcerpts(excerpts: Excerpt[]): Promise<void> {

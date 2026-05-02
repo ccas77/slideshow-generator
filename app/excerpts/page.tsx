@@ -15,10 +15,14 @@ interface Excerpt {
   id: string;
   name: string;
   bookId?: string;
-  imagePrompt: string;     // AI prompt for generating the hook image
-  overlayText: string;     // text displayed on the hook image
-  hookImage?: string;      // uploaded base64 data URL — overrides AI prompt
+  imagePrompts: string[];  // AI prompts for hook image (random pick)
+  overlayTexts: string[];  // hook texts on the hook image (random pick)
   excerptImages: ExcerptImage[]; // uploaded book page screenshots
+}
+
+interface GeneratedSlide {
+  label: string;
+  imageData: string;
 }
 
 interface Book {
@@ -47,13 +51,14 @@ export default function ExcerptsPage() {
   const [search, setSearch] = useState("");
   const [accounts, setAccounts] = useState<TikTokAccount[]>([]);
   const [igAccounts, setIgAccounts] = useState<TikTokAccount[]>([]);
-  const [publishAccountIds, setPublishAccountIds] = useState<number[]>([]);
-  const [publishPlatform, setPublishPlatform] = useState<"tiktok" | "instagram">("tiktok");
-  const [publishScheduledAt, setPublishScheduledAt] = useState("");
-  const [publishing, setPublishing] = useState(false);
-  const [publishResult, setPublishResult] = useState<string | null>(null);
   const [extracting, setExtracting] = useState(false);
   const [imageUrl, setImageUrl] = useState("");
+  // Generate + post flow
+  const [generatedSlides, setGeneratedSlides] = useState<GeneratedSlide[] | null>(null);
+  const [generating, setGenerating] = useState(false);
+  const [posting, setPosting] = useState(false);
+  const [postResult, setPostResult] = useState<string | null>(null);
+  const [previewIndex, setPreviewIndex] = useState(0);
 
   useEffect(() => {
     const pw = localStorage.getItem("sg.password");
@@ -75,8 +80,13 @@ export default function ExcerptsPage() {
         fetch(`/api/post-tiktok?password=${encodeURIComponent(password)}&platform=instagram`),
       ]);
       if (exRes.ok) {
-        const raw: Excerpt[] = (await exRes.json()).excerpts || [];
-        setExcerpts(raw.map((e) => ({ ...e, excerptImages: e.excerptImages || [] })));
+        const raw = (await exRes.json()).excerpts || [];
+        setExcerpts(raw.map((e: Excerpt & { imagePrompt?: string; overlayText?: string }) => ({
+          ...e,
+          imagePrompts: e.imagePrompts?.length ? e.imagePrompts : e.imagePrompt ? [e.imagePrompt] : [],
+          overlayTexts: e.overlayTexts?.length ? e.overlayTexts : e.overlayText ? [e.overlayText] : [],
+          excerptImages: e.excerptImages || [],
+        })));
       }
       if (bkRes.ok) setBooks((await bkRes.json()).books || []);
       if (ttRes.ok) setAccounts((await ttRes.json()).accounts || []);
@@ -126,8 +136,8 @@ export default function ExcerptsPage() {
     const ex: Excerpt = {
       id: uid(),
       name: name.trim(),
-      imagePrompt: "",
-      overlayText: "",
+      imagePrompts: [],
+      overlayTexts: [],
       excerptImages: [],
     };
     persist([...excerpts, ex]);
@@ -158,7 +168,7 @@ export default function ExcerptsPage() {
       });
       const data = await res.json();
       if (res.ok && data.prompt) {
-        updateExcerpt(excerptId, (ex) => ({ ...ex, imagePrompt: data.prompt }));
+        updateExcerpt(excerptId, (ex) => ({ ...ex, imagePrompts: [...ex.imagePrompts, data.prompt] }));
       } else {
         window.alert(data.error || "Failed to extract prompt");
       }
@@ -207,7 +217,7 @@ export default function ExcerptsPage() {
       });
       const data = await res.json();
       if (res.ok && data.prompt) {
-        updateExcerpt(excerptId, (ex) => ({ ...ex, imagePrompt: data.prompt }));
+        updateExcerpt(excerptId, (ex) => ({ ...ex, imagePrompts: [...ex.imagePrompts, data.prompt] }));
         setImageUrl("");
       } else {
         window.alert(data.error || "Failed to extract prompt");
@@ -265,37 +275,55 @@ export default function ExcerptsPage() {
     });
   }
 
-  async function publishExcerpt() {
-    if (!active || publishAccountIds.length === 0) return;
-    setPublishing(true);
-    setPublishResult(null);
+  async function generateSlideshow() {
+    if (!active) return;
+    setGenerating(true);
+    setGeneratedSlides(null);
+    setPostResult(null);
+    setPreviewIndex(0);
+    try {
+      const res = await fetch("/api/excerpt-generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-password": password || "" },
+        body: JSON.stringify({ excerptId: active.id }),
+      });
+      const data = await res.json();
+      if (res.ok && data.slides) {
+        setGeneratedSlides(data.slides);
+      } else {
+        window.alert(data.error || "Generation failed");
+      }
+    } catch (e) {
+      window.alert(e instanceof Error ? e.message : "Failed");
+    }
+    setGenerating(false);
+  }
+
+  async function postSlideshow(accountId: number, platform: "tiktok" | "instagram", scheduledAt?: string) {
+    if (!generatedSlides) return;
+    setPosting(true);
+    setPostResult(null);
     try {
       const res = await fetch("/api/excerpt-publish", {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-password": password || "" },
         body: JSON.stringify({
-          excerptId: active.id,
-          accountIds: publishAccountIds,
-          platform: publishPlatform,
-          ...(publishScheduledAt ? { scheduledAt: new Date(publishScheduledAt).toISOString() } : {}),
+          slides: generatedSlides,
+          accountIds: [accountId],
+          platform,
+          ...(scheduledAt ? { scheduledAt: new Date(scheduledAt).toISOString() } : {}),
         }),
       });
       const data = await res.json();
       if (res.ok) {
-        setPublishResult(`Posted ${data.slides} slides [post:${data.postId}]`);
+        setPostResult(`Posted ${data.slides} slides [post:${data.postId}]`);
       } else {
-        setPublishResult(`Error: ${data.error}`);
+        setPostResult(`Error: ${data.error}`);
       }
     } catch (e) {
-      setPublishResult(`Error: ${e instanceof Error ? e.message : "Failed"}`);
+      setPostResult(`Error: ${e instanceof Error ? e.message : "Failed"}`);
     }
-    setPublishing(false);
-  }
-
-  function togglePublishAccount(id: number) {
-    setPublishAccountIds((prev) =>
-      prev.includes(id) ? prev.filter((a) => a !== id) : [...prev, id]
-    );
+    setPosting(false);
   }
 
   const active = excerpts.find((e) => e.id === activeId);
@@ -464,34 +492,51 @@ export default function ExcerptsPage() {
                   </div>
 
                   {/* SLIDE 1: Hook */}
-                  <Section number={1} title="Hook slide" subtitle="AI-generated image with overlay text">
+                  <Section number={1} title="Hook slide" subtitle="AI-generated image with overlay text (random pick each generate)">
+                    {/* Image prompts */}
                     <label className="block text-xs font-medium text-zinc-400 mb-1">
-                      Image prompt
+                      Image prompts ({active.imagePrompts.length})
                     </label>
-                    <textarea
-                      value={active.imagePrompt}
-                      onChange={(e) =>
-                        updateExcerpt(active.id, (ex) => ({
-                          ...ex,
-                          imagePrompt: e.target.value,
-                        }))
-                      }
-                      rows={3}
-                      placeholder="e.g. A woman sitting in front of a bookshelf, looking into the camera, warm lighting, shallow depth of field"
-                      className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-white text-sm mb-3 focus:outline-none focus:ring-2 focus:ring-white/20 placeholder:text-zinc-600"
-                    />
-
-                    {/* Extract prompt from image or URL */}
-                    <div className="mb-3">
+                    {active.imagePrompts.length > 0 && (
+                      <div className="space-y-2 mb-3">
+                        {active.imagePrompts.map((p, i) => (
+                          <div key={i} className="flex gap-2">
+                            <textarea
+                              value={p}
+                              onChange={(e) => {
+                                const next = [...active.imagePrompts];
+                                next[i] = e.target.value;
+                                updateExcerpt(active.id, (ex) => ({ ...ex, imagePrompts: next }));
+                              }}
+                              rows={2}
+                              className="flex-1 rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20"
+                            />
+                            <button
+                              onClick={() => updateExcerpt(active.id, (ex) => ({ ...ex, imagePrompts: ex.imagePrompts.filter((_, j) => j !== i) }))}
+                              className="text-xs text-red-500 hover:text-red-400 shrink-0 self-start mt-2"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      <button
+                        onClick={() => updateExcerpt(active.id, (ex) => ({ ...ex, imagePrompts: [...ex.imagePrompts, ""] }))}
+                        className="px-3 py-1.5 rounded-lg border border-zinc-700 bg-zinc-900 text-xs text-zinc-300 hover:bg-zinc-800 transition-colors"
+                      >
+                        + Add prompt
+                      </button>
                       <button
                         onClick={() => uploadAndExtractPrompt(active.id)}
                         disabled={extracting}
                         className="px-3 py-1.5 rounded-lg border border-zinc-700 bg-zinc-900 text-xs text-zinc-300 hover:bg-zinc-800 transition-colors disabled:opacity-40"
                       >
-                        {extracting ? "Extracting..." : "Extract prompt from image"}
+                        {extracting ? "Extracting..." : "Extract from image"}
                       </button>
                     </div>
-                    <div className="flex gap-2 mb-3">
+                    <div className="flex gap-2 mb-4">
                       <input
                         type="text"
                         value={imageUrl}
@@ -508,21 +553,41 @@ export default function ExcerptsPage() {
                       </button>
                     </div>
 
+                    {/* Overlay texts (hooks) */}
                     <label className="block text-xs font-medium text-zinc-400 mb-1">
-                      Overlay text
+                      Hook texts ({active.overlayTexts.length})
                     </label>
-                    <textarea
-                      value={active.overlayText}
-                      onChange={(e) =>
-                        updateExcerpt(active.id, (ex) => ({
-                          ...ex,
-                          overlayText: e.target.value,
-                        }))
-                      }
-                      rows={2}
-                      placeholder='e.g. Why are you blushing? It&apos;s only a book.'
-                      className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20 placeholder:text-zinc-600"
-                    />
+                    {active.overlayTexts.length > 0 && (
+                      <div className="space-y-2 mb-3">
+                        {active.overlayTexts.map((t, i) => (
+                          <div key={i} className="flex gap-2">
+                            <input
+                              type="text"
+                              value={t}
+                              onChange={(e) => {
+                                const next = [...active.overlayTexts];
+                                next[i] = e.target.value;
+                                updateExcerpt(active.id, (ex) => ({ ...ex, overlayTexts: next }));
+                              }}
+                              placeholder='e.g. Why are you blushing? It&apos;s only a book.'
+                              className="flex-1 rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20 placeholder:text-zinc-600"
+                            />
+                            <button
+                              onClick={() => updateExcerpt(active.id, (ex) => ({ ...ex, overlayTexts: ex.overlayTexts.filter((_, j) => j !== i) }))}
+                              className="text-xs text-red-500 hover:text-red-400 shrink-0"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <button
+                      onClick={() => updateExcerpt(active.id, (ex) => ({ ...ex, overlayTexts: [...ex.overlayTexts, ""] }))}
+                      className="px-3 py-1.5 rounded-lg border border-zinc-700 bg-zinc-900 text-xs text-zinc-300 hover:bg-zinc-800 transition-colors"
+                    >
+                      + Add hook text
+                    </button>
                   </Section>
 
                   {/* SLIDES 2+: Excerpt images */}
@@ -624,62 +689,104 @@ export default function ExcerptsPage() {
                     )}
                   </Section>
 
-                  {/* Publish */}
+                  {/* Generate & Post */}
                   <div className="mt-8 pt-6 border-t border-zinc-800">
-                    <h3 className="text-sm font-semibold mb-3">Publish</h3>
-
-                    {/* Platform */}
-                    <div className="flex gap-3 mb-3">
-                      {(["tiktok", "instagram"] as const).map((p) => (
-                        <button
-                          key={p}
-                          onClick={() => { setPublishPlatform(p); setPublishAccountIds([]); }}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${publishPlatform === p ? "bg-white text-black" : "bg-zinc-800 text-zinc-400 hover:text-white"}`}
-                        >
-                          {p === "tiktok" ? "TikTok" : "Instagram"}
-                        </button>
-                      ))}
-                    </div>
-
-                    {/* Accounts */}
-                    <div className="space-y-1.5 mb-3">
-                      {(publishPlatform === "tiktok" ? accounts : igAccounts).map((a) => (
-                        <label key={a.id} className="flex items-center gap-2 text-sm text-zinc-300 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={publishAccountIds.includes(a.id)}
-                            onChange={() => togglePublishAccount(a.id)}
-                            className="accent-white w-3.5 h-3.5"
-                          />
-                          @{a.username}
-                        </label>
-                      ))}
-                      {(publishPlatform === "tiktok" ? accounts : igAccounts).length === 0 && (
-                        <p className="text-xs text-zinc-600">No {publishPlatform === "tiktok" ? "TikTok" : "Instagram"} accounts connected.</p>
-                      )}
-                    </div>
-
-                    {/* Schedule */}
-                    <div className="mb-4">
-                      <label className="text-xs text-zinc-500 block mb-1">Schedule (optional)</label>
-                      <input
-                        type="datetime-local"
-                        value={publishScheduledAt}
-                        onChange={(e) => setPublishScheduledAt(e.target.value)}
-                        className="rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-white/20"
-                      />
-                    </div>
+                    <h3 className="text-sm font-semibold mb-3">Generate & Post</h3>
 
                     <button
-                      onClick={publishExcerpt}
-                      disabled={publishing || publishAccountIds.length === 0}
+                      onClick={generateSlideshow}
+                      disabled={generating || active.imagePrompts.length === 0}
                       className="px-5 py-2.5 rounded-lg bg-white text-black font-semibold hover:bg-zinc-200 transition-colors text-sm disabled:opacity-40"
                     >
-                      {publishing ? "Publishing..." : publishScheduledAt ? "Schedule" : "Publish Now"}
+                      {generating ? "Generating..." : "Generate Slideshow"}
                     </button>
-                    {publishResult && (
-                      <div className={`mt-3 text-sm p-3 rounded-lg ${publishResult.startsWith("Error") ? "bg-red-900/30 text-red-400" : "bg-green-900/30 text-green-400"}`}>
-                        {publishResult}
+
+                    {generatedSlides && (
+                      <div className="mt-5 space-y-4">
+                        {/* Preview carousel */}
+                        <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-xs text-zinc-400">
+                              Slide {previewIndex + 1} of {generatedSlides.length} — {generatedSlides[previewIndex].label}
+                            </span>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => setPreviewIndex((i) => Math.max(0, i - 1))}
+                                disabled={previewIndex === 0}
+                                className="text-xs text-zinc-500 hover:text-white disabled:text-zinc-800 transition-colors"
+                              >
+                                ← Prev
+                              </button>
+                              <button
+                                onClick={() => setPreviewIndex((i) => Math.min(generatedSlides!.length - 1, i + 1))}
+                                disabled={previewIndex === generatedSlides.length - 1}
+                                className="text-xs text-zinc-500 hover:text-white disabled:text-zinc-800 transition-colors"
+                              >
+                                Next →
+                              </button>
+                            </div>
+                          </div>
+                          <img
+                            src={generatedSlides[previewIndex].imageData}
+                            alt={generatedSlides[previewIndex].label}
+                            className="w-full max-w-[280px] mx-auto rounded-lg border border-zinc-700"
+                          />
+                        </div>
+
+                        {/* Post controls */}
+                        <div className="space-y-3">
+                          <label className="text-xs text-zinc-400 block">Post to account</label>
+                          <select
+                            id="post-account"
+                            defaultValue=""
+                            className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+                          >
+                            <option value="" disabled>Select account...</option>
+                            {accounts.length > 0 && (
+                              <optgroup label="TikTok">
+                                {accounts.map((a) => (
+                                  <option key={`tt-${a.id}`} value={`tiktok:${a.id}`}>@{a.username}</option>
+                                ))}
+                              </optgroup>
+                            )}
+                            {igAccounts.length > 0 && (
+                              <optgroup label="Instagram">
+                                {igAccounts.map((a) => (
+                                  <option key={`ig-${a.id}`} value={`instagram:${a.id}`}>@{a.username}</option>
+                                ))}
+                              </optgroup>
+                            )}
+                          </select>
+
+                          <div>
+                            <label className="text-xs text-zinc-500 block mb-1">Schedule (optional)</label>
+                            <input
+                              id="post-schedule"
+                              type="datetime-local"
+                              className="rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+                            />
+                          </div>
+
+                          <button
+                            onClick={() => {
+                              const sel = (document.getElementById("post-account") as HTMLSelectElement).value;
+                              if (!sel) { window.alert("Select an account"); return; }
+                              const [platform, idStr] = sel.split(":");
+                              const schedule = (document.getElementById("post-schedule") as HTMLInputElement).value;
+                              postSlideshow(Number(idStr), platform as "tiktok" | "instagram", schedule || undefined);
+                            }}
+                            disabled={posting}
+                            className="px-5 py-2.5 rounded-lg bg-white text-black font-semibold hover:bg-zinc-200 transition-colors text-sm disabled:opacity-40"
+                          >
+                            {posting ? "Posting..." : "Post"}
+                          </button>
+                        </div>
+
+                        {postResult && (
+                          <div className={`text-sm p-3 rounded-lg ${postResult.startsWith("Error") ? "bg-red-900/30 text-red-400" : "bg-green-900/30 text-green-400"}`}>
+                            {postResult}
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
