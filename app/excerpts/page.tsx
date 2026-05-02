@@ -21,10 +21,17 @@ interface Excerpt {
   excerptImages: ExcerptImage[]; // uploaded book page screenshots
 }
 
+interface NamedItem {
+  id: string;
+  name: string;
+  value: string;
+}
+
 interface Book {
   id: string;
   name: string;
   coverImage?: string;
+  imagePrompts: NamedItem[];
 }
 
 interface TikTokAccount {
@@ -52,6 +59,8 @@ export default function ExcerptsPage() {
   const [publishScheduledAt, setPublishScheduledAt] = useState("");
   const [publishing, setPublishing] = useState(false);
   const [publishResult, setPublishResult] = useState<string | null>(null);
+  const [extracting, setExtracting] = useState(false);
+  const [imageUrl, setImageUrl] = useState("");
 
   useEffect(() => {
     const pw = localStorage.getItem("sg.password");
@@ -146,7 +155,27 @@ export default function ExcerptsPage() {
     if (activeId === id) setActiveId(null);
   }
 
-  function uploadHookImage(excerptId: string) {
+  async function extractPromptFromImage(imageData: string, excerptId: string) {
+    setExtracting(true);
+    try {
+      const res = await fetch("/api/extract-prompt", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-password": password || "" },
+        body: JSON.stringify({ imageData }),
+      });
+      const data = await res.json();
+      if (res.ok && data.prompt) {
+        updateExcerpt(excerptId, (ex) => ({ ...ex, imagePrompt: data.prompt }));
+      } else {
+        window.alert(data.error || "Failed to extract prompt");
+      }
+    } catch (err) {
+      window.alert(err instanceof Error ? err.message : "Failed");
+    }
+    setExtracting(false);
+  }
+
+  function uploadAndExtractPrompt(excerptId: string) {
     const input = document.createElement("input");
     input.type = "file";
     input.accept = "image/*";
@@ -158,9 +187,42 @@ export default function ExcerptsPage() {
         reader.onload = () => resolve(reader.result as string);
         reader.readAsDataURL(file);
       });
-      updateExcerpt(excerptId, (ex) => ({ ...ex, hookImage: dataUrl }));
+      await extractPromptFromImage(dataUrl, excerptId);
     };
     input.click();
+  }
+
+  async function extractPromptFromUrl(excerptId: string) {
+    if (!imageUrl.trim()) return;
+    setExtracting(true);
+    try {
+      const fetchRes = await fetch("/api/fetch-image-url", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-password": password || "" },
+        body: JSON.stringify({ url: imageUrl.trim() }),
+      });
+      const fetchData = await fetchRes.json();
+      if (!fetchRes.ok || !fetchData.coverData) {
+        window.alert(fetchData.error || "Failed to fetch image");
+        setExtracting(false);
+        return;
+      }
+      const res = await fetch("/api/extract-prompt", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-password": password || "" },
+        body: JSON.stringify({ imageData: fetchData.coverData }),
+      });
+      const data = await res.json();
+      if (res.ok && data.prompt) {
+        updateExcerpt(excerptId, (ex) => ({ ...ex, imagePrompt: data.prompt }));
+        setImageUrl("");
+      } else {
+        window.alert(data.error || "Failed to extract prompt");
+      }
+    } catch (err) {
+      window.alert(err instanceof Error ? err.message : "Failed");
+    }
+    setExtracting(false);
   }
 
   function addExcerptImage(excerptId: string) {
@@ -425,6 +487,52 @@ export default function ExcerptsPage() {
                       placeholder="e.g. A woman sitting in front of a bookshelf, looking into the camera, warm lighting, shallow depth of field"
                       className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-white text-sm mb-3 focus:outline-none focus:ring-2 focus:ring-white/20 placeholder:text-zinc-600"
                     />
+
+                    {/* Extract prompt from image or URL */}
+                    <div className="flex flex-wrap gap-2 mb-3">
+                      <button
+                        onClick={() => uploadAndExtractPrompt(active.id)}
+                        disabled={extracting}
+                        className="px-3 py-1.5 rounded-lg border border-zinc-700 bg-zinc-900 text-xs text-zinc-300 hover:bg-zinc-800 transition-colors disabled:opacity-40"
+                      >
+                        {extracting ? "Extracting..." : "Extract prompt from image"}
+                      </button>
+                      {activeBook && activeBook.imagePrompts.length > 0 && (
+                        <select
+                          value=""
+                          onChange={(e) => {
+                            if (e.target.value) {
+                              updateExcerpt(active.id, (ex) => ({ ...ex, imagePrompt: e.target.value }));
+                            }
+                          }}
+                          className="rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-1.5 text-xs text-zinc-300 focus:outline-none focus:ring-2 focus:ring-white/20"
+                        >
+                          <option value="">Use book prompt...</option>
+                          {activeBook.imagePrompts.map((p) => (
+                            <option key={p.id} value={p.value}>
+                              {p.name || p.value.slice(0, 50)}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                    </div>
+                    <div className="flex gap-2 mb-3">
+                      <input
+                        type="text"
+                        value={imageUrl}
+                        onChange={(e) => setImageUrl(e.target.value)}
+                        placeholder="Paste image URL to extract prompt..."
+                        className="flex-1 rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20 placeholder:text-zinc-600"
+                      />
+                      <button
+                        onClick={() => extractPromptFromUrl(active.id)}
+                        disabled={extracting || !imageUrl.trim()}
+                        className="px-3 py-2 rounded-lg border border-zinc-700 bg-zinc-900 text-xs text-zinc-300 hover:bg-zinc-800 transition-colors disabled:opacity-40 shrink-0"
+                      >
+                        Extract
+                      </button>
+                    </div>
+
                     <label className="block text-xs font-medium text-zinc-400 mb-1">
                       Overlay text
                     </label>
@@ -438,33 +546,8 @@ export default function ExcerptsPage() {
                       }
                       rows={2}
                       placeholder='e.g. Why are you blushing? It&apos;s only a book.'
-                      className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-white text-sm mb-3 focus:outline-none focus:ring-2 focus:ring-white/20 placeholder:text-zinc-600"
+                      className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20 placeholder:text-zinc-600"
                     />
-                    <label className="block text-xs font-medium text-zinc-400 mb-1">
-                      Uploaded image {active.hookImage && <span className="text-zinc-600">(overrides AI prompt)</span>}
-                    </label>
-                    {active.hookImage ? (
-                      <div className="flex items-center gap-3">
-                        <img
-                          src={active.hookImage}
-                          alt="Hook"
-                          className="w-16 h-20 rounded-lg object-cover border border-zinc-700 shrink-0"
-                        />
-                        <button
-                          onClick={() => updateExcerpt(active.id, (ex) => ({ ...ex, hookImage: undefined }))}
-                          className="text-xs text-red-500 hover:text-red-400 transition-colors"
-                        >
-                          Remove
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() => uploadHookImage(active.id)}
-                        className="w-full px-4 py-3 rounded-lg border border-dashed border-zinc-700 text-zinc-400 hover:text-white hover:border-zinc-500 transition-colors text-sm"
-                      >
-                        + Upload hook image
-                      </button>
-                    )}
                   </Section>
 
                   {/* SLIDES 2+: Excerpt images */}

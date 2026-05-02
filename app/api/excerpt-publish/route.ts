@@ -38,17 +38,15 @@ export async function POST(req: NextRequest) {
   try {
     const mediaIds: string[] = [];
 
-    // Slide 1: Hook slide — uploaded image or AI-generated, with overlay text
-    let hookImageData: string | null = excerpt.hookImage || null;
-    if (!hookImageData && excerpt.imagePrompt) {
+    // Slide 1: Hook slide — AI-generated image with overlay text
+    let hookImageData: string | null = null;
+    if (excerpt.imagePrompt) {
       hookImageData = await generateImage(excerpt.imagePrompt);
     }
     if (excerpt.overlayText) {
-      // Render overlay text on the image
       const hookBuf = await renderSlide(hookImageData, excerpt.overlayText);
       mediaIds.push(await uploadPng(hookBuf, "hook-slide.png"));
     } else if (hookImageData) {
-      // No text — just upload the image as-is
       const b64 = hookImageData.includes(",") ? hookImageData.split(",")[1] : hookImageData;
       const buf = Buffer.from(b64, "base64");
       mediaIds.push(await uploadPng(buf, "hook-slide.png"));
