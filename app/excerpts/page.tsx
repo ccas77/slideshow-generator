@@ -27,6 +27,11 @@ interface Book {
   coverImage?: string;
 }
 
+interface TikTokAccount {
+  id: number;
+  username: string;
+}
+
 function uid() {
   return Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
 }
@@ -40,6 +45,13 @@ export default function ExcerptsPage() {
   const [saving, setSaving] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [accounts, setAccounts] = useState<TikTokAccount[]>([]);
+  const [igAccounts, setIgAccounts] = useState<TikTokAccount[]>([]);
+  const [publishAccountIds, setPublishAccountIds] = useState<number[]>([]);
+  const [publishPlatform, setPublishPlatform] = useState<"tiktok" | "instagram">("tiktok");
+  const [publishScheduledAt, setPublishScheduledAt] = useState("");
+  const [publishing, setPublishing] = useState(false);
+  const [publishResult, setPublishResult] = useState<string | null>(null);
 
   useEffect(() => {
     const pw = localStorage.getItem("sg.password");
@@ -54,15 +66,19 @@ export default function ExcerptsPage() {
     if (!password) return;
     setLoading(true);
     try {
-      const [exRes, bkRes] = await Promise.all([
+      const [exRes, bkRes, ttRes, igRes] = await Promise.all([
         fetch(`/api/excerpts?password=${encodeURIComponent(password)}`),
         fetch(`/api/books?password=${encodeURIComponent(password)}`),
+        fetch(`/api/post-tiktok?password=${encodeURIComponent(password)}`),
+        fetch(`/api/post-tiktok?password=${encodeURIComponent(password)}&platform=instagram`),
       ]);
       if (exRes.ok) {
         const raw: Excerpt[] = (await exRes.json()).excerpts || [];
         setExcerpts(raw.map((e) => ({ ...e, excerptImages: e.excerptImages || [] })));
       }
       if (bkRes.ok) setBooks((await bkRes.json()).books || []);
+      if (ttRes.ok) setAccounts((await ttRes.json()).accounts || []);
+      if (igRes.ok) setIgAccounts((await igRes.json()).accounts || []);
     } catch (e) {
       console.error("Excerpts fetch error:", e);
     }
@@ -192,6 +208,39 @@ export default function ExcerptsPage() {
       [images[index], images[target]] = [images[target], images[index]];
       return { ...ex, excerptImages: images };
     });
+  }
+
+  async function publishExcerpt() {
+    if (!active || publishAccountIds.length === 0) return;
+    setPublishing(true);
+    setPublishResult(null);
+    try {
+      const res = await fetch("/api/excerpt-publish", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-password": password || "" },
+        body: JSON.stringify({
+          excerptId: active.id,
+          accountIds: publishAccountIds,
+          platform: publishPlatform,
+          ...(publishScheduledAt ? { scheduledAt: new Date(publishScheduledAt).toISOString() } : {}),
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setPublishResult(`Posted ${data.slides} slides [post:${data.postId}]`);
+      } else {
+        setPublishResult(`Error: ${data.error}`);
+      }
+    } catch (e) {
+      setPublishResult(`Error: ${e instanceof Error ? e.message : "Failed"}`);
+    }
+    setPublishing(false);
+  }
+
+  function togglePublishAccount(id: number) {
+    setPublishAccountIds((prev) =>
+      prev.includes(id) ? prev.filter((a) => a !== id) : [...prev, id]
+    );
   }
 
   const active = excerpts.find((e) => e.id === activeId);
@@ -516,6 +565,66 @@ export default function ExcerptsPage() {
                       </p>
                     )}
                   </Section>
+
+                  {/* Publish */}
+                  <div className="mt-8 pt-6 border-t border-zinc-800">
+                    <h3 className="text-sm font-semibold mb-3">Publish</h3>
+
+                    {/* Platform */}
+                    <div className="flex gap-3 mb-3">
+                      {(["tiktok", "instagram"] as const).map((p) => (
+                        <button
+                          key={p}
+                          onClick={() => { setPublishPlatform(p); setPublishAccountIds([]); }}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${publishPlatform === p ? "bg-white text-black" : "bg-zinc-800 text-zinc-400 hover:text-white"}`}
+                        >
+                          {p === "tiktok" ? "TikTok" : "Instagram"}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Accounts */}
+                    <div className="space-y-1.5 mb-3">
+                      {(publishPlatform === "tiktok" ? accounts : igAccounts).map((a) => (
+                        <label key={a.id} className="flex items-center gap-2 text-sm text-zinc-300 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={publishAccountIds.includes(a.id)}
+                            onChange={() => togglePublishAccount(a.id)}
+                            className="accent-white w-3.5 h-3.5"
+                          />
+                          @{a.username}
+                        </label>
+                      ))}
+                      {(publishPlatform === "tiktok" ? accounts : igAccounts).length === 0 && (
+                        <p className="text-xs text-zinc-600">No {publishPlatform === "tiktok" ? "TikTok" : "Instagram"} accounts connected.</p>
+                      )}
+                    </div>
+
+                    {/* Schedule */}
+                    <div className="mb-4">
+                      <label className="text-xs text-zinc-500 block mb-1">Schedule (optional)</label>
+                      <input
+                        type="datetime-local"
+                        value={publishScheduledAt}
+                        onChange={(e) => setPublishScheduledAt(e.target.value)}
+                        className="rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+                      />
+                    </div>
+
+                    <button
+                      onClick={publishExcerpt}
+                      disabled={publishing || publishAccountIds.length === 0}
+                      className="px-5 py-2.5 rounded-lg bg-white text-black font-semibold hover:bg-zinc-200 transition-colors text-sm disabled:opacity-40"
+                    >
+                      {publishing ? "Publishing..." : publishScheduledAt ? "Schedule" : "Publish Now"}
+                    </button>
+                    {publishResult && (
+                      <div className={`mt-3 text-sm p-3 rounded-lg ${publishResult.startsWith("Error") ? "bg-red-900/30 text-red-400" : "bg-green-900/30 text-green-400"}`}>
+                        {publishResult}
+                      </div>
+                    )}
+                  </div>
                 </>
               )}
             </main>
