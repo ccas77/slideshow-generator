@@ -1047,7 +1047,7 @@ export default function ExcerptsPage() {
                     platform: igAccounts.find((a) => String(a.id) === selectedAutoAccount) ? "instagram" : "tiktok",
                   };
                   const readyExcerpts = excerpts.filter(
-                    (e) => e.imagePrompts.length > 0 && e.excerptImages.length > 0
+                    (e) => e.imagePrompts.length > 0
                   );
                   return (
                     <div className="space-y-4">
@@ -1135,7 +1135,7 @@ export default function ExcerptsPage() {
                           Excerpts to post (empty = all ready excerpts, round-robin)
                         </label>
                         {readyExcerpts.length === 0 ? (
-                          <p className="text-xs text-zinc-600">No excerpts ready (need at least 1 prompt + 1 excerpt image).</p>
+                          <p className="text-xs text-zinc-600">No excerpts ready (need at least 1 image prompt).</p>
                         ) : (
                           <div className="space-y-1.5 max-h-48 overflow-y-auto">
                             {readyExcerpts.map((e) => (
