@@ -87,15 +87,28 @@ export async function runExcerptPhase(
             }
           }
 
-          // Optional extra hook slide (second hook, same AI image)
+          // Optional extra hook slide (fresh AI image from its own prompts)
+          const extraPrompts = excerpt.extraImagePrompts?.filter(Boolean) || [];
           const extraTexts = excerpt.extraOverlayTexts?.filter(Boolean) || [];
-          if (extraTexts.length > 0 && hookImageData) {
-            const extraText = pickRandom(extraTexts);
-            if (extraText) {
-              const extraBuf = await renderSlide(hookImageData, extraText);
-              mediaIds.push(
-                await uploadPng(extraBuf, `excerpt-auto-${accIdStr}-hook2.png`)
-              );
+          if (extraPrompts.length > 0) {
+            const extraPrompt = pickRandom(extraPrompts);
+            const extraText = extraTexts.length > 0 ? pickRandom(extraTexts) : undefined;
+            if (extraPrompt) {
+              const extraImageData = await generateImage(extraPrompt);
+              if (extraText) {
+                const extraBuf = await renderSlide(extraImageData, extraText);
+                mediaIds.push(
+                  await uploadPng(extraBuf, `excerpt-auto-${accIdStr}-hook2.png`)
+                );
+              } else if (extraImageData) {
+                const b64 = extraImageData.includes(",")
+                  ? extraImageData.split(",")[1]
+                  : extraImageData;
+                const buf = Buffer.from(b64, "base64");
+                mediaIds.push(
+                  await uploadPng(buf, `excerpt-auto-${accIdStr}-hook2.png`)
+                );
+              }
             }
           }
 

@@ -17,7 +17,8 @@ interface Excerpt {
   bookId?: string;
   imagePrompts: string[];  // AI prompts for hook image (random pick)
   overlayTexts: string[];  // hook texts on the hook image (random pick)
-  extraOverlayTexts?: string[]; // optional second hook slide texts (random pick)
+  extraImagePrompts?: string[];  // AI prompts for second hook image (random pick)
+  extraOverlayTexts?: string[];  // texts for second hook slide (random pick)
   excerptImages: ExcerptImage[]; // uploaded book page screenshots (optional)
 }
 
@@ -66,6 +67,8 @@ export default function ExcerptsPage() {
   const [igAccounts, setIgAccounts] = useState<TikTokAccount[]>([]);
   const [extracting, setExtracting] = useState(false);
   const [imageUrl, setImageUrl] = useState("");
+  const [extraImageUrl, setExtraImageUrl] = useState("");
+  const [extraHookOpen, setExtraHookOpen] = useState(false);
   // Automation
   const [autoConfig, setAutoConfig] = useState<ExcerptAutomation>({ accounts: {} });
   const [selectedAutoAccount, setSelectedAutoAccount] = useState<string>("");
@@ -104,6 +107,7 @@ export default function ExcerptsPage() {
           ...e,
           imagePrompts: e.imagePrompts?.length ? e.imagePrompts : e.imagePrompt ? [e.imagePrompt] : [],
           overlayTexts: e.overlayTexts?.length ? e.overlayTexts : e.overlayText ? [e.overlayText] : [],
+          extraImagePrompts: e.extraImagePrompts || [],
           extraOverlayTexts: e.extraOverlayTexts || [],
           excerptImages: e.excerptImages || [],
         })));
@@ -159,6 +163,7 @@ export default function ExcerptsPage() {
       name: name.trim(),
       imagePrompts: [],
       overlayTexts: [],
+      extraImagePrompts: [],
       extraOverlayTexts: [],
       excerptImages: [],
     };
@@ -180,7 +185,7 @@ export default function ExcerptsPage() {
     if (activeId === id) setActiveId(null);
   }
 
-  async function extractPromptFromImage(imageData: string, excerptId: string) {
+  async function extractPromptFromImage(imageData: string, excerptId: string, target: "main" | "extra" = "main") {
     setExtracting(true);
     try {
       const res = await fetch("/api/extract-prompt", {
@@ -190,7 +195,11 @@ export default function ExcerptsPage() {
       });
       const data = await res.json();
       if (res.ok && data.prompt) {
-        updateExcerpt(excerptId, (ex) => ({ ...ex, imagePrompts: [...ex.imagePrompts, data.prompt] }));
+        if (target === "extra") {
+          updateExcerpt(excerptId, (ex) => ({ ...ex, extraImagePrompts: [...(ex.extraImagePrompts || []), data.prompt] }));
+        } else {
+          updateExcerpt(excerptId, (ex) => ({ ...ex, imagePrompts: [...ex.imagePrompts, data.prompt] }));
+        }
       } else {
         window.alert(data.error || "Failed to extract prompt");
       }
@@ -200,7 +209,7 @@ export default function ExcerptsPage() {
     setExtracting(false);
   }
 
-  function uploadAndExtractPrompt(excerptId: string) {
+  function uploadAndExtractPrompt(excerptId: string, target: "main" | "extra" = "main") {
     const input = document.createElement("input");
     input.type = "file";
     input.accept = "image/*";
@@ -212,19 +221,20 @@ export default function ExcerptsPage() {
         reader.onload = () => resolve(reader.result as string);
         reader.readAsDataURL(file);
       });
-      await extractPromptFromImage(dataUrl, excerptId);
+      await extractPromptFromImage(dataUrl, excerptId, target);
     };
     input.click();
   }
 
-  async function extractPromptFromUrl(excerptId: string) {
-    if (!imageUrl.trim()) return;
+  async function extractPromptFromUrl(excerptId: string, target: "main" | "extra" = "main") {
+    const url = target === "extra" ? extraImageUrl : imageUrl;
+    if (!url.trim()) return;
     setExtracting(true);
     try {
       const fetchRes = await fetch("/api/fetch-image-url", {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-password": password || "" },
-        body: JSON.stringify({ url: imageUrl.trim() }),
+        body: JSON.stringify({ url: url.trim() }),
       });
       const fetchData = await fetchRes.json();
       if (!fetchRes.ok || !fetchData.coverData) {
@@ -239,8 +249,13 @@ export default function ExcerptsPage() {
       });
       const data = await res.json();
       if (res.ok && data.prompt) {
-        updateExcerpt(excerptId, (ex) => ({ ...ex, imagePrompts: [...ex.imagePrompts, data.prompt] }));
-        setImageUrl("");
+        if (target === "extra") {
+          updateExcerpt(excerptId, (ex) => ({ ...ex, extraImagePrompts: [...(ex.extraImagePrompts || []), data.prompt] }));
+          setExtraImageUrl("");
+        } else {
+          updateExcerpt(excerptId, (ex) => ({ ...ex, imagePrompts: [...ex.imagePrompts, data.prompt] }));
+          setImageUrl("");
+        }
       } else {
         window.alert(data.error || "Failed to extract prompt");
       }
@@ -664,44 +679,121 @@ export default function ExcerptsPage() {
                     </button>
                   </Section>
 
-                  {/* OPTIONAL SLIDE 2: Extra hook */}
-                  <Section
-                    number={2}
-                    title="Extra hook texts (optional)"
-                    subtitle="Second hook slide using the same AI image"
-                  >
-                    {(active.extraOverlayTexts || []).length > 0 && (
-                      <div className="space-y-2 mb-3">
-                        {(active.extraOverlayTexts || []).map((t, i) => (
-                          <div key={i} className="flex gap-2">
-                            <input
-                              type="text"
-                              value={t}
-                              onChange={(e) => {
-                                const next = [...(active.extraOverlayTexts || [])];
-                                next[i] = e.target.value;
-                                updateExcerpt(active.id, (ex) => ({ ...ex, extraOverlayTexts: next }));
-                              }}
-                              placeholder='e.g. He pinned her against the wall...'
-                              className="flex-1 rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20 placeholder:text-zinc-600"
-                            />
-                            <button
-                              onClick={() => updateExcerpt(active.id, (ex) => ({ ...ex, extraOverlayTexts: (ex.extraOverlayTexts || []).filter((_, j) => j !== i) }))}
-                              className="text-xs text-red-500 hover:text-red-400 shrink-0"
-                            >
-                              Remove
-                            </button>
+                  {/* OPTIONAL SLIDE 2: Extra hook (collapsible) */}
+                  <div className="mb-6">
+                    <button
+                      onClick={() => setExtraHookOpen(!extraHookOpen)}
+                      className="flex items-center gap-3 mb-3 w-full text-left"
+                    >
+                      <span className="w-6 h-6 rounded-full bg-zinc-800 text-zinc-400 text-xs font-semibold flex items-center justify-center shrink-0">
+                        2
+                      </span>
+                      <div className="flex-1">
+                        <div className="text-sm font-medium">Extra hook slide (optional)</div>
+                        <div className="text-xs text-zinc-500">Second hook with its own AI image</div>
+                      </div>
+                      <span className="text-zinc-500 text-sm">{extraHookOpen ? "▲" : "▼"}</span>
+                    </button>
+                    {extraHookOpen && (
+                      <div className="ml-9">
+                        {/* Extra hook image prompts */}
+                        <label className="block text-xs font-medium text-zinc-400 mb-1">
+                          Image prompts ({(active.extraImagePrompts || []).length})
+                        </label>
+                        {(active.extraImagePrompts || []).length > 0 && (
+                          <div className="space-y-2 mb-3">
+                            {(active.extraImagePrompts || []).map((p, i) => (
+                              <div key={i} className="flex gap-2">
+                                <textarea
+                                  value={p}
+                                  onChange={(e) => {
+                                    const next = [...(active.extraImagePrompts || [])];
+                                    next[i] = e.target.value;
+                                    updateExcerpt(active.id, (ex) => ({ ...ex, extraImagePrompts: next }));
+                                  }}
+                                  rows={2}
+                                  className="flex-1 rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20 placeholder:text-zinc-600 resize-none"
+                                />
+                                <button
+                                  onClick={() => updateExcerpt(active.id, (ex) => ({ ...ex, extraImagePrompts: (ex.extraImagePrompts || []).filter((_, j) => j !== i) }))}
+                                  className="text-xs text-red-500 hover:text-red-400 shrink-0"
+                                >
+                                  Remove
+                                </button>
+                              </div>
+                            ))}
                           </div>
-                        ))}
+                        )}
+                        <div className="flex gap-2 mb-2">
+                          <button
+                            onClick={() => updateExcerpt(active.id, (ex) => ({ ...ex, extraImagePrompts: [...(ex.extraImagePrompts || []), ""] }))}
+                            className="px-3 py-1.5 rounded-lg border border-zinc-700 bg-zinc-900 text-xs text-zinc-300 hover:bg-zinc-800 transition-colors"
+                          >
+                            + Add prompt
+                          </button>
+                          <button
+                            onClick={() => uploadAndExtractPrompt(active.id, "extra")}
+                            disabled={extracting}
+                            className="px-3 py-1.5 rounded-lg border border-zinc-700 bg-zinc-900 text-xs text-zinc-300 hover:bg-zinc-800 transition-colors disabled:opacity-40"
+                          >
+                            Upload &amp; extract
+                          </button>
+                        </div>
+                        <div className="flex gap-2 mb-4">
+                          <input
+                            type="text"
+                            value={extraImageUrl}
+                            onChange={(e) => setExtraImageUrl(e.target.value)}
+                            placeholder="Paste image URL to extract prompt..."
+                            className="flex-1 rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20 placeholder:text-zinc-600"
+                          />
+                          <button
+                            onClick={() => extractPromptFromUrl(active.id, "extra")}
+                            disabled={extracting || !extraImageUrl.trim()}
+                            className="px-3 py-2 rounded-lg border border-zinc-700 bg-zinc-900 text-xs text-zinc-300 hover:bg-zinc-800 transition-colors disabled:opacity-40 shrink-0"
+                          >
+                            Extract
+                          </button>
+                        </div>
+
+                        {/* Extra hook overlay texts */}
+                        <label className="block text-xs font-medium text-zinc-400 mb-1">
+                          Hook texts ({(active.extraOverlayTexts || []).length})
+                        </label>
+                        {(active.extraOverlayTexts || []).length > 0 && (
+                          <div className="space-y-2 mb-3">
+                            {(active.extraOverlayTexts || []).map((t, i) => (
+                              <div key={i} className="flex gap-2">
+                                <input
+                                  type="text"
+                                  value={t}
+                                  onChange={(e) => {
+                                    const next = [...(active.extraOverlayTexts || [])];
+                                    next[i] = e.target.value;
+                                    updateExcerpt(active.id, (ex) => ({ ...ex, extraOverlayTexts: next }));
+                                  }}
+                                  placeholder='e.g. He pinned her against the wall...'
+                                  className="flex-1 rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20 placeholder:text-zinc-600"
+                                />
+                                <button
+                                  onClick={() => updateExcerpt(active.id, (ex) => ({ ...ex, extraOverlayTexts: (ex.extraOverlayTexts || []).filter((_, j) => j !== i) }))}
+                                  className="text-xs text-red-500 hover:text-red-400 shrink-0"
+                                >
+                                  Remove
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        <button
+                          onClick={() => updateExcerpt(active.id, (ex) => ({ ...ex, extraOverlayTexts: [...(ex.extraOverlayTexts || []), ""] }))}
+                          className="px-3 py-1.5 rounded-lg border border-zinc-700 bg-zinc-900 text-xs text-zinc-300 hover:bg-zinc-800 transition-colors"
+                        >
+                          + Add hook text
+                        </button>
                       </div>
                     )}
-                    <button
-                      onClick={() => updateExcerpt(active.id, (ex) => ({ ...ex, extraOverlayTexts: [...(ex.extraOverlayTexts || []), ""] }))}
-                      className="px-3 py-1.5 rounded-lg border border-zinc-700 bg-zinc-900 text-xs text-zinc-300 hover:bg-zinc-800 transition-colors"
-                    >
-                      + Add extra hook text
-                    </button>
-                  </Section>
+                  </div>
 
                   {/* Excerpt images (optional) */}
                   <Section

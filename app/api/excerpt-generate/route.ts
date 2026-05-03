@@ -55,16 +55,23 @@ export async function POST(req: NextRequest) {
       slides.push({ label: "Hook", imageData: hookImageData });
     }
 
-    // Optional extra hook slide (second hook with same AI image)
+    // Optional extra hook slide (fresh AI image from its own prompts)
+    const extraPrompts = excerpt.extraImagePrompts?.filter(Boolean) || [];
     const extraTexts = excerpt.extraOverlayTexts?.filter(Boolean) || [];
-    if (extraTexts.length > 0 && hookImageData) {
-      const extraText = pickRandom(extraTexts);
-      if (extraText) {
-        const extraBuf = await renderSlide(hookImageData, extraText);
-        slides.push({
-          label: "Hook 2",
-          imageData: `data:image/png;base64,${extraBuf.toString("base64")}`,
-        });
+    if (extraPrompts.length > 0) {
+      const extraPrompt = pickRandom(extraPrompts);
+      const extraText = extraTexts.length > 0 ? pickRandom(extraTexts) : undefined;
+      if (extraPrompt) {
+        const extraImageData = await generateImage(extraPrompt);
+        if (extraImageData && extraText) {
+          const extraBuf = await renderSlide(extraImageData, extraText);
+          slides.push({
+            label: "Hook 2",
+            imageData: `data:image/png;base64,${extraBuf.toString("base64")}`,
+          });
+        } else if (extraImageData) {
+          slides.push({ label: "Hook 2", imageData: extraImageData });
+        }
       }
     }
 
