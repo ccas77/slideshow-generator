@@ -89,18 +89,16 @@ export async function renderSlide(
     .png()
     .toBuffer();
 
-  // 3. Text overlay — white text with soft black shadow, centered
-  // Use font_family instead of fontfile so Pango/fontconfig handles emoji fallback
+  // 3. Text overlay — white text with black outline, centered
   const escaped = escapeMarkup(text);
   const fontSize = 36;
   const pSize = fontSize * 1024;
 
-  // Black shadow text (rendered slightly larger via blur for a glow effect)
-  const shadowMarkup = `<span font_family="Inter" foreground="black" font_weight="bold" font_size="${pSize}">${escaped}</span>`;
-  const shadowRaw = await sharp({
-    text: { text: shadowMarkup, width: SLIDE_W - 80, align: "centre", rgba: true, dpi: 150 },
+  // Black outline text — rendered and composited at offsets around the center
+  const outlineMarkup = `<span font_family="Inter" foreground="black" font_weight="bold" font_size="${pSize}">${escaped}</span>`;
+  const outlinePng = await sharp({
+    text: { text: outlineMarkup, width: SLIDE_W - 80, align: "centre", rgba: true, dpi: 150 },
   }).png().toBuffer();
-  const shadowPng = await sharp(shadowRaw).blur(6).png().toBuffer();
 
   // White foreground text
   const textMarkup = `<span font_family="Inter" foreground="white" font_weight="bold" font_size="${pSize}">${escaped}</span>`;
@@ -114,10 +112,24 @@ export async function renderSlide(
   const topOffset = Math.max(0, Math.round((SLIDE_H - textH) / 2));
   const leftOffset = Math.max(0, Math.round((SLIDE_W - textW) / 2));
 
+  // Build outline by compositing black text at offsets in all directions
+  const outlineOffset = 3;
+  const outlineLayers: { input: Buffer; top: number; left: number }[] = [];
+  for (let dy = -outlineOffset; dy <= outlineOffset; dy++) {
+    for (let dx = -outlineOffset; dx <= outlineOffset; dx++) {
+      if (dx === 0 && dy === 0) continue;
+      outlineLayers.push({
+        input: outlinePng,
+        top: topOffset + dy,
+        left: leftOffset + dx,
+      });
+    }
+  }
+
   return sharp(baseBuffer)
     .composite([
       { input: gradientPng },
-      { input: shadowPng, top: topOffset, left: leftOffset },
+      ...outlineLayers,
       { input: textPng, top: topOffset, left: leftOffset },
     ])
     .png()
