@@ -243,7 +243,10 @@ export async function runTikTokPhase(
           lastStatus: status,
         });
       }
-    } catch {}
+    } catch (saveErr) {
+      const msg = saveErr instanceof Error ? saveErr.message : String(saveErr);
+      debugLog.push(`Save error for ${accId}: ${msg}`);
+    }
   }
 
   // Include skipped accounts (enabled=false or no jobs)
