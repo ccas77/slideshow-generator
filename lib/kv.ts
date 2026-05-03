@@ -559,7 +559,8 @@ export interface Excerpt {
   bookId?: string;         // link to a book for grouping + cover slide
   imagePrompts: string[];  // AI prompts for generating the hook image (random pick)
   overlayTexts: string[];  // hook texts displayed on the hook image (random pick)
-  excerptImages: ExcerptImage[]; // uploaded book page screenshots
+  extraOverlayTexts?: string[]; // optional second hook slide texts (random pick)
+  excerptImages: ExcerptImage[]; // uploaded book page screenshots (optional)
   // Legacy single-value fields (migrated to arrays on read)
   imagePrompt?: string;
   overlayText?: string;
@@ -576,6 +577,7 @@ export async function getExcerpts(): Promise<Excerpt[]> {
     ...e,
     imagePrompts: e.imagePrompts?.length ? e.imagePrompts : e.imagePrompt ? [e.imagePrompt] : [],
     overlayTexts: e.overlayTexts?.length ? e.overlayTexts : e.overlayText ? [e.overlayText] : [],
+    extraOverlayTexts: e.extraOverlayTexts || [],
     excerptImages: e.excerptImages || [],
   }));
 }

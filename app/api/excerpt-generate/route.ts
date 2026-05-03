@@ -55,7 +55,20 @@ export async function POST(req: NextRequest) {
       slides.push({ label: "Hook", imageData: hookImageData });
     }
 
-    // Slides 2+: Excerpt images (already stored)
+    // Optional extra hook slide (second hook with same AI image)
+    const extraTexts = excerpt.extraOverlayTexts?.filter(Boolean) || [];
+    if (extraTexts.length > 0 && hookImageData) {
+      const extraText = pickRandom(extraTexts);
+      if (extraText) {
+        const extraBuf = await renderSlide(hookImageData, extraText);
+        slides.push({
+          label: "Hook 2",
+          imageData: `data:image/png;base64,${extraBuf.toString("base64")}`,
+        });
+      }
+    }
+
+    // Excerpt images (optional, already stored)
     for (const img of excerpt.excerptImages) {
       slides.push({ label: img.label || "Excerpt", imageData: img.imageData });
     }

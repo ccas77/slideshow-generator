@@ -17,7 +17,8 @@ interface Excerpt {
   bookId?: string;
   imagePrompts: string[];  // AI prompts for hook image (random pick)
   overlayTexts: string[];  // hook texts on the hook image (random pick)
-  excerptImages: ExcerptImage[]; // uploaded book page screenshots
+  extraOverlayTexts?: string[]; // optional second hook slide texts (random pick)
+  excerptImages: ExcerptImage[]; // uploaded book page screenshots (optional)
 }
 
 interface GeneratedSlide {
@@ -103,6 +104,7 @@ export default function ExcerptsPage() {
           ...e,
           imagePrompts: e.imagePrompts?.length ? e.imagePrompts : e.imagePrompt ? [e.imagePrompt] : [],
           overlayTexts: e.overlayTexts?.length ? e.overlayTexts : e.overlayText ? [e.overlayText] : [],
+          extraOverlayTexts: e.extraOverlayTexts || [],
           excerptImages: e.excerptImages || [],
         })));
       }
@@ -157,6 +159,7 @@ export default function ExcerptsPage() {
       name: name.trim(),
       imagePrompts: [],
       overlayTexts: [],
+      extraOverlayTexts: [],
       excerptImages: [],
     };
     persist([...excerpts, ex]);
@@ -661,10 +664,49 @@ export default function ExcerptsPage() {
                     </button>
                   </Section>
 
-                  {/* SLIDES 2+: Excerpt images */}
+                  {/* OPTIONAL SLIDE 2: Extra hook */}
                   <Section
                     number={2}
-                    title="Excerpt images"
+                    title="Extra hook texts (optional)"
+                    subtitle="Second hook slide using the same AI image"
+                  >
+                    {(active.extraOverlayTexts || []).length > 0 && (
+                      <div className="space-y-2 mb-3">
+                        {(active.extraOverlayTexts || []).map((t, i) => (
+                          <div key={i} className="flex gap-2">
+                            <input
+                              type="text"
+                              value={t}
+                              onChange={(e) => {
+                                const next = [...(active.extraOverlayTexts || [])];
+                                next[i] = e.target.value;
+                                updateExcerpt(active.id, (ex) => ({ ...ex, extraOverlayTexts: next }));
+                              }}
+                              placeholder='e.g. He pinned her against the wall...'
+                              className="flex-1 rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20 placeholder:text-zinc-600"
+                            />
+                            <button
+                              onClick={() => updateExcerpt(active.id, (ex) => ({ ...ex, extraOverlayTexts: (ex.extraOverlayTexts || []).filter((_, j) => j !== i) }))}
+                              className="text-xs text-red-500 hover:text-red-400 shrink-0"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <button
+                      onClick={() => updateExcerpt(active.id, (ex) => ({ ...ex, extraOverlayTexts: [...(ex.extraOverlayTexts || []), ""] }))}
+                      className="px-3 py-1.5 rounded-lg border border-zinc-700 bg-zinc-900 text-xs text-zinc-300 hover:bg-zinc-800 transition-colors"
+                    >
+                      + Add extra hook text
+                    </button>
+                  </Section>
+
+                  {/* Excerpt images (optional) */}
+                  <Section
+                    number={3}
+                    title="Excerpt images (optional)"
                     subtitle="Uploaded screenshots of book pages"
                   >
                     {active.excerptImages.length > 0 && (
@@ -684,7 +726,7 @@ export default function ExcerptsPage() {
                                 {img.label || `Image ${i + 1}`}
                               </div>
                               <div className="text-xs text-zinc-600 mt-0.5">
-                                Slide {i + 2}
+                                Slide {i + ((active.extraOverlayTexts || []).filter(Boolean).length > 0 ? 3 : 2)}
                               </div>
                             </div>
                             <div className="flex flex-col gap-1 shrink-0">
@@ -733,7 +775,7 @@ export default function ExcerptsPage() {
 
                   {/* FINAL SLIDE: Cover */}
                   <Section
-                    number={active.excerptImages.length + 2}
+                    number={active.excerptImages.length + ((active.extraOverlayTexts || []).filter(Boolean).length > 0 ? 3 : 2)}
                     title="Book cover"
                     subtitle="Pulled automatically from the selected book"
                   >

@@ -36,7 +36,7 @@ export async function runExcerptPhase(
 
       // Build excerpt pool
       let pool = excerpts.filter(
-        (e) => e.imagePrompts.length > 0 && e.excerptImages.length > 0
+        (e) => e.imagePrompts.length > 0
       );
       if (accConfig.excerptIds.length > 0) {
         pool = pool.filter((e) => accConfig.excerptIds.includes(e.id));
@@ -68,8 +68,9 @@ export async function runExcerptPhase(
           const mediaIds: string[] = [];
 
           // Slide 1: Hook — AI image with overlay text
+          let hookImageData: string | null = null;
           if (prompt) {
-            const hookImageData = await generateImage(prompt);
+            hookImageData = await generateImage(prompt);
             if (hookText) {
               const hookBuf = await renderSlide(hookImageData, hookText);
               mediaIds.push(
@@ -86,7 +87,19 @@ export async function runExcerptPhase(
             }
           }
 
-          // Slides 2+: Excerpt images
+          // Optional extra hook slide (second hook, same AI image)
+          const extraTexts = excerpt.extraOverlayTexts?.filter(Boolean) || [];
+          if (extraTexts.length > 0 && hookImageData) {
+            const extraText = pickRandom(extraTexts);
+            if (extraText) {
+              const extraBuf = await renderSlide(hookImageData, extraText);
+              mediaIds.push(
+                await uploadPng(extraBuf, `excerpt-auto-${accIdStr}-hook2.png`)
+              );
+            }
+          }
+
+          // Excerpt images (optional)
           for (let i = 0; i < excerpt.excerptImages.length; i++) {
             const img = excerpt.excerptImages[i];
             const b64 = img.imageData.includes(",")
