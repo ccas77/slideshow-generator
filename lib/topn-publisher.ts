@@ -68,7 +68,9 @@ async function generateTopNSlides(listId: string, maxBooks?: number, bgPromptsOv
     : list.backgroundPrompts;
   if (bgPrompts && bgPrompts.length > 0) {
     const prompt = bgPrompts[Math.floor(Math.random() * bgPrompts.length)];
+    console.log(`[topn] generating bg image, prompt="${prompt.slice(0, 80)}..."`);
     bgImage = await generateImage(prompt);
+    console.log(`[topn] bg image generated, length=${bgImage?.length ?? 0}`);
   }
 
   const titleTexts = list.titleTexts && list.titleTexts.length > 0 ? list.titleTexts : [""];
@@ -105,25 +107,35 @@ export async function publishTopN(
   opts: PublishTopNOptions
 ): Promise<PublishTopNResult> {
   const startMs = Date.now();
+  let phase = "init";
   let slideCount = 0;
   try {
   const { listId, accountIds, scheduledAt } = opts;
+
+  phase = "generateSlides";
+  console.log(`[topn] phase=${phase} listId=${listId}`);
   const { list, slideBufs, finalOrder, audioBuffer } = await generateTopNSlides(listId, undefined, opts.backgroundPrompts);
   slideCount = slideBufs.length;
+  console.log(`[topn] slides generated: ${slideCount} books=${finalOrder.length} elapsedMs=${Date.now() - startMs}`);
 
   const isVideo = opts.platform === "tiktok-video" || opts.platform === "fb-video" || opts.platform === "ig-video";
 
+  phase = "upload";
   const mediaIds: string[] = [];
   if (isVideo) {
+    console.log(`[topn] phase=renderVideo`);
     const videoBuf = await renderVideo(slideBufs, { durationPerSlide: 4, transitionDuration: 2, audioBuffer });
+    console.log(`[topn] phase=uploadVideo size=${videoBuf.length} elapsedMs=${Date.now() - startMs}`);
     const mediaId = await uploadVideo(videoBuf, "topn-video.mp4");
     mediaIds.push(mediaId);
   } else {
     for (let j = 0; j < slideBufs.length; j++) {
+      console.log(`[topn] phase=uploadPng ${j+1}/${slideBufs.length} elapsedMs=${Date.now() - startMs}`);
       const mediaId = await uploadPng(slideBufs[j], `topn-slide-${j}.png`);
       mediaIds.push(mediaId);
     }
   }
+  console.log(`[topn] uploads done mediaIds=${mediaIds.length} elapsedMs=${Date.now() - startMs}`);
 
   const captions = list.captions && list.captions.length > 0 ? list.captions : [""];
   const caption = captions[Math.floor(Math.random() * captions.length)];
@@ -148,18 +160,25 @@ export async function publishTopN(
   };
   if (scheduledAt) postBody.scheduled_at = scheduledAt;
 
+  phase = "createPost";
+  console.log(`[topn] phase=createPost elapsedMs=${Date.now() - startMs}`);
   const postResp = await pbFetch("/v1/posts", {
     method: "POST",
     body: JSON.stringify(postBody),
   });
 
+  console.log(`[topn] post created id=${postResp.id || postResp.data?.id} elapsedMs=${Date.now() - startMs}`);
   return {
     postId: postResp.id || postResp.data?.id || "unknown",
     slides: slideBufs.length,
     books: finalOrder.map((b) => b.title),
   };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error(`[topn] FAILED phase=${phase} elapsedMs=${Date.now() - startMs} error=${msg}`);
+    throw err;
   } finally {
-    console.log(`[topn-publisher] publishTopN done slides=${slideCount} elapsedMs=${Date.now() - startMs}`);
+    console.log(`[topn] publishTopN done slides=${slideCount} elapsedMs=${Date.now() - startMs}`);
   }
 }
 
