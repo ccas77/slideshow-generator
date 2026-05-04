@@ -53,6 +53,7 @@ export async function runTopNPhase(
       await markScheduled(topnSchedKeys);
 
       const failedTopnKeys: string[] = [];
+      let anySuccess = false;
       for (const win of activeWindows) {
         try {
           const scheduledAt = randomTimeInWindow(win.start, win.end);
@@ -67,6 +68,7 @@ export async function runTopNPhase(
             listName: selectedList.name,
             status: `${accIdStr}: scheduled ${r.slides} slides for ${scheduledAt.toISOString()} [post:${r.postId}]`,
           });
+          anySuccess = true;
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err);
           topNResults.push({ listName: selectedList.name, status: `error (${accIdStr}): ${msg}` });
@@ -77,13 +79,15 @@ export async function runTopNPhase(
         await unmarkScheduled(failedTopnKeys);
       }
 
-      // Advance pointer and mark today
-      updatedTopNAccounts[accIdStr] = {
-        ...accConfig,
-        pointer: accConfig.pointer + 1,
-        lastPostDate: today,
-      };
-      topNUpdated = true;
+      // Only advance pointer and mark today if at least one post succeeded
+      if (anySuccess) {
+        updatedTopNAccounts[accIdStr] = {
+          ...accConfig,
+          pointer: accConfig.pointer + 1,
+          lastPostDate: today,
+        };
+        topNUpdated = true;
+      }
     }
 
     if (topNUpdated) {
