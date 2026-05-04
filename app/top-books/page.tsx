@@ -119,6 +119,11 @@ export default function TopBooksPage() {
   const [accountSearch, setAccountSearch] = useState("");
   const [describingImage, setDescribingImage] = useState(false);
   const [bgImageUrl, setBgImageUrl] = useState("");
+  const [bgPromptsText, setBgPromptsText] = useState("");
+  useEffect(() => {
+    const cfg = selectedTopnAccount ? topnAutoConfig.accounts[selectedTopnAccount] : null;
+    setBgPromptsText((cfg?.backgroundPrompts || []).join("\n"));
+  }, [selectedTopnAccount, topnAutoConfig]);
 
   // Music
   const [musicTracks, setMusicTracks] = useState<MusicTrack[]>([]);
@@ -988,14 +993,10 @@ export default function TopBooksPage() {
                         <label className="text-xs text-zinc-400 block mb-1">Background prompts (one per line)</label>
                         <p className="text-[11px] text-zinc-600 mb-2">Overrides list-level background prompts. Leave empty to use each list&apos;s own prompts.</p>
                         <textarea
-                          value={(selectedCfg.backgroundPrompts || []).join("\n")}
-                          onChange={(e) => {
-                            const lines = e.target.value.split("\n");
-                            const hasContent = lines.some((l) => l.trim());
-                            updateAccountConfig(selectedTopnAccount, { backgroundPrompts: hasContent ? lines : undefined });
-                          }}
-                          onBlur={(e) => {
-                            const lines = e.target.value.split("\n").filter((l) => l.trim());
+                          value={bgPromptsText}
+                          onChange={(e) => setBgPromptsText(e.target.value)}
+                          onBlur={() => {
+                            const lines = bgPromptsText.split("\n").filter((l) => l.trim());
                             updateAccountConfig(selectedTopnAccount, { backgroundPrompts: lines.length > 0 ? lines : undefined });
                           }}
                           rows={3}
@@ -1024,8 +1025,10 @@ export default function TopBooksPage() {
                                   });
                                   const json = await res.json();
                                   if (json.prompt) {
-                                    const existing = selectedCfg.backgroundPrompts || [];
-                                    updateAccountConfig(selectedTopnAccount, { backgroundPrompts: [...existing, json.prompt] });
+                                    const newText = bgPromptsText ? bgPromptsText + "\n" + json.prompt : json.prompt;
+                                    setBgPromptsText(newText);
+                                    const lines = newText.split("\n").filter((l: string) => l.trim());
+                                    updateAccountConfig(selectedTopnAccount, { backgroundPrompts: lines });
                                     setBgImageUrl("");
                                   } else {
                                     alert(json.error || "Failed to describe image");
@@ -1062,8 +1065,10 @@ export default function TopBooksPage() {
                                     });
                                     const json = await res.json();
                                     if (json.prompt) {
-                                      const existing = selectedCfg.backgroundPrompts || [];
-                                      updateAccountConfig(selectedTopnAccount, { backgroundPrompts: [...existing, json.prompt] });
+                                      const newText = bgPromptsText ? bgPromptsText + "\n" + json.prompt : json.prompt;
+                                      setBgPromptsText(newText);
+                                      const lines = newText.split("\n").filter((l: string) => l.trim());
+                                      updateAccountConfig(selectedTopnAccount, { backgroundPrompts: lines });
                                     } else {
                                       alert(json.error || "Failed to describe image");
                                     }
