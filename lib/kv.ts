@@ -220,8 +220,23 @@ export async function getAccountData(accountId: number): Promise<AccountData> {
 
 export async function setAccountData(
   accountId: number,
-  data: AccountData
+  data: AccountData,
+  source?: string
 ): Promise<void> {
+  // Pointer audit log — record every write so we can trace resets
+  const existing = await redis.get<AccountData>(key(accountId));
+  const oldPtr = existing?.config?.pointer ?? null;
+  const oldPPtr = existing?.config?.promptPointer ?? null;
+  const newPtr = data.config?.pointer ?? null;
+  const newPPtr = data.config?.promptPointer ?? null;
+  if (oldPtr !== newPtr || oldPPtr !== newPPtr || source) {
+    const logKey = `pointer-audit:${accountId}`;
+    const entries = (await redis.get<string[]>(logKey)) || [];
+    entries.unshift(
+      `${new Date().toISOString()} [${source || "unknown"}] pointer: ${oldPtr}→${newPtr}, promptPointer: ${oldPPtr}→${newPPtr}`
+    );
+    await redis.set(logKey, entries.slice(0, 50), { ex: 604800 });
+  }
   await redis.set(key(accountId), data);
 }
 

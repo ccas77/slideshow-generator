@@ -61,10 +61,10 @@ export async function POST(req: NextRequest) {
       lastRun: existing.lastRun,
       lastStatus: existing.lastStatus,
     };
-    await setAccountData(accountId, merged);
+    await setAccountData(accountId, merged, "ui-save");
   } else {
     // Cron save or full save (includes pointer) — write as-is
-    await setAccountData(accountId, data);
+    await setAccountData(accountId, data, "full-save");
   }
   return NextResponse.json({ ok: true });
 }

@@ -251,7 +251,7 @@ export async function runTikTokPhase(
           },
           lastRun: new Date().toISOString(),
           lastStatus: status,
-        });
+        }, "cron");
       }
     } catch (saveErr) {
       const msg = saveErr instanceof Error ? saveErr.message : String(saveErr);
@@ -357,7 +357,7 @@ export async function runTikTokPhase(
         config: { ...data.config, pointer: newPointer, promptPointer: newPromptPointer },
         lastRun: new Date().toISOString(),
         lastStatus: status,
-      });
+      }, "cron-fallback");
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       debugLog.push(`${acc.username} (${acc.id}) fallback error: ${msg}`);
