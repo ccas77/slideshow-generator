@@ -37,6 +37,7 @@ interface TopNAccountConfig {
   frequencyDays: number;
   lastPostDate?: string;
   platform: "tiktok-carousel" | "tiktok-video" | "fb-video" | "ig-carousel" | "ig-video";
+  backgroundPrompts?: string[];
 }
 
 interface TopNGlobalAutomation {
@@ -978,6 +979,22 @@ export default function TopBooksPage() {
                             </label>
                           ))}
                         </div>
+                      </div>
+
+                      {/* Background prompts (account-level) */}
+                      <div>
+                        <label className="text-xs text-zinc-400 block mb-1">Background prompts (one per line)</label>
+                        <p className="text-[11px] text-zinc-600 mb-2">Overrides list-level background prompts. Leave empty to use each list&apos;s own prompts.</p>
+                        <textarea
+                          value={(selectedCfg.backgroundPrompts || []).join("\n")}
+                          onChange={(e) => {
+                            const lines = e.target.value.split("\n").filter((l) => l.trim());
+                            updateAccountConfig(selectedTopnAccount, { backgroundPrompts: lines.length > 0 ? lines : undefined });
+                          }}
+                          rows={3}
+                          placeholder="e.g. A dark moody bookshelf with candlelight"
+                          className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20"
+                        />
                       </div>
 
                       {/* Time windows */}

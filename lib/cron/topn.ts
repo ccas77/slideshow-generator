@@ -61,6 +61,7 @@ export async function runTopNPhase(
             accountIds: [Number(accIdStr)],
             scheduledAt: scheduledAt.toISOString(),
             platform: accConfig.platform,
+            backgroundPrompts: accConfig.backgroundPrompts,
           });
           topNResults.push({
             listName: selectedList.name,
