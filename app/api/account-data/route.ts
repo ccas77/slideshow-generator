@@ -36,15 +36,35 @@ export async function POST(req: NextRequest) {
       { status: 400 }
     );
   }
-  // Preserve cron-managed pointer/promptPointer if not included in the incoming config.
-  // The UI strips these fields to avoid overwriting cron values, so we merge them back.
+  // The UI strips pointer/promptPointer from config saves.
+  // To avoid a race condition where the UI overwrites cron-managed fields
+  // (pointer, promptPointer, lastRun, lastStatus), we read the existing data
+  // and only overlay the UI-managed fields onto it.
+  const existing = await getAccountData(accountId);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const raw = data.config as any;
-  if (raw && !("pointer" in raw)) {
-    const existing = await getAccountData(accountId);
-    raw.pointer = existing.config.pointer;
-    raw.promptPointer = existing.config.promptPointer;
+  const incomingConfig = data.config as any;
+  const isUiSave = incomingConfig && !("pointer" in incomingConfig);
+
+  if (isUiSave) {
+    // UI save: overlay UI fields onto existing, preserve cron fields
+    const merged: AccountData = {
+      config: {
+        ...existing.config,           // keeps pointer, promptPointer
+        ...incomingConfig,             // overwrites enabled, intervals, selections, etc.
+        pointer: existing.config.pointer,
+        promptPointer: existing.config.promptPointer,
+      },
+      prompts: data.prompts,
+      texts: data.texts,
+      captions: data.captions,
+      // Always keep cron-managed fields from existing
+      lastRun: existing.lastRun,
+      lastStatus: existing.lastStatus,
+    };
+    await setAccountData(accountId, merged);
+  } else {
+    // Cron save or full save (includes pointer) — write as-is
+    await setAccountData(accountId, data);
   }
-  await setAccountData(accountId, data);
   return NextResponse.json({ ok: true });
 }

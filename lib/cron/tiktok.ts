@@ -7,7 +7,7 @@ import { generateImageWithInfo } from "@/lib/gemini";
 import { renderSlide } from "@/lib/render-slide";
 import { listTikTokAccounts, pbFetch, uploadPng } from "@/lib/post-bridge";
 import { shouldProcessWindow, randomTimeInWindow } from "./window";
-import { markScheduled, unmarkScheduled } from "./scheduled-today";
+import { markScheduled, unmarkScheduled, getScheduledToday } from "./scheduled-today";
 import type { Job, CronAccountResult } from "./types";
 
 function pickRandom<T>(arr: T[]): T | null {
@@ -256,6 +256,112 @@ export async function runTikTokPhase(
     } catch (saveErr) {
       const msg = saveErr instanceof Error ? saveErr.message : String(saveErr);
       debugLog.push(`Save error for ${accId}: ${msg}`);
+    }
+  }
+
+  // Fallback: if ALL windows passed and no successful post, try once more now
+  const currentScheduled = await getScheduledToday();
+  const successfulAccounts = new Set(
+    postResults
+      .filter((r) => !r.status.startsWith("skipped:") && !r.status.startsWith("error:"))
+      .map((r) => r.job.acc.id)
+  );
+
+  for (const acc of accounts) {
+    const data = accountData.get(acc.id);
+    if (!data || !data.config.enabled) continue;
+    if (data.config.intervals.length === 0) continue;
+    // Skip if this account already posted successfully this invocation
+    if (successfulAccounts.has(acc.id)) continue;
+    // Skip if any window is still upcoming (normal retry will handle it)
+    const anyWindowLeft = data.config.intervals.some((w) => shouldProcessWindow(w.start));
+    if (anyWindowLeft) continue;
+    // Skip if any schedule key is set (means a previous invocation succeeded)
+    const hasSuccessKey = data.config.intervals.some((w) =>
+      currentScheduled.has(`${acc.id}:${w.start}`)
+    );
+    if (hasSuccessKey) continue;
+
+    // All windows passed, no successful post today — fallback attempt
+    debugLog.push(`${acc.username} (${acc.id}): fallback — all windows passed with no successful post`);
+    const candidates: Array<{ book: (typeof books)[0]; slideshow: (typeof books)[0]["slideshows"][0] }> = [];
+    for (const sel of data.config.selections) {
+      const book = books.find((b) => b.id === sel.bookId);
+      const slideshow = book?.slideshows.find((s) => s.id === sel.slideshowId);
+      if (book && slideshow) candidates.push({ book, slideshow });
+    }
+    if (candidates.length === 0) continue;
+
+    const ptr = pointerUpdates.get(acc.id) ?? (data.config.pointer || 0);
+    const picked = candidates[ptr % candidates.length];
+    if (!picked || !picked.slideshow.slideTexts.trim()) continue;
+
+    const { book, slideshow: pickedSlideshow } = picked;
+    const linkedPrompts = (book.imagePrompts || []).filter((p) => pickedSlideshow.imagePromptIds.includes(p.id));
+    const allowedPrompts = linkedPrompts.length > 0 ? linkedPrompts : book.imagePrompts || [];
+    const pPtr = promptPointerUpdates.get(acc.id) ?? (data.config.promptPointer || 0);
+    const pickedPrompt = allowedPrompts.length > 0 ? allowedPrompts[pPtr % allowedPrompts.length] : null;
+    if (!pickedPrompt) continue;
+
+    const slideTexts = pickedSlideshow.slideTexts.split("\n").map((t) => t.trim()).filter(Boolean);
+    if (slideTexts.length < 2) continue;
+    const finalTexts = book.coverImage && slideTexts.length > 2 ? slideTexts.slice(0, -1) : slideTexts;
+
+    const linkedCaptions = (book.captions || []).filter((c) => pickedSlideshow.captionIds.includes(c.id));
+    const allowedCaptions = linkedCaptions.length > 0 ? linkedCaptions : book.captions || [];
+    const captionText = pickRandom(allowedCaptions)?.value || "";
+
+    try {
+      const imgResult = await generateImageWithInfo(pickedPrompt.value);
+      if (!imgResult.data) {
+        debugLog.push(`${acc.username} (${acc.id}) fallback: image gen failed — ${imgResult.error || "unknown"}`);
+        results.push({ accountId: acc.id, username: acc.username, status: `fallback failed: ${imgResult.error || "image gen failed"}` });
+        continue;
+      }
+
+      const slideBufs: Buffer[] = [];
+      for (const text of finalTexts) {
+        slideBufs.push(await renderSlide(imgResult.data, text));
+      }
+      const mediaIds: string[] = [];
+      for (let j = 0; j < slideBufs.length; j++) {
+        mediaIds.push(await uploadPng(slideBufs[j], `slide-${j + 1}.png`));
+      }
+      if (book.coverImage) {
+        const b64 = book.coverImage.replace(/^data:[^;]+;base64,/, "");
+        mediaIds.push(await uploadPng(Buffer.from(b64, "base64"), `slide-cover.png`));
+      }
+
+      // Schedule 5 minutes from now
+      const scheduledAt = new Date(Date.now() + 5 * 60 * 1000);
+      const postResp = await pbFetch("/v1/posts", {
+        method: "POST",
+        body: JSON.stringify({
+          caption: captionText,
+          media: mediaIds,
+          social_accounts: [acc.id],
+          scheduled_at: scheduledAt.toISOString(),
+          platform_configurations: { tiktok: { draft: false, is_aigc: true } },
+        }),
+      });
+      const postId = postResp.id || postResp.data?.id || "unknown";
+      const status = `fallback: scheduled ${finalTexts.length} slides for ${scheduledAt.toISOString()} (book:${book.name}/${pickedSlideshow.name}) [post:${postId}]`;
+      results.push({ accountId: acc.id, username: acc.username, status });
+
+      // Mark so we don't fallback again and save pointer
+      await markScheduled([`${acc.id}:fallback`]);
+      const newPointer = (ptr + 1);
+      const newPromptPointer = (pPtr + 1);
+      await setAccountData(acc.id, {
+        ...data,
+        config: { ...data.config, pointer: newPointer, promptPointer: newPromptPointer },
+        lastRun: new Date().toISOString(),
+        lastStatus: status,
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      debugLog.push(`${acc.username} (${acc.id}) fallback error: ${msg}`);
+      results.push({ accountId: acc.id, username: acc.username, status: `fallback error: ${msg}` });
     }
   }
 
