@@ -990,6 +990,11 @@ export default function TopBooksPage() {
                         <textarea
                           value={(selectedCfg.backgroundPrompts || []).join("\n")}
                           onChange={(e) => {
+                            const lines = e.target.value.split("\n");
+                            const hasContent = lines.some((l) => l.trim());
+                            updateAccountConfig(selectedTopnAccount, { backgroundPrompts: hasContent ? lines : undefined });
+                          }}
+                          onBlur={(e) => {
                             const lines = e.target.value.split("\n").filter((l) => l.trim());
                             updateAccountConfig(selectedTopnAccount, { backgroundPrompts: lines.length > 0 ? lines : undefined });
                           }}
