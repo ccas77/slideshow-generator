@@ -4,7 +4,7 @@ import {
   getExcerpts,
   getBooks,
 } from "@/lib/kv";
-import { generateImage } from "@/lib/gemini";
+import { generateImageWithInfo } from "@/lib/gemini";
 import { renderSlide } from "@/lib/render-slide";
 import { pbFetch, uploadPng } from "@/lib/post-bridge";
 import { shouldProcessWindow, randomTimeInWindow } from "./window";
@@ -71,7 +71,11 @@ export async function runExcerptPhase(
           // Slide 1: Hook — AI image with overlay text
           let hookImageData: string | null = null;
           if (prompt) {
-            hookImageData = await generateImage(prompt);
+            const hookResult = await generateImageWithInfo(prompt);
+            hookImageData = hookResult.data;
+            if (!hookImageData) {
+              results.push({ status: `warn (${accIdStr}): hook image failed — ${hookResult.error || "unknown"}` });
+            }
             if (hookText) {
               const hookBuf = await renderSlide(hookImageData, hookText);
               mediaIds.push(
@@ -95,7 +99,11 @@ export async function runExcerptPhase(
             const extraPrompt = pickRandom(extraPrompts);
             const extraText = extraTexts.length > 0 ? pickRandom(extraTexts) : undefined;
             if (extraPrompt) {
-              const extraImageData = await generateImage(extraPrompt);
+              const extraResult = await generateImageWithInfo(extraPrompt);
+              const extraImageData = extraResult.data;
+              if (!extraImageData) {
+                results.push({ status: `warn (${accIdStr}): extra hook image failed — ${extraResult.error || "unknown"}` });
+              }
               if (extraText) {
                 const extraBuf = await renderSlide(extraImageData, extraText);
                 mediaIds.push(

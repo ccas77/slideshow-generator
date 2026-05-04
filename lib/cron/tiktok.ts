@@ -3,7 +3,7 @@ import {
   setAccountData,
   getBooks,
 } from "@/lib/kv";
-import { generateImage } from "@/lib/gemini";
+import { generateImageWithInfo } from "@/lib/gemini";
 import { renderSlide } from "@/lib/render-slide";
 import { listTikTokAccounts, pbFetch, uploadPng } from "@/lib/post-bridge";
 import { shouldProcessWindow, randomTimeInWindow } from "./window";
@@ -153,33 +153,21 @@ export async function runTikTokPhase(
     await markScheduled(allSchedKeys);
   }
 
-  // Phase 2: Generate all images in parallel (Gemini API, no sharp involved)
-  const images = await Promise.all(
-    jobs.map(async (job) => {
-      try {
-        return await generateImage(job.imagePrompt);
-      } catch {
-        return null;
-      }
-    })
-  );
-
-  // Phase 3: Render slides strictly one at a time (sharp Pango fails under concurrency)
-  // Then upload and post each job
+  // Phase 2+3: Generate image, render slides, and post — one job at a time
   const postResults: Array<{ job: Job; status: string }> = [];
 
-  for (let i = 0; i < jobs.length; i++) {
-    const job = jobs[i];
-    const image = images[i];
-    if (!image) {
-      postResults.push({ job, status: "skipped: image generation failed" });
-      continue;
-    }
+  for (const job of jobs) {
     try {
-      const slideBufs: Buffer[] = [];
+      const imgResult = await generateImageWithInfo(job.imagePrompt);
+      if (!imgResult.data) {
+        debugLog.push(`${job.acc.username} (${job.acc.id}) ${job.win.start}: image gen failed — ${imgResult.error || "unknown"}`);
+        postResults.push({ job, status: `skipped: image generation failed — ${imgResult.error || "unknown"}` });
+        continue;
+      }
 
+      const slideBufs: Buffer[] = [];
       for (const text of job.slideTexts) {
-        const buf = await renderSlide(image, text);
+        const buf = await renderSlide(imgResult.data, text);
         slideBufs.push(buf);
       }
 
@@ -219,6 +207,7 @@ export async function runTikTokPhase(
       });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
+      debugLog.push(`${job.acc.username} (${job.acc.id}) ${job.win.start}: job error — ${msg}`);
       postResults.push({ job, status: `error: ${msg}` });
     }
   }
