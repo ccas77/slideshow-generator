@@ -16,10 +16,11 @@ export async function POST(req: NextRequest) {
   if (authErr) return authErr;
 
   const body = await req.json();
-  const { listId, accountIds, scheduledAt } = body as {
+  const { listId, accountIds, scheduledAt, backgroundPrompts } = body as {
     listId: string;
     accountIds: number[];
     scheduledAt?: string;
+    backgroundPrompts?: string[];
   };
 
   if (!listId || !accountIds?.length) {
@@ -27,7 +28,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const result = await publishTopN({ listId, accountIds, scheduledAt });
+    const result = await publishTopN({ listId, accountIds, scheduledAt, backgroundPrompts });
     return NextResponse.json({
       ok: true,
       postId: result.postId,
