@@ -137,8 +137,9 @@ export async function publishTopN(
   }
   console.log(`[topn] uploads done mediaIds=${mediaIds.length} elapsedMs=${Date.now() - startMs}`);
 
-  const captions = list.captions && list.captions.length > 0 ? list.captions : [""];
-  const caption = captions[Math.floor(Math.random() * captions.length)];
+  const DEFAULT_CAPTION = "#booktok #fyp #bookrecs #kindleunlimited";
+  const captions = list.captions && list.captions.length > 0 ? list.captions : [DEFAULT_CAPTION];
+  const caption = captions[Math.floor(Math.random() * captions.length)] || DEFAULT_CAPTION;
 
   const platformConfigurations: Record<string, unknown> = {};
   if (opts.platform === "tiktok-video" || opts.platform === "tiktok-carousel") {
