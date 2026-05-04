@@ -7,7 +7,7 @@ import { generateImage } from "@/lib/gemini";
 import { renderSlide } from "@/lib/render-slide";
 import { listTikTokAccounts, pbFetch, uploadPng } from "@/lib/post-bridge";
 import { shouldProcessWindow, randomTimeInWindow } from "./window";
-import { markScheduled } from "./scheduled-today";
+import { markScheduled, unmarkScheduled } from "./scheduled-today";
 import type { Job, CronAccountResult } from "./types";
 
 function pickRandom<T>(arr: T[]): T | null {
@@ -74,7 +74,10 @@ export async function runTikTokPhase(
           const pickedIdx = currentPointer % candidates.length;
           const picked = candidates[pickedIdx];
           pointerUpdates.set(acc.id, currentPointer + 1);
-          if (!picked || !picked.slideshow.slideTexts.trim()) continue;
+          if (!picked || !picked.slideshow.slideTexts.trim()) {
+            debugLog.push(`  ${win.start}: skip — no picked slideshow or empty slideTexts (idx=${pickedIdx}, candidates=${candidates.length})`);
+            continue;
+          }
           const { book, slideshow: pickedSlideshow } = picked;
           // If the slideshow explicitly links prompts/captions, rotate only
           // through those. Otherwise (e.g. imported slideshows with empty
@@ -93,7 +96,10 @@ export async function runTikTokPhase(
           const pickedPrompt = allowedPrompts.length > 0 ? allowedPrompts[currentPromptPointer % allowedPrompts.length] : null;
           promptPointerUpdates.set(acc.id, currentPromptPointer + 1);
           const pickedCaption = pickRandom(allowedCaptions);
-          if (!pickedPrompt) continue;
+          if (!pickedPrompt) {
+            debugLog.push(`  ${win.start}: skip — no prompt (linkedPrompts=${linkedPrompts.length}, bookPrompts=${(book.imagePrompts||[]).length}, promptPtr=${currentPromptPointer})`);
+            continue;
+          }
           imagePrompt = pickedPrompt.value;
           slideTexts = pickedSlideshow.slideTexts
             .split("\n")
@@ -111,7 +117,10 @@ export async function runTikTokPhase(
           const prompt = pickRandom(data.prompts);
           const textSet = pickRandom(data.texts);
           const captionItem = pickRandom(data.captions);
-          if (!prompt || !textSet) continue;
+          if (!prompt || !textSet) {
+            debugLog.push(`  ${win.start}: skip — no legacy prompt/textSet (prompts=${data.prompts.length}, texts=${data.texts.length})`);
+            continue;
+          }
           imagePrompt = prompt.value;
           slideTexts = textSet.value
             .split("\n")
@@ -121,7 +130,10 @@ export async function runTikTokPhase(
           source = "legacy-saved";
         }
 
-        if (slideTexts.length < 2) continue;
+        if (slideTexts.length < 2) {
+          debugLog.push(`  ${win.start}: skip — fewer than 2 slide texts (${slideTexts.length})`);
+          continue;
+        }
 
         jobs.push({ acc, win, imagePrompt, slideTexts, captionText, source, coverImage, schedKey });
       }
@@ -209,6 +221,15 @@ export async function runTikTokPhase(
       const msg = err instanceof Error ? err.message : String(err);
       postResults.push({ job, status: `error: ${msg}` });
     }
+  }
+
+  // Un-mark schedule keys for failed jobs so they can retry next invocation
+  const failedSchedKeys = postResults
+    .filter((r) => r.status.startsWith("skipped:") || r.status.startsWith("error:"))
+    .map((r) => r.job.schedKey);
+  if (failedSchedKeys.length > 0) {
+    debugLog.push(`Un-marking ${failedSchedKeys.length} failed schedule keys: ${JSON.stringify(failedSchedKeys)}`);
+    await unmarkScheduled(failedSchedKeys);
   }
 
   // Phase 4: Aggregate results per account and save status

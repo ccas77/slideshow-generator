@@ -8,7 +8,7 @@ import { generateImage } from "@/lib/gemini";
 import { renderSlide } from "@/lib/render-slide";
 import { pbFetch, uploadPng } from "@/lib/post-bridge";
 import { shouldProcessWindow, randomTimeInWindow } from "./window";
-import { markScheduled } from "./scheduled-today";
+import { markScheduled, unmarkScheduled } from "./scheduled-today";
 import type { ExcerptAutoResult } from "./types";
 
 function pickRandom<T>(arr: T[]): T | undefined {
@@ -54,6 +54,7 @@ export async function runExcerptPhase(
         )
         .map((w) => `excerpt:${accIdStr}:${w.start}`);
       if (schedKeys.length > 0) await markScheduled(schedKeys);
+      const failedExcerptKeys: string[] = [];
 
       for (const win of accConfig.intervals) {
         if (!shouldProcessWindow(win.start)) continue;
@@ -142,6 +143,7 @@ export async function runExcerptPhase(
             results.push({
               status: `skip: ${excerpt.name} — not enough slides (${mediaIds.length})`,
             });
+            failedExcerptKeys.push(`excerpt:${accIdStr}:${win.start}`);
             pointer++;
             continue;
           }
@@ -169,9 +171,14 @@ export async function runExcerptPhase(
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err);
           results.push({ status: `error (${accIdStr}): ${msg}` });
+          failedExcerptKeys.push(`excerpt:${accIdStr}:${win.start}`);
         }
 
         pointer++;
+      }
+
+      if (failedExcerptKeys.length > 0) {
+        await unmarkScheduled(failedExcerptKeys);
       }
 
       updatedAccounts[accIdStr] = { ...accConfig, pointer };

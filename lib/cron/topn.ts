@@ -5,7 +5,7 @@ import {
 } from "@/lib/kv";
 import { publishTopN } from "@/lib/topn-publisher";
 import { shouldProcessWindow, randomTimeInWindow } from "./window";
-import { markScheduled } from "./scheduled-today";
+import { markScheduled, unmarkScheduled } from "./scheduled-today";
 import type { TopNResult } from "./types";
 
 export async function runTopNPhase(
@@ -52,6 +52,7 @@ export async function runTopNPhase(
       const topnSchedKeys = activeWindows.map((w) => `topn:${accIdStr}:${w.start}`);
       await markScheduled(topnSchedKeys);
 
+      const failedTopnKeys: string[] = [];
       for (const win of activeWindows) {
         try {
           const scheduledAt = randomTimeInWindow(win.start, win.end);
@@ -68,7 +69,11 @@ export async function runTopNPhase(
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err);
           topNResults.push({ listName: selectedList.name, status: `error (${accIdStr}): ${msg}` });
+          failedTopnKeys.push(`topn:${accIdStr}:${win.start}`);
         }
+      }
+      if (failedTopnKeys.length > 0) {
+        await unmarkScheduled(failedTopnKeys);
       }
 
       // Advance pointer and mark today
