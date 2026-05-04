@@ -19,6 +19,8 @@ export async function GET(req: NextRequest) {
   const url = new URL(req.url);
   const listId = url.searchParams.get("listId");
   const debug = url.searchParams.get("debug") === "1";
+  const bgPromptsParam = url.searchParams.get("backgroundPrompts");
+  const bgPromptsOverride = bgPromptsParam ? bgPromptsParam.split("|").filter(Boolean) : undefined;
   if (!listId) {
     return NextResponse.json({ error: "listId required" }, { status: 400 });
   }
@@ -70,7 +72,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ ok: true, steps });
     }
 
-    const videoBuf = await previewTopN(listId);
+    const videoBuf = await previewTopN(listId, bgPromptsOverride);
     return new Response(new Uint8Array(videoBuf), {
       headers: {
         "Content-Type": "video/mp4",
