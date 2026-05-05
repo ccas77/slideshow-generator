@@ -241,15 +241,48 @@ export async function setAccountData(
 }
 
 const BOOKS_KEY = "books";
+const BOOK_COVER_PREFIX = "book-cover:";
+
+export async function getBookCover(bookId: string): Promise<string | undefined> {
+  const data = await redis.get<string>(BOOK_COVER_PREFIX + bookId);
+  return data || undefined;
+}
+
+export async function setBookCover(bookId: string, coverData: string): Promise<void> {
+  await redis.set(BOOK_COVER_PREFIX + bookId, coverData);
+}
+
+export async function deleteBookCover(bookId: string): Promise<void> {
+  await redis.del(BOOK_COVER_PREFIX + bookId);
+}
 
 export async function getBooks(): Promise<Book[]> {
   const data = await redis.get<unknown[]>(BOOKS_KEY);
   if (!data) return [];
-  return data.map((b) => migrateBook(b));
+  const books = data.map((b) => migrateBook(b));
+  // Reattach covers from separate keys
+  const coverPromises = books.map((b) =>
+    b.coverImage ? Promise.resolve(b.coverImage) : getBookCover(b.id)
+  );
+  const covers = await Promise.all(coverPromises);
+  for (let i = 0; i < books.length; i++) {
+    if (covers[i]) books[i].coverImage = covers[i];
+  }
+  return books;
 }
 
 export async function setBooks(books: Book[]): Promise<void> {
-  await redis.set(BOOKS_KEY, books);
+  // Save covers to separate keys, strip from main array
+  const coverOps: Promise<void>[] = [];
+  for (const book of books) {
+    if (book.coverImage) {
+      coverOps.push(setBookCover(book.id, book.coverImage));
+    }
+  }
+  await Promise.all(coverOps);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const stripped = books.map(({ coverImage: _, ...rest }) => rest);
+  await redis.set(BOOKS_KEY, stripped);
 }
 
 // ── Top Books (for "Top N" slideshows) ──
