@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getIgSlideshows, getBooks, getVideoMusicTrack, redis } from "@/lib/kv";
+import { getIgSlideshows, getBooksWithCovers, getVideoMusicTrack, redis } from "@/lib/kv";
 import { generateImage } from "@/lib/gemini";
 import { renderSlide } from "@/lib/render-slide";
 import { renderVideo } from "@/lib/render-video";
@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
     const texts = ss.slideTexts.split("\n").map((t) => t.trim()).filter(Boolean);
 
     // Check for book cover — drop last text slide if cover replaces it
-    const books = await getBooks();
+    const books = await getBooksWithCovers();
     const book = ss.sourceBookId ? books.find((b) => b.id === ss.sourceBookId) : undefined;
     const slideTexts = book?.coverImage && texts.length > 2 ? texts.slice(0, -1) : texts;
 

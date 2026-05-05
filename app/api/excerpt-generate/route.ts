@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getExcerpts, getBooks, redis } from "@/lib/kv";
+import { getExcerpts, getBooksWithCovers, redis } from "@/lib/kv";
 import { generateImage } from "@/lib/gemini";
 import { renderSlide } from "@/lib/render-slide";
 
@@ -82,7 +82,7 @@ export async function POST(req: NextRequest) {
 
     // Final slide: Book cover
     if (excerpt.bookId) {
-      const books = await getBooks();
+      const books = await getBooksWithCovers();
       const book = books.find((b) => b.id === excerpt.bookId);
       if (book?.coverImage) {
         slides.push({ label: "Cover", imageData: book.coverImage });

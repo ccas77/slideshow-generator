@@ -49,6 +49,7 @@ export default function BooksPage() {
     kind: "prompts" | "captions";
     item: NamedItem;
   } | null>(null);
+  const [covers, setCovers] = useState<Record<string, string>>({});
   const [bookSearch, setBookSearch] = useState("");
   const [showImport, setShowImport] = useState(false);
   const [importName, setImportName] = useState("");
@@ -74,7 +75,22 @@ export default function BooksPage() {
         `/api/books?password=${encodeURIComponent(password)}`
       );
       if (res.ok) {
-        setBooks((await res.json()).books || []);
+        const loadedBooks: Book[] = (await res.json()).books || [];
+        setBooks(loadedBooks);
+        // Load covers in parallel
+        const coverResults = await Promise.all(
+          loadedBooks.map((b) =>
+            fetch(`/api/books/cover?password=${encodeURIComponent(password)}&bookId=${b.id}`)
+              .then((r) => r.json())
+              .then((d) => [b.id, d.cover] as [string, string | null])
+              .catch(() => [b.id, null] as [string, string | null])
+          )
+        );
+        const coverMap: Record<string, string> = {};
+        for (const [id, cover] of coverResults) {
+          if (cover) coverMap[id] = cover;
+        }
+        setCovers(coverMap);
       } else {
         console.error("Books API error:", res.status, await res.text());
       }
@@ -88,16 +104,57 @@ export default function BooksPage() {
     if (password) loadBooks();
   }, [password, loadBooks]);
 
+  const saveCover = useCallback(
+    async (bookId: string, cover: string) => {
+      if (!password) return;
+      setCovers((prev) => ({ ...prev, [bookId]: cover }));
+      try {
+        const res = await fetch("/api/books/cover", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ password, bookId, cover }),
+        });
+        if (!res.ok) {
+          const text = await res.text();
+          window.alert(`Cover save failed: ${res.status} ${text}`);
+        }
+      } catch {
+        window.alert("Cover save failed — check console for details.");
+      }
+    },
+    [password]
+  );
+
+  const removeCover = useCallback(
+    async (bookId: string) => {
+      if (!password) return;
+      setCovers((prev) => {
+        const next = { ...prev };
+        delete next[bookId];
+        return next;
+      });
+      try {
+        await fetch(`/api/books/cover?password=${encodeURIComponent(password)}&bookId=${bookId}`, {
+          method: "DELETE",
+        });
+      } catch {}
+    },
+    [password]
+  );
+
   const persist = useCallback(
     async (next: Book[]) => {
       if (!password) return;
       setSaving(true);
       setBooks(next);
       try {
+        // Strip covers — they're saved separately
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const stripped = next.map(({ coverImage, ...rest }) => rest);
         const res = await fetch("/api/books", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ password, books: next }),
+          body: JSON.stringify({ password, books: stripped }),
         });
         if (!res.ok) {
           const text = await res.text();
@@ -361,13 +418,13 @@ export default function BooksPage() {
 
                   {/* Cover image */}
                   <div className="mb-5 flex items-center gap-4">
-                    {activeBook.coverImage ? (
+                    {covers[activeBook.id] ? (
                       <>
-                        <img src={activeBook.coverImage} alt="Cover" className="w-12 h-[72px] rounded-lg object-cover border border-zinc-700" />
+                        <img src={covers[activeBook.id]} alt="Cover" className="w-12 h-[72px] rounded-lg object-cover border border-zinc-700" />
                         <div className="flex flex-col gap-1">
                           <span className="text-xs text-zinc-500">Book cover</span>
                           <button
-                            onClick={() => updateBook(activeBook.id, (b) => ({ ...b, coverImage: undefined }))}
+                            onClick={() => removeCover(activeBook.id)}
                             className="text-xs text-red-500 hover:text-red-400"
                           >
                             Remove
@@ -391,7 +448,7 @@ export default function BooksPage() {
                                 if (!file) return;
                                 const reader = new FileReader();
                                 reader.onload = () => {
-                                  updateBook(activeBook.id, (b) => ({ ...b, coverImage: reader.result as string }));
+                                  saveCover(activeBook.id, reader.result as string);
                                 };
                                 reader.readAsDataURL(file);
                                 e.target.value = "";
@@ -413,7 +470,7 @@ export default function BooksPage() {
                                 });
                                 const data = await res.json();
                                 if (data.coverData) {
-                                  updateBook(activeBook.id, (b) => ({ ...b, coverImage: data.coverData }));
+                                  saveCover(activeBook.id, data.coverData);
                                 }
                               } catch {}
                               (e.target as HTMLInputElement).value = "";

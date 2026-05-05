@@ -2,7 +2,7 @@ import {
   getExcerptAutomation,
   setExcerptAutomation,
   getExcerpts,
-  getBooks,
+  getBooksWithCovers,
 } from "@/lib/kv";
 import { generateImageWithInfo } from "@/lib/gemini";
 import { renderSlide } from "@/lib/render-slide";
@@ -25,7 +25,7 @@ export async function runExcerptPhase(
     if (!auto.accounts || Object.keys(auto.accounts).length === 0) return results;
 
     const excerpts = await getExcerpts();
-    const books = await getBooks();
+    const books = await getBooksWithCovers();
     if (excerpts.length === 0) return results;
 
     let updated = false;

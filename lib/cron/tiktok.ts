@@ -1,7 +1,7 @@
 import {
   getAccountData,
   setAccountData,
-  getBooks,
+  getBooksWithCovers,
 } from "@/lib/kv";
 import { generateImageWithInfo } from "@/lib/gemini";
 import { renderSlide } from "@/lib/render-slide";
@@ -21,7 +21,7 @@ export async function runTikTokPhase(
   const results: CronAccountResult[] = [];
   const debugLog: string[] = [];
   const accounts = await listTikTokAccounts();
-  const books = await getBooks();
+  const books = await getBooksWithCovers();
   debugLog.push(`${accounts.length} accounts, ${books.length} books, scheduledToday: ${JSON.stringify([...scheduledToday])}`);
 
   // Phase 1: Build all jobs (fast, no I/O-heavy work)

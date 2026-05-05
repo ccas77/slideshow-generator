@@ -259,8 +259,11 @@ export async function deleteBookCover(bookId: string): Promise<void> {
 export async function getBooks(): Promise<Book[]> {
   const data = await redis.get<unknown[]>(BOOKS_KEY);
   if (!data) return [];
-  const books = data.map((b) => migrateBook(b));
-  // Reattach covers from separate keys
+  return data.map((b) => migrateBook(b));
+}
+
+export async function getBooksWithCovers(): Promise<Book[]> {
+  const books = await getBooks();
   const coverPromises = books.map((b) =>
     b.coverImage ? Promise.resolve(b.coverImage) : getBookCover(b.id)
   );
