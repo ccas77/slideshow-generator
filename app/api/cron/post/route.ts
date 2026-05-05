@@ -7,7 +7,7 @@ import { runInstagramPhase } from "@/lib/cron/instagram";
 import { runVideoPhase } from "@/lib/cron/video";
 import { runExcerptPhase } from "@/lib/cron/excerpts";
 
-export const maxDuration = 900; // 15 min for Pro
+export const maxDuration = 800; // Pro max
 
 export async function GET(req: NextRequest) {
   const secret = process.env.CRON_SECRET;
