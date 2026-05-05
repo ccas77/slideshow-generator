@@ -168,9 +168,26 @@ export async function publishTopN(
     body: JSON.stringify(postBody),
   });
 
-  console.log(`[topn] post created id=${postResp.id || postResp.data?.id} elapsedMs=${Date.now() - startMs}`);
+  const postId = postResp.id || postResp.data?.id;
+  console.log(`[topn] post created id=${postId} elapsedMs=${Date.now() - startMs}`);
+
+  // Verify the post actually exists on PostBridge
+  if (postId && postId !== "unknown") {
+    phase = "verifyPost";
+    try {
+      const verify = await pbFetch(`/v1/posts/${postId}`);
+      console.log(`[topn] post verified status=${verify.status || verify.data?.status}`);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(`[topn] post verification FAILED: ${msg}`);
+      throw new Error(`Post created but verification failed: ${msg}`);
+    }
+  } else {
+    throw new Error("PostBridge returned no post ID");
+  }
+
   return {
-    postId: postResp.id || postResp.data?.id || "unknown",
+    postId,
     slides: slideBufs.length,
     books: finalOrder.map((b) => b.title),
   };
