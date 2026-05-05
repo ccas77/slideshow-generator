@@ -5,7 +5,6 @@ export const SLIDE_H = 1920;
 export function renderSlideToCanvas(
   imageSrc: string | null,
   text: string,
-  textStyle?: number
 ): Promise<HTMLCanvasElement> {
   return new Promise((resolve) => {
     const canvas = document.createElement("canvas");
@@ -46,55 +45,20 @@ export function renderSlideToCanvas(
       const totalHeight = lines.length * lineHeight;
       const startY = (SLIDE_H - totalHeight) / 2 + lineHeight / 2;
 
-      // Pick text style (use provided or random)
-      const resolvedStyle = textStyle ?? Math.floor(Math.random() * 3);
+      // White text with black outline
       ctx.lineJoin = "round";
       ctx.miterLimit = 2;
-
-      if (resolvedStyle === 0) {
-        // Style 1: White text with black outline
-        ctx.strokeStyle = "black";
-        ctx.lineWidth = Math.round(fontSize * 0.18);
-        ctx.shadowColor = "rgba(0,0,0,0.5)";
-        ctx.shadowBlur = 12;
-        for (let i = 0; i < lines.length; i++) {
-          ctx.strokeText(lines[i], SLIDE_W / 2, startY + i * lineHeight);
-        }
-        ctx.shadowBlur = 0;
-        ctx.fillStyle = "white";
-        for (let i = 0; i < lines.length; i++) {
-          ctx.fillText(lines[i], SLIDE_W / 2, startY + i * lineHeight);
-        }
-      } else if (resolvedStyle === 1) {
-        // Style 2: White text with 50% opacity background shadow
-        ctx.shadowColor = "rgba(0,0,0,0.5)";
-        ctx.shadowBlur = 20;
-        ctx.shadowOffsetX = 0;
-        ctx.shadowOffsetY = 4;
-        ctx.fillStyle = "white";
-        // Double-draw for stronger shadow
-        for (let i = 0; i < lines.length; i++) {
-          ctx.fillText(lines[i], SLIDE_W / 2, startY + i * lineHeight);
-        }
-        for (let i = 0; i < lines.length; i++) {
-          ctx.fillText(lines[i], SLIDE_W / 2, startY + i * lineHeight);
-        }
-        ctx.shadowBlur = 0;
-        ctx.shadowOffsetX = 0;
-        ctx.shadowOffsetY = 0;
-      } else {
-        // Style 3: Black text with solid white shadow
-        ctx.shadowColor = "white";
-        ctx.shadowBlur = 0;
-        ctx.shadowOffsetX = 3;
-        ctx.shadowOffsetY = 3;
-        ctx.fillStyle = "black";
-        for (let i = 0; i < lines.length; i++) {
-          ctx.fillText(lines[i], SLIDE_W / 2, startY + i * lineHeight);
-        }
-        ctx.shadowBlur = 0;
-        ctx.shadowOffsetX = 0;
-        ctx.shadowOffsetY = 0;
+      ctx.strokeStyle = "black";
+      ctx.lineWidth = Math.round(fontSize * 0.18);
+      ctx.shadowColor = "rgba(0,0,0,0.5)";
+      ctx.shadowBlur = 12;
+      for (let i = 0; i < lines.length; i++) {
+        ctx.strokeText(lines[i], SLIDE_W / 2, startY + i * lineHeight);
+      }
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = "white";
+      for (let i = 0; i < lines.length; i++) {
+        ctx.fillText(lines[i], SLIDE_W / 2, startY + i * lineHeight);
       }
 
       resolve(canvas);

@@ -196,10 +196,9 @@ export default function PostNowTab({
         : slideshow.texts;
       const totalSlides = textSlides.length + (coverImage ? 1 : 0);
 
-      const slideStyle = Math.floor(Math.random() * 3);
       for (let i = 0; i < textSlides.length; i++) {
         setPostStatus(`Uploading slide ${i + 1} of ${totalSlides}...`);
-        const canvas = await renderSlideToCanvas(slideshow.image, textSlides[i], slideStyle);
+        const canvas = await renderSlideToCanvas(slideshow.image, textSlides[i]);
         const dataUrl = canvas.toDataURL("image/png");
 
         const res = await fetch("/api/post-tiktok?action=upload", {
@@ -250,9 +249,8 @@ export default function PostNowTab({
   const downloadAll = useCallback(async () => {
     if (!slideshow) return;
     setDownloading(true);
-    const slideStyle = Math.floor(Math.random() * 3);
     for (let i = 0; i < slideshow.texts.length; i++) {
-      const canvas = await renderSlideToCanvas(slideshow.image, slideshow.texts[i], slideStyle);
+      const canvas = await renderSlideToCanvas(slideshow.image, slideshow.texts[i]);
       const link = document.createElement("a");
       link.download = `slide-${i + 1}.png`;
       link.href = canvas.toDataURL("image/png");
