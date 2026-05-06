@@ -44,17 +44,18 @@ export async function runTopNPhase(
       });
       if (activeWindows.length === 0) continue;
 
-      // Round-robin: pick one list
-      const listIndex = accConfig.pointer % pool.length;
-      const selectedList = pool[listIndex];
-
       // Mark all TopN window keys for this account before heavy work
       const topnSchedKeys = activeWindows.map((w) => `topn:${accIdStr}:${w.start}`);
       await markScheduled(topnSchedKeys);
 
       const failedTopnKeys: string[] = [];
-      let anySuccess = false;
+      let successCount = 0;
+      let currentPointer = accConfig.pointer;
       for (const win of activeWindows) {
+        // Each window picks the next list in rotation
+        const listIndex = currentPointer % pool.length;
+        const selectedList = pool[listIndex];
+        currentPointer++;
         try {
           const scheduledAt = randomTimeInWindow(win.start, win.end);
           const r = await publishTopN({
@@ -68,7 +69,7 @@ export async function runTopNPhase(
             listName: selectedList.name,
             status: `${accIdStr}: scheduled ${r.slides} slides for ${scheduledAt.toISOString()} [post:${r.postId}]`,
           });
-          anySuccess = true;
+          successCount++;
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err);
           topNResults.push({ listName: selectedList.name, status: `error (${accIdStr}): ${msg}` });
@@ -79,11 +80,11 @@ export async function runTopNPhase(
         await unmarkScheduled(failedTopnKeys);
       }
 
-      // Only advance pointer and mark today if at least one post succeeded
-      if (anySuccess) {
+      // Advance pointer by number of windows attempted, mark today if any succeeded
+      if (successCount > 0) {
         updatedTopNAccounts[accIdStr] = {
           ...accConfig,
-          pointer: accConfig.pointer + 1,
+          pointer: currentPointer,
           lastPostDate: today,
         };
         topNUpdated = true;
