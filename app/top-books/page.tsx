@@ -93,6 +93,12 @@ export default function TopBooksPage() {
   const [genreFilter, setGenreFilter] = useState<string>("all");
   const [bookSearch, setBookSearch] = useState("");
 
+  // Bulk genre tagging
+  const [bulkMode, setBulkMode] = useState(false);
+  const [bulkSelected, setBulkSelected] = useState<Set<string>>(new Set());
+  const [bulkGenre, setBulkGenre] = useState("");
+  const [bulkAppend, setBulkAppend] = useState(true);
+
   // List form
   const [showListForm, setShowListForm] = useState(false);
   const [editListId, setEditListId] = useState<string | null>(null);
@@ -322,6 +328,37 @@ export default function TopBooksPage() {
       body: JSON.stringify({ id: book.id, pinned: !book.pinned }),
     });
     await load();
+  }
+
+  async function bulkApplyGenre() {
+    if (bulkSelected.size === 0 || !bulkGenre.trim()) return;
+    setLoading(true);
+    try {
+      for (const bookId of bulkSelected) {
+        const book = books.find((b) => b.id === bookId);
+        if (!book) continue;
+        let newGenre: string;
+        if (bulkAppend) {
+          const existing = book.genre ? book.genre.split(",").map((s) => s.trim()).filter(Boolean) : [];
+          if (!existing.some((g) => g.toLowerCase() === bulkGenre.trim().toLowerCase())) {
+            existing.push(bulkGenre.trim());
+          }
+          newGenre = existing.join(", ");
+        } else {
+          newGenre = bulkGenre.trim();
+        }
+        await fetch(`/api/top-books?password=${encodeURIComponent(password || "")}`, {
+          method: "PUT",
+          headers: headers(),
+          body: JSON.stringify({ id: bookId, genre: newGenre }),
+        });
+      }
+      setBulkMode(false);
+      setBulkSelected(new Set());
+      setBulkGenre("");
+      await load();
+    } catch {}
+    setLoading(false);
   }
 
   // ── List CRUD ──
@@ -696,12 +733,59 @@ export default function TopBooksPage() {
         {/* ═══ BOOKS TAB ═══ */}
         {tab === "books" && (
           <>
+            {bulkMode && (
+              <div className="mb-4 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm font-medium text-amber-300">{bulkSelected.size} book{bulkSelected.size !== 1 ? "s" : ""} selected</span>
+                  <button onClick={() => { setBulkMode(false); setBulkSelected(new Set()); }} className="text-xs text-zinc-400 hover:text-white">Cancel</button>
+                </div>
+                <div className="flex items-center gap-2 mb-2">
+                  <input
+                    value={bulkGenre}
+                    onChange={(e) => setBulkGenre(e.target.value)}
+                    placeholder="Genre to apply..."
+                    className="flex-1 rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-white text-sm placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-500/30"
+                  />
+                  <button
+                    onClick={bulkApplyGenre}
+                    disabled={bulkSelected.size === 0 || !bulkGenre.trim() || loading}
+                    className="rounded-lg bg-amber-500 text-black px-4 py-2 text-sm font-medium hover:bg-amber-400 transition-colors disabled:opacity-50"
+                  >
+                    {loading ? "Saving..." : "Apply"}
+                  </button>
+                </div>
+                <div className="flex items-center gap-3 text-xs">
+                  <label className="flex items-center gap-1.5 cursor-pointer">
+                    <input type="radio" checked={bulkAppend} onChange={() => setBulkAppend(true)} className="accent-amber-500" />
+                    <span className="text-zinc-300">Append to existing</span>
+                  </label>
+                  <label className="flex items-center gap-1.5 cursor-pointer">
+                    <input type="radio" checked={!bulkAppend} onChange={() => setBulkAppend(false)} className="accent-amber-500" />
+                    <span className="text-zinc-300">Replace</span>
+                  </label>
+                  <button
+                    onClick={() => setBulkSelected(new Set(filteredBooks.map((b) => b.id)))}
+                    className="ml-auto text-amber-400 hover:text-amber-300"
+                  >
+                    Select all visible
+                  </button>
+                </div>
+              </div>
+            )}
             <div className="flex items-center gap-3 mb-4 flex-wrap">
               <button
                 onClick={() => openBookForm()}
                 className="rounded-lg bg-white text-black px-4 py-2 text-sm font-medium hover:bg-zinc-200 transition-colors"
               >
                 + Add Book
+              </button>
+              <button
+                onClick={() => { setBulkMode(!bulkMode); setBulkSelected(new Set()); }}
+                className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+                  bulkMode ? "bg-amber-500 text-black" : "border border-zinc-700 text-zinc-400 hover:text-white hover:border-zinc-500"
+                }`}
+              >
+                Bulk Tag Genre
               </button>
               <input
                 value={bookSearch}
@@ -743,7 +827,25 @@ export default function TopBooksPage() {
             {filteredBooks.length > 0 ? (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                 {filteredBooks.map((b) => (
-                  <BookCard key={b.id} book={b} onEdit={() => openBookForm(b)} onDelete={() => deleteBook(b.id)} onTogglePin={() => togglePinned(b)} />
+                  <div key={b.id} className="relative">
+                    {bulkMode && (
+                      <button
+                        onClick={() => setBulkSelected((prev) => {
+                          const next = new Set(prev);
+                          if (next.has(b.id)) next.delete(b.id); else next.add(b.id);
+                          return next;
+                        })}
+                        className={`absolute top-2 left-2 z-10 w-6 h-6 rounded-full border-2 flex items-center justify-center text-xs font-bold transition-colors ${
+                          bulkSelected.has(b.id)
+                            ? "bg-amber-500 border-amber-500 text-black"
+                            : "bg-black/50 border-zinc-400 text-transparent hover:border-white"
+                        }`}
+                      >
+                        ✓
+                      </button>
+                    )}
+                    <BookCard book={b} onEdit={() => openBookForm(b)} onDelete={() => deleteBook(b.id)} onTogglePin={() => togglePinned(b)} />
+                  </div>
                 ))}
               </div>
             ) : (
