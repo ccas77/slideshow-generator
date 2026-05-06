@@ -240,8 +240,12 @@ export async function runTikTokPhase(
     try {
       const data = accountData.get(accId);
       if (data) {
-        const newPointer = pointerUpdates.get(accId);
-        const newPromptPointer = promptPointerUpdates.get(accId);
+        // Bump pointers by 1 extra so daily rotation doesn't repeat
+        // when windows_per_day is a multiple of candidates.length
+        const rawPointer = pointerUpdates.get(accId);
+        const newPointer = rawPointer !== undefined ? rawPointer + 1 : undefined;
+        const rawPromptPointer = promptPointerUpdates.get(accId);
+        const newPromptPointer = rawPromptPointer !== undefined ? rawPromptPointer + 1 : undefined;
         await setAccountData(accId, {
           ...data,
           config: {
