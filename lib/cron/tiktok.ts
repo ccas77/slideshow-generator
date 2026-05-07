@@ -153,6 +153,31 @@ export async function runTikTokPhase(
     await markScheduled(allSchedKeys);
   }
 
+  // Save pointers NOW — before heavy work. If the cron times out during
+  // image generation or posting, the pointer is already advanced so the
+  // next run won't pick the same slideshows.
+  for (const [accId, rawPointer] of pointerUpdates) {
+    const data = accountData.get(accId);
+    if (!data) continue;
+    const rawPromptPointer = promptPointerUpdates.get(accId);
+    const newPointer = rawPointer + 1; // +1 bump to shift daily start
+    const newPromptPointer = rawPromptPointer !== undefined ? rawPromptPointer + 1 : data.config.promptPointer;
+    try {
+      await setAccountData(accId, {
+        ...data,
+        config: {
+          ...data.config,
+          pointer: newPointer,
+          promptPointer: newPromptPointer,
+        },
+      }, "cron-pointer-early");
+      debugLog.push(`Early pointer save ${accId}: pointer=${newPointer}, promptPointer=${newPromptPointer}`);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      debugLog.push(`Early pointer save FAILED ${accId}: ${msg}`);
+    }
+  }
+
   // Phase 2+3: Generate image, render slides, and post — one job at a time
   const postResults: Array<{ job: Job; status: string }> = [];
 
@@ -238,25 +263,13 @@ export async function runTikTokPhase(
       status,
     });
     try {
-      const data = accountData.get(accId);
-      if (data) {
-        // Bump pointers by 1 extra so daily rotation doesn't repeat
-        // when windows_per_day is a multiple of candidates.length
-        const rawPointer = pointerUpdates.get(accId);
-        const newPointer = rawPointer !== undefined ? rawPointer + 1 : undefined;
-        const rawPromptPointer = promptPointerUpdates.get(accId);
-        const newPromptPointer = rawPromptPointer !== undefined ? rawPromptPointer + 1 : undefined;
-        await setAccountData(accId, {
-          ...data,
-          config: {
-            ...data.config,
-            ...(newPointer !== undefined ? { pointer: newPointer } : {}),
-            ...(newPromptPointer !== undefined ? { promptPointer: newPromptPointer } : {}),
-          },
-          lastRun: new Date().toISOString(),
-          lastStatus: status,
-        }, "cron");
-      }
+      // Read fresh data (pointer was already saved early, don't overwrite it)
+      const freshData = await getAccountData(accId);
+      await setAccountData(accId, {
+        ...freshData,
+        lastRun: new Date().toISOString(),
+        lastStatus: status,
+      }, "cron-status");
     } catch (saveErr) {
       const msg = saveErr instanceof Error ? saveErr.message : String(saveErr);
       debugLog.push(`Save error for ${accId}: ${msg}`);
