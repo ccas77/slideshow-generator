@@ -104,7 +104,7 @@ export async function runVideoPhase(
               social_accounts: [Number(accIdStr)],
               scheduled_at: scheduledAt.toISOString(),
               platform_configurations: {
-                tiktok: { draft: false, is_aigc: true },
+                tiktok: { draft: false, is_aigc: false },
               },
             }),
           });

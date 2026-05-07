@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
     if (platform === "instagram") {
       platformConfig.instagram = {};
     } else {
-      platformConfig.tiktok = { draft: false, is_aigc: true };
+      platformConfig.tiktok = { draft: false, is_aigc: false };
     }
 
     const postBody: Record<string, unknown> = {

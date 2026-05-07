@@ -159,7 +159,7 @@ export async function runExcerptPhase(
           const platformCfg =
             accConfig.platform === "instagram"
               ? { instagram: {} }
-              : { tiktok: { draft: false, is_aigc: true } };
+              : { tiktok: { draft: false, is_aigc: false } };
 
           const scheduledAt = randomTimeInWindow(win.start, win.end);
           const postResp = await pbFetch("/v1/posts", {

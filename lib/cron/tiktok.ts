@@ -195,7 +195,7 @@ export async function runTikTokPhase(
           social_accounts: [job.acc.id],
           scheduled_at: scheduledAt.toISOString(),
           platform_configurations: {
-            tiktok: { draft: false, is_aigc: true },
+            tiktok: { draft: false, is_aigc: false },
           },
         }),
       });
@@ -345,7 +345,7 @@ export async function runTikTokPhase(
           media: mediaIds,
           social_accounts: [acc.id],
           scheduled_at: scheduledAt.toISOString(),
-          platform_configurations: { tiktok: { draft: false, is_aigc: true } },
+          platform_configurations: { tiktok: { draft: false, is_aigc: false } },
         }),
       });
       const postId = postResp.id || postResp.data?.id || "unknown";
