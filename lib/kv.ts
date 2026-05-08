@@ -664,3 +664,37 @@ export async function getExcerptAutomation(): Promise<ExcerptAutomation> {
 export async function setExcerptAutomation(config: ExcerptAutomation): Promise<void> {
   await redis.set(EXCERPT_AUTOMATION_KEY, config);
 }
+
+// ── Post Log ──
+
+export interface PostLogEntry {
+  date: string;
+  time: string;
+  accountId: number;
+  accountName: string;
+  bookName: string;
+  slideshowId: string;
+  slideshowName: string;
+  imagePromptId: string;
+  imagePromptText: string;
+  captionId: string;
+  captionText: string;
+  postBridgeId: string;
+  postBridgeUrl: string;
+  source: string;
+  timestamp: string;
+}
+
+const postLogKey = (date: string) => `post-log:${date}`;
+
+export async function appendPostLog(entry: PostLogEntry): Promise<void> {
+  const key = postLogKey(entry.date);
+  const existing = await redis.get<PostLogEntry[]>(key);
+  const updated = [...(existing || []), entry];
+  await redis.set(key, updated, { ex: 30 * 86400 });
+}
+
+export async function getPostLog(date: string): Promise<PostLogEntry[]> {
+  const data = await redis.get<PostLogEntry[]>(postLogKey(date));
+  return data || [];
+}

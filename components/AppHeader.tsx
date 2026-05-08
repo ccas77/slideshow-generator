@@ -38,6 +38,7 @@ export default function AppHeader() {
           {link("/excerpts", "Excerpts")}
           {link("/instagram", "Instagram")}
           {link("/posts", "Posts")}
+          {link("/post-log", "Post Log")}
           {link("/chat", "Chat")}
         </nav>
       </div>

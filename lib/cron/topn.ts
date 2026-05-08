@@ -2,6 +2,7 @@ import {
   getTopNLists,
   getTopNAutomation,
   setTopNAutomation,
+  appendPostLog,
 } from "@/lib/kv";
 import { publishTopN } from "@/lib/topn-publisher";
 import { shouldProcessWindow, randomTimeInWindow } from "./window";
@@ -69,6 +70,26 @@ export async function runTopNPhase(
             listName: selectedList.name,
             status: `${accIdStr}: scheduled ${r.slides} slides for ${scheduledAt.toISOString()} [post:${r.postId}]`,
           });
+
+          const tnNow = new Date();
+          await appendPostLog({
+            date: tnNow.toISOString().slice(0, 10),
+            time: tnNow.toISOString().slice(11, 16),
+            accountId: Number(accIdStr),
+            accountName: accIdStr,
+            bookName: "",
+            slideshowId: selectedList.id,
+            slideshowName: selectedList.name,
+            imagePromptId: "",
+            imagePromptText: "",
+            captionId: "",
+            captionText: "",
+            postBridgeId: String(r.postId),
+            postBridgeUrl: r.postUrl || "",
+            source: "cron-topn",
+            timestamp: tnNow.toISOString(),
+          }).catch(() => {});
+
           successCount++;
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err);

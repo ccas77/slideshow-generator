@@ -23,6 +23,7 @@ export interface PublishTopNOptions {
 
 export interface PublishTopNResult {
   postId: string;
+  postUrl: string;
   slides: number;
   books: string[];
 }
@@ -169,6 +170,7 @@ export async function publishTopN(
   });
 
   const postId = postResp.id || postResp.data?.id;
+  const postUrl = postResp.url || postResp.data?.url || "";
   console.log(`[topn] post created id=${postId} elapsedMs=${Date.now() - startMs}`);
 
   // Verify the post actually exists on PostBridge
@@ -188,6 +190,7 @@ export async function publishTopN(
 
   return {
     postId,
+    postUrl,
     slides: slideBufs.length,
     books: finalOrder.map((b) => b.title),
   };
