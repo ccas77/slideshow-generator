@@ -242,7 +242,7 @@ export default function PostsPage() {
                         </span>
                         {isPosted && p.posted_at && (
                           <span className="text-xs text-zinc-500">
-                            {new Date(p.posted_at).toLocaleDateString()}
+                            {new Date(p.posted_at).toLocaleString()}
                           </span>
                         )}
                         {isScheduled && p.scheduled_at && (
