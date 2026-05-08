@@ -281,10 +281,22 @@ export async function runTikTokPhase(
 
   // Phase 4: Aggregate results per account and save status
   const accountStatuses = new Map<number, string[]>();
+  const accountNewPosts = new Map<number, Array<{ slideshowName: string; bookName: string; promptSnippet: string; scheduledAt: string; postId: string; timestamp: string }>>();
   for (const r of postResults) {
     const id = r.job.acc.id;
     if (!accountStatuses.has(id)) accountStatuses.set(id, []);
     accountStatuses.get(id)!.push(r.status);
+    if (!r.status.startsWith("skipped:") && !r.status.startsWith("error:")) {
+      if (!accountNewPosts.has(id)) accountNewPosts.set(id, []);
+      accountNewPosts.get(id)!.push({
+        slideshowName: r.job.slideshowName || "unknown",
+        bookName: r.job.bookName || "unknown",
+        promptSnippet: r.job.imagePrompt.slice(0, 60),
+        scheduledAt: new Date().toISOString(),
+        postId: "unknown",
+        timestamp: new Date().toISOString(),
+      });
+    }
   }
 
   for (const [accId, statuses] of accountStatuses) {
@@ -298,10 +310,13 @@ export async function runTikTokPhase(
     try {
       // Read fresh data (pointer was already saved early, don't overwrite it)
       const freshData = await getAccountData(accId);
+      const existingHistory = freshData.recentPosts || [];
+      const newHistory = [...(accountNewPosts.get(accId) || []), ...existingHistory].slice(0, 20);
       await setAccountData(accId, {
         ...freshData,
         lastRun: new Date().toISOString(),
         lastStatus: status,
+        recentPosts: newHistory,
       }, "cron-status");
     } catch (saveErr) {
       const msg = saveErr instanceof Error ? saveErr.message : String(saveErr);
