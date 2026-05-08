@@ -60,6 +60,7 @@ export async function POST(req: NextRequest) {
       // Always keep cron-managed fields from existing
       lastRun: existing.lastRun,
       lastStatus: existing.lastStatus,
+      recentPosts: existing.recentPosts,
     };
     await setAccountData(accountId, merged, "ui-save");
   } else {
