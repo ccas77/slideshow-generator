@@ -52,7 +52,9 @@ export async function runTopNPhase(
       const failedTopnKeys: string[] = [];
       let successCount = 0;
       let currentPointer = accConfig.pointer;
-      for (const win of activeWindows) {
+      // Cap windows to pool size so we never post the same list twice
+      const windowsToProcess = activeWindows.slice(0, pool.length);
+      for (const win of windowsToProcess) {
         // Each window picks the next list in rotation
         const listIndex = currentPointer % pool.length;
         const selectedList = pool[listIndex];
