@@ -123,7 +123,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { action, passage, bookTag, hook, twist, keywords, slides, hasCover } =
+  const { action, passage, bookTag, hook, twist, specialInstructions, slides, hasCover } =
     await req.json();
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -159,9 +159,9 @@ RULES:
     const emoji = settings.censorshipEmoji || DEFAULT_EMOJI;
     system = GUIDE_TEMPLATE(leetspeak, emoji);
     if (hasCover) {
-      userMessage = `Here is the source passage. DO NOT repeat it back. Transform it into slideshow beats following the guide. Use second person POV. Preserve all dialogue from the source.\n\n${passage}\n\nDO NOT include a book tag as the final line — the book cover image will be used as the final slide instead. End on the twist/cliffhanger.\n\nHOOK GUIDANCE (concept for slide one): ${hook}\n\nTWIST GUIDANCE (concept for final slide): ${twist}\n\nBACKLOADING KEYWORDS (put these at the END of slides, never the beginning): ${keywords}\n\nMAXIMUM 24 LINES. Start slide one based on the hook guidance above.`;
+      userMessage = `Here is the source passage. DO NOT repeat it back. Transform it into slideshow beats following the guide. Use second person POV. Preserve all dialogue from the source.\n\n${passage}\n\nDO NOT include a book tag as the final line — the book cover image will be used as the final slide instead. End on the twist/cliffhanger.\n\nHOOK GUIDANCE (concept for slide one): ${hook}\n\nTWIST GUIDANCE (concept for final slide): ${twist}${specialInstructions ? `\n\nSPECIAL INSTRUCTIONS: ${specialInstructions}` : ""}\n\nMAXIMUM 24 LINES. Start slide one based on the hook guidance above.`;
     } else {
-      userMessage = `Here is the source passage. DO NOT repeat it back. Transform it into slideshow beats following the guide. Use second person POV. Preserve all dialogue from the source.\n\n${passage}\n\nBOOK TAG (use this as the final line): ${bookTag}\n\nHOOK GUIDANCE (concept for slide one): ${hook}\n\nTWIST GUIDANCE (concept for final slide before book tag): ${twist}\n\nBACKLOADING KEYWORDS (put these at the END of slides, never the beginning): ${keywords}\n\nMAXIMUM 24 LINES. Start slide one based on the hook guidance above.`;
+      userMessage = `Here is the source passage. DO NOT repeat it back. Transform it into slideshow beats following the guide. Use second person POV. Preserve all dialogue from the source.\n\n${passage}\n\nBOOK TAG (use this as the final line): ${bookTag}\n\nHOOK GUIDANCE (concept for slide one): ${hook}\n\nTWIST GUIDANCE (concept for final slide before book tag): ${twist}${specialInstructions ? `\n\nSPECIAL INSTRUCTIONS: ${specialInstructions}` : ""}\n\nMAXIMUM 24 LINES. Start slide one based on the hook guidance above.`;
     }
   }
 

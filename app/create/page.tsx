@@ -32,7 +32,7 @@ export default function CreatePage() {
   const [bookTag, setBookTag] = useState("");
   const [hook, setHook] = useState("");
   const [twist, setTwist] = useState("");
-  const [keywords, setKeywords] = useState("");
+  const [specialInstructions, setSpecialInstructions] = useState("");
   const [output, setOutput] = useState("");
   const [loading, setLoading] = useState(false);
   const [tightening, setTightening] = useState(false);
@@ -86,7 +86,7 @@ export default function CreatePage() {
           "Content-Type": "application/json",
           "x-password": password || "",
         },
-        body: JSON.stringify({ passage, bookTag, hook, twist, keywords }),
+        body: JSON.stringify({ passage, bookTag, hook, twist, specialInstructions }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed");
@@ -250,11 +250,12 @@ export default function CreatePage() {
             </Field>
           </div>
 
-          <Field label="Backloading keywords">
-            <input
-              value={keywords}
-              onChange={(e) => setKeywords(e.target.value)}
-              placeholder="e.g. mystery, betrayal, secret identity"
+          <Field label="Special instructions">
+            <textarea
+              value={specialInstructions}
+              onChange={(e) => setSpecialInstructions(e.target.value)}
+              placeholder="e.g. focus on dialogue, use more emojis, backload these keywords: betrayal, secret identity"
+              rows={3}
               className="input-field"
             />
           </Field>
