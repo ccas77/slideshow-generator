@@ -118,10 +118,10 @@ export default function PostLogPage() {
   }).length;
 
   return (
-    <main className="min-h-screen bg-zinc-950 text-white px-6 sm:px-10 pt-10">
-      <AppHeader />
-      <div className="max-w-7xl mx-auto py-8">
-        <h1 className="text-2xl font-bold mb-6">Post Log</h1>
+    <main className="min-h-screen bg-zinc-950 text-white">
+      <div className="max-w-7xl mx-auto px-6 sm:px-10 py-10">
+        <AppHeader />
+        <h1 className="text-2xl font-bold mb-6 mt-8">Post Log</h1>
 
         <div className="flex flex-wrap gap-4 mb-6 items-center">
           <div>
