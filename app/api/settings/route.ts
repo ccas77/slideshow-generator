@@ -20,6 +20,7 @@ export async function POST(req: NextRequest) {
   const authErr = checkAuth(req);
   if (authErr) return authErr;
   const body = await req.json();
-  await setAppSettings(body);
+  const existing = await getAppSettings();
+  await setAppSettings({ ...existing, ...body });
   return NextResponse.json({ ok: true });
 }

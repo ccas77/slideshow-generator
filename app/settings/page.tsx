@@ -18,6 +18,10 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [censorLeetspeak, setCensorLeetspeak] = useState("");
+  const [censorEmoji, setCensorEmoji] = useState("");
+  const [savingCensor, setSavingCensor] = useState(false);
+  const [savedCensor, setSavedCensor] = useState(false);
 
   useEffect(() => {
     const pw = localStorage.getItem("sg.password");
@@ -42,6 +46,8 @@ export default function SettingsPage() {
       if (settingsRes.ok) {
         const data = await settingsRes.json();
         setAllowedIds(data.allowedAccountIds || []);
+        setCensorLeetspeak(data.censorshipLeetspeak || "");
+        setCensorEmoji(data.censorshipEmoji || "");
       }
     } catch {}
     setLoading(false);
@@ -72,6 +78,22 @@ export default function SettingsPage() {
       setSaved(true);
     } catch {}
     setSaving(false);
+  }
+
+  async function saveCensorship() {
+    setSavingCensor(true);
+    try {
+      await fetch("/api/settings", {
+        method: "POST",
+        headers: headers(),
+        body: JSON.stringify({
+          censorshipLeetspeak: censorLeetspeak,
+          censorshipEmoji: censorEmoji,
+        }),
+      });
+      setSavedCensor(true);
+    } catch {}
+    setSavingCensor(false);
   }
 
   if (!password) return null;
@@ -156,6 +178,42 @@ export default function SettingsPage() {
             {allowedIds.length === 0 && (
               <span className="text-xs text-zinc-500">All accounts visible</span>
             )}
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6 mt-6">
+          <h2 className="text-lg font-medium mb-1">Censorship Substitutions</h2>
+          <p className="text-sm text-zinc-500 mb-4">
+            Edit the leetspeak and emoji substitutions used in Create Slides. Leave blank to use defaults.
+          </p>
+
+          <label className="block text-sm font-medium text-zinc-300 mb-1">Leetspeak</label>
+          <textarea
+            value={censorLeetspeak}
+            onChange={(e) => { setCensorLeetspeak(e.target.value); setSavedCensor(false); }}
+            placeholder="c0p, ja!l, pr!son, d£ath, k!$, ..."
+            rows={4}
+            className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white placeholder-zinc-600 focus:border-blue-500 focus:outline-none mb-4"
+          />
+
+          <label className="block text-sm font-medium text-zinc-300 mb-1">Emoji</label>
+          <textarea
+            value={censorEmoji}
+            onChange={(e) => { setCensorEmoji(e.target.value); setSavedCensor(false); }}
+            placeholder="😻 = pussy, 🐓 = cock, ..."
+            rows={3}
+            className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white placeholder-zinc-600 focus:border-blue-500 focus:outline-none mb-4"
+          />
+
+          <div className="flex items-center gap-3">
+            <button
+              onClick={saveCensorship}
+              disabled={savingCensor}
+              className="rounded-lg bg-white text-black px-5 py-2 text-sm font-medium hover:bg-zinc-200 transition-colors disabled:opacity-50"
+            >
+              {savingCensor ? "Saving..." : "Save Censorship"}
+            </button>
+            {savedCensor && <span className="text-sm text-green-400">Saved</span>}
           </div>
         </div>
       </div>

@@ -585,6 +585,8 @@ const SETTINGS_KEY = "app-settings";
 
 export interface AppSettings {
   allowedAccountIds?: number[]; // empty or missing = show all
+  censorshipLeetspeak?: string; // comma-separated leetspeak substitutions
+  censorshipEmoji?: string; // comma-separated emoji substitutions (emoji = word)
 }
 
 export async function getAppSettings(): Promise<AppSettings> {
