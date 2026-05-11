@@ -40,6 +40,7 @@ export default function AppHeader() {
           {link("/posts", "Posts")}
           {link("/post-log", "Post Log")}
           {link("/chat", "Chat")}
+          {link("/settings", "Settings")}
         </nav>
       </div>
       <button
