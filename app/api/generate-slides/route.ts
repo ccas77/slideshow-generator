@@ -155,8 +155,8 @@ RULES:
     userMessage = `Cut the backstory and transition filler from these slides. Keep all dialogue, emojis, reader reactions, WTF moments, and juicy details exactly as written. Do not rewrite anything.\n\n${slides}`;
   } else {
     const settings = await getAppSettings();
-    const leetspeak = settings.censorshipLeetspeak || DEFAULT_LEETSPEAK;
-    const emoji = settings.censorshipEmoji || DEFAULT_EMOJI;
+    const leetspeak = DEFAULT_LEETSPEAK + (settings.censorshipLeetspeak ? ", " + settings.censorshipLeetspeak : "");
+    const emoji = DEFAULT_EMOJI + (settings.censorshipEmoji ? ", " + settings.censorshipEmoji : "");
     system = GUIDE_TEMPLATE(leetspeak, emoji);
     if (hasCover) {
       userMessage = `Here is the source passage. DO NOT repeat it back. Transform it into slideshow beats following the guide. Use second person POV. Preserve all dialogue from the source.\n\n${passage}\n\nDO NOT include a book tag as the final line — the book cover image will be used as the final slide instead. End on the twist/cliffhanger.\n\nHOOK GUIDANCE (concept for slide one): ${hook}\n\nTWIST GUIDANCE (concept for final slide): ${twist}${specialInstructions ? `\n\nSPECIAL INSTRUCTIONS: ${specialInstructions}` : ""}\n\nMAXIMUM 24 LINES. Start slide one based on the hook guidance above.`;

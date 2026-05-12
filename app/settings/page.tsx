@@ -67,10 +67,10 @@ export default function SettingsPage() {
         <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6">
           <h2 className="text-lg font-medium mb-1">Censorship Substitutions</h2>
           <p className="text-sm text-zinc-500 mb-4">
-            Edit the leetspeak and emoji substitutions used in Create Slides. Leave blank to use defaults.
+            The default substitutions are always active. Add extra ones here — they get appended to the defaults.
           </p>
 
-          <label className="block text-sm font-medium text-zinc-300 mb-1">Leetspeak</label>
+          <label className="block text-sm font-medium text-zinc-300 mb-1">Extra Leetspeak</label>
           <textarea
             value={censorLeetspeak}
             onChange={(e) => { setCensorLeetspeak(e.target.value); setSaved(false); }}
@@ -79,7 +79,7 @@ export default function SettingsPage() {
             className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white placeholder-zinc-600 focus:border-blue-500 focus:outline-none mb-4"
           />
 
-          <label className="block text-sm font-medium text-zinc-300 mb-1">Emoji</label>
+          <label className="block text-sm font-medium text-zinc-300 mb-1">Extra Emoji</label>
           <textarea
             value={censorEmoji}
             onChange={(e) => { setCensorEmoji(e.target.value); setSaved(false); }}
