@@ -1470,6 +1470,24 @@ export default function TopBooksPage() {
                     </div>
                   </div>
                 )}
+                {fbAccounts.length > 0 && (
+                  <div>
+                    <label className="text-xs text-zinc-400 block mb-2">Facebook accounts</label>
+                    <div className="space-y-2">
+                      {fbAccounts.map((a) => (
+                        <label key={a.id} className="flex items-center gap-2 text-sm">
+                          <input
+                            type="checkbox"
+                            checked={publishAccounts.includes(a.id)}
+                            onChange={() => togglePublishAccount(a.id)}
+                            className="rounded"
+                          />
+                          @{a.username}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
               <div>
                 <label className="text-xs text-zinc-400 block mb-1">Schedule (optional)</label>
