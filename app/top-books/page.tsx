@@ -558,12 +558,14 @@ export default function TopBooksPage() {
       // Look up account-level background prompts for the first selected account
       const firstAccKey = String(publishAccounts[0]);
       const accBgPrompts = topnAutoConfig.accounts[firstAccKey]?.backgroundPrompts;
+      const platform = detectPlatform(String(publishAccounts[0]));
       const res = await fetch("/api/top-n-generate", {
         method: "POST",
         headers: headers(),
         body: JSON.stringify({
           listId: publishListId,
           accountIds: publishAccounts,
+          platform,
           ...(scheduledAt ? { scheduledAt: new Date(scheduledAt).toISOString() } : {}),
           ...(accBgPrompts && accBgPrompts.length > 0 ? { backgroundPrompts: accBgPrompts } : {}),
         }),

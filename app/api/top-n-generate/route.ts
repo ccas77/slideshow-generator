@@ -16,11 +16,12 @@ export async function POST(req: NextRequest) {
   if (authErr) return authErr;
 
   const body = await req.json();
-  const { listId, accountIds, scheduledAt, backgroundPrompts } = body as {
+  const { listId, accountIds, scheduledAt, backgroundPrompts, platform } = body as {
     listId: string;
     accountIds: number[];
     scheduledAt?: string;
     backgroundPrompts?: string[];
+    platform?: "tiktok-carousel" | "tiktok-video" | "fb-video" | "ig-carousel" | "ig-video";
   };
 
   if (!listId || !accountIds?.length) {
@@ -28,7 +29,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const result = await publishTopN({ listId, accountIds, scheduledAt, backgroundPrompts });
+    const result = await publishTopN({ listId, accountIds, scheduledAt, backgroundPrompts, platform });
     return NextResponse.json({
       ok: true,
       postId: result.postId,
