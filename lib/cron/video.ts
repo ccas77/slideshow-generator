@@ -3,6 +3,7 @@ import {
   setVideoAutomation,
   getIgSlideshows,
   getVideoMusicTrack,
+  getBooks,
 } from "@/lib/kv";
 import { generateImage } from "@/lib/gemini";
 import { renderSlide } from "@/lib/render-slide";
@@ -27,6 +28,14 @@ export async function runVideoPhase(
 
     const igSlideshows = await getIgSlideshows();
     if (igSlideshows.length === 0) return results;
+
+    const books = await getBooks();
+    const bookMusicMap = new Map<string, string[]>();
+    for (const book of books) {
+      if (book.musicTrackIds && book.musicTrackIds.length > 0) {
+        bookMusicMap.set(book.id, book.musicTrackIds);
+      }
+    }
 
     let updated = false;
     const updatedAccounts = { ...videoAuto.accounts };
@@ -76,9 +85,10 @@ export async function runVideoPhase(
             slideBufs.push(await renderSlide(image, text));
           }
 
-          // Pick a random music track
+          // Pick a random music track (book-level first, then account-level)
           let audioBuffer: Buffer | undefined;
-          const trackIds = accConfig.musicTrackIds || [];
+          const bookTrackIds = ss.sourceBookId ? (bookMusicMap.get(ss.sourceBookId) || []) : [];
+          const trackIds = bookTrackIds.length > 0 ? bookTrackIds : (accConfig.musicTrackIds || []);
           if (trackIds.length > 0) {
             const trackId = trackIds[Math.floor(Math.random() * trackIds.length)];
             const track = await getVideoMusicTrack(trackId);
