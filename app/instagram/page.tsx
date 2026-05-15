@@ -86,6 +86,7 @@ interface IgGlobalAutomation {
 interface TikTokAccount {
   id: number;
   username: string;
+  platform?: "tiktok" | "instagram" | "facebook";
 }
 
 type Tab = "slideshows" | "import" | "music" | "automation" | "video";
@@ -101,6 +102,7 @@ export default function InstagramPage() {
   const [books, setBooks] = useState<Book[]>([]);
   const [accounts, setAccounts] = useState<TikTokAccount[]>([]);
   const [igAccounts, setIgAccounts] = useState<TikTokAccount[]>([]);
+  const [fbAccounts, setFbAccounts] = useState<TikTokAccount[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [tab, setTab] = useState<Tab>("slideshows");
@@ -153,11 +155,12 @@ export default function InstagramPage() {
     if (!password) return;
     setLoading(true);
     try {
-      const [igRes, booksRes, ttRes, igAccRes, autoRes, videoRes, videoMusicRes] = await Promise.all([
+      const [igRes, booksRes, ttRes, igAccRes, fbAccRes, autoRes, videoRes, videoMusicRes] = await Promise.all([
         fetch("/api/ig-slideshows"),
         fetch(`/api/books?password=${encodeURIComponent(password)}`),
         fetch(`/api/post-tiktok?password=${encodeURIComponent(password)}&platform=tiktok`),
         fetch(`/api/post-tiktok?password=${encodeURIComponent(password)}&platform=instagram`),
+        fetch(`/api/post-tiktok?password=${encodeURIComponent(password)}&platform=facebook`),
         fetch("/api/ig-automation"),
         fetch("/api/video-automation"),
         fetch(`/api/video-music?password=${encodeURIComponent(password)}`),
@@ -166,6 +169,7 @@ export default function InstagramPage() {
       if (booksRes.ok) setBooks((await booksRes.json()).books || []);
       if (ttRes.ok) setAccounts((await ttRes.json()).accounts || []);
       if (igAccRes.ok) setIgAccounts((await igAccRes.json()).accounts || []);
+      if (fbAccRes.ok) setFbAccounts((await fbAccRes.json()).accounts || []);
       if (autoRes.ok) {
         const raw = (await autoRes.json()).config;
         setAutoConfig({ enabled: raw?.enabled ?? false, accounts: raw?.accounts ?? {} });
@@ -510,7 +514,7 @@ export default function InstagramPage() {
     setVideoGenerating(false);
   }
 
-  async function postOneVideo(accountId: number, platform: "tiktok" | "instagram", caption: string, scheduledAt?: string) {
+  async function postOneVideo(accountId: number, platform: "tiktok" | "instagram" | "facebook", caption: string, scheduledAt?: string) {
     if (!videoGenResult) return;
     setVideoPosting(true);
     setVideoPostResult(null);
@@ -1064,7 +1068,11 @@ export default function InstagramPage() {
 
             {/* ═══ Automation Tab ═══ */}
             {tab === "automation" && (() => {
-              const allAccs = [...igAccounts.map((a) => ({ ...a, platform: "instagram" as const })), ...accounts.map((a) => ({ ...a, platform: "tiktok" as const }))];
+              const allAccs = [
+                ...accounts.map((a) => ({ ...a, platform: "tiktok" as const })),
+                ...igAccounts.map((a) => ({ ...a, platform: "instagram" as const })),
+                ...fbAccounts.map((a) => ({ ...a, platform: "facebook" as const })),
+              ].sort((a, b) => a.username.localeCompare(b.username));
               const selConfig = selectedAutoAccount ? autoConfig.accounts[selectedAutoAccount] : null;
               const updateAccConfig = (patch: Partial<IgAccountConfig>) => {
                 if (!selectedAutoAccount) return;
@@ -1098,12 +1106,21 @@ export default function InstagramPage() {
                       className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-white/20"
                     >
                       <option value="">Select an account…</option>
-                      {allAccs.map((a) => {
-                        const cfg = autoConfig.accounts[String(a.id)];
+                      {(["tiktok", "instagram", "facebook"] as const).map((plat) => {
+                        const platAccs = allAccs.filter((a) => a.platform === plat);
+                        if (platAccs.length === 0) return null;
+                        const label = plat === "tiktok" ? "TikTok" : plat === "instagram" ? "Instagram" : "Facebook";
                         return (
-                          <option key={a.id} value={String(a.id)}>
-                            @{a.username} ({a.platform}){cfg?.enabled ? " ✓" : ""}
-                          </option>
+                          <optgroup key={plat} label={label}>
+                            {platAccs.map((a) => {
+                              const cfg = autoConfig.accounts[String(a.id)];
+                              return (
+                                <option key={a.id} value={String(a.id)}>
+                                  @{a.username}{cfg?.enabled ? " ✓" : ""}
+                                </option>
+                              );
+                            })}
+                          </optgroup>
                         );
                       })}
                     </select>
@@ -1289,7 +1306,11 @@ export default function InstagramPage() {
             )}
 
             {tab === "video" && (() => {
-              const allAccs = [...igAccounts.map((a) => ({ ...a, platform: "instagram" as const })), ...accounts.map((a) => ({ ...a, platform: "tiktok" as const }))];
+              const allAccs = [
+                ...accounts.map((a) => ({ ...a, platform: "tiktok" as const })),
+                ...igAccounts.map((a) => ({ ...a, platform: "instagram" as const })),
+                ...fbAccounts.map((a) => ({ ...a, platform: "facebook" as const })),
+              ].sort((a, b) => a.username.localeCompare(b.username));
               const selConfig = selectedVideoAccount ? videoConfig.accounts[selectedVideoAccount] : null;
               const updateVideoAccConfig = (patch: Partial<VideoAccountConfig>) => {
                 if (!selectedVideoAccount) return;
@@ -1379,6 +1400,13 @@ export default function InstagramPage() {
                                 ))}
                               </optgroup>
                             )}
+                            {fbAccounts.length > 0 && (
+                              <optgroup label="Facebook">
+                                {fbAccounts.map((a) => (
+                                  <option key={`fb-${a.id}`} value={`facebook:${a.id}`}>@{a.username}</option>
+                                ))}
+                              </optgroup>
+                            )}
                           </select>
                         </div>
                         <div>
@@ -1406,7 +1434,7 @@ export default function InstagramPage() {
                             const [plat, idStr] = sel.split(":");
                             const caption = (document.getElementById("video-post-caption") as HTMLInputElement).value;
                             const schedule = (document.getElementById("video-post-schedule") as HTMLInputElement).value;
-                            postOneVideo(Number(idStr), plat as "tiktok" | "instagram", caption, schedule || undefined);
+                            postOneVideo(Number(idStr), plat as "tiktok" | "instagram" | "facebook", caption, schedule || undefined);
                           }}
                           disabled={videoPosting}
                           className="px-5 py-2.5 rounded-lg bg-white text-black font-semibold hover:bg-zinc-200 transition-colors text-sm disabled:opacity-40"
@@ -1443,12 +1471,21 @@ export default function InstagramPage() {
                       className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-white/20"
                     >
                       <option value="">Select an account...</option>
-                      {allAccs.map((a) => {
-                        const cfg = videoConfig.accounts[String(a.id)];
+                      {(["tiktok", "instagram", "facebook"] as const).map((plat) => {
+                        const platAccs = allAccs.filter((a) => a.platform === plat);
+                        if (platAccs.length === 0) return null;
+                        const label = plat === "tiktok" ? "TikTok" : plat === "instagram" ? "Instagram" : "Facebook";
                         return (
-                          <option key={a.id} value={String(a.id)}>
-                            @{a.username} ({a.platform}){cfg?.enabled ? " \u2713" : ""}
-                          </option>
+                          <optgroup key={plat} label={label}>
+                            {platAccs.map((a) => {
+                              const cfg = videoConfig.accounts[String(a.id)];
+                              return (
+                                <option key={a.id} value={String(a.id)}>
+                                  @{a.username}{cfg?.enabled ? " \u2713" : ""}
+                                </option>
+                              );
+                            })}
+                          </optgroup>
                         );
                       })}
                     </select>

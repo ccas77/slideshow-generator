@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
   const { generationId, accountId, platform, caption, scheduledAt } = (await req.json()) as {
     generationId: string;
     accountId: number;
-    platform: "tiktok" | "instagram";
+    platform: "tiktok" | "instagram" | "facebook";
     caption?: string;
     scheduledAt?: string;
   };
@@ -40,6 +40,8 @@ export async function POST(req: NextRequest) {
     const platformConfig: Record<string, unknown> = {};
     if (platform === "instagram") {
       platformConfig.instagram = {};
+    } else if (platform === "facebook") {
+      platformConfig.facebook = {};
     } else {
       platformConfig.tiktok = { draft: false, is_aigc: false };
     }
