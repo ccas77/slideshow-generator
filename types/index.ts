@@ -1,6 +1,7 @@
 export interface TikTokAccount {
   id: number;
   username: string;
+  platform?: "tiktok" | "instagram" | "facebook";
 }
 
 export interface GeneratedSlideshow {

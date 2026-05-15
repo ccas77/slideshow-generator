@@ -53,11 +53,20 @@ export default function AutomationTab({
               className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-white/20 mb-6"
             >
               <option value="">Select an account…</option>
-              {accounts.map((a) => (
-                <option key={a.id} value={a.id}>
-                  @{a.username}
-                </option>
-              ))}
+              {(["tiktok", "instagram", "facebook"] as const).map((plat) => {
+                const platAccounts = accounts.filter((a) => (a.platform || "tiktok") === plat);
+                if (platAccounts.length === 0) return null;
+                const label = plat === "tiktok" ? "TikTok" : plat === "instagram" ? "Instagram" : "Facebook";
+                return (
+                  <optgroup key={plat} label={label}>
+                    {platAccounts.map((a) => (
+                      <option key={a.id} value={a.id}>
+                        @{a.username}
+                      </option>
+                    ))}
+                  </optgroup>
+                );
+              })}
             </select>
 
             {accountId != null && !loadingAccount && (

@@ -24,17 +24,20 @@ export function useAccounts(authed: boolean, password: string) {
     }
   }, [accountId]);
 
-  // Fetch accounts once authed
+  // Fetch accounts from all platforms once authed
   useEffect(() => {
     if (!authed) return;
     (async () => {
       try {
-        const res = await fetch(
-          `/api/post-tiktok?password=${encodeURIComponent(password)}`
-        );
-        if (!res.ok) return;
-        const data = await res.json();
-        setAccounts(data.accounts || []);
+        const [tkRes, igRes, fbRes] = await Promise.all([
+          fetch(`/api/post-tiktok?password=${encodeURIComponent(password)}&platform=tiktok`),
+          fetch(`/api/post-tiktok?password=${encodeURIComponent(password)}&platform=instagram`),
+          fetch(`/api/post-tiktok?password=${encodeURIComponent(password)}&platform=facebook`),
+        ]);
+        const tk = tkRes.ok ? ((await tkRes.json()).accounts || []).map((a: TikTokAccount) => ({ ...a, platform: "tiktok" as const })) : [];
+        const ig = igRes.ok ? ((await igRes.json()).accounts || []).map((a: TikTokAccount) => ({ ...a, platform: "instagram" as const })) : [];
+        const fb = fbRes.ok ? ((await fbRes.json()).accounts || []).map((a: TikTokAccount) => ({ ...a, platform: "facebook" as const })) : [];
+        setAccounts([...tk, ...ig, ...fb]);
       } catch {}
     })();
   }, [authed, password]);
