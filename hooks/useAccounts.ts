@@ -37,7 +37,9 @@ export function useAccounts(authed: boolean, password: string) {
         const tk = tkRes.ok ? ((await tkRes.json()).accounts || []).map((a: TikTokAccount) => ({ ...a, platform: "tiktok" as const })) : [];
         const ig = igRes.ok ? ((await igRes.json()).accounts || []).map((a: TikTokAccount) => ({ ...a, platform: "instagram" as const })) : [];
         const fb = fbRes.ok ? ((await fbRes.json()).accounts || []).map((a: TikTokAccount) => ({ ...a, platform: "facebook" as const })) : [];
-        setAccounts([...tk, ...ig, ...fb]);
+        const all = [...tk, ...ig, ...fb];
+        all.sort((a, b) => a.username.localeCompare(b.username));
+        setAccounts(all);
       } catch {}
     })();
   }, [authed, password]);
