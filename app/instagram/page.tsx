@@ -1267,7 +1267,7 @@ export default function InstagramPage() {
                         const acc = [...igAccounts, ...accounts].find((a) => String(a.id) === id);
                         return acc ? `@${acc.username}` : id;
                       });
-                      const audioUrl = `/api/video-music?id=${t.id}`;
+                      const audioUrl = `/api/video-music?id=${t.id}&password=${encodeURIComponent(password || "")}`;
                       return (
                         <div key={t.id} className="bg-zinc-900 rounded-lg px-4 py-3 border border-zinc-800 space-y-2">
                           <div className="flex items-center justify-between">
