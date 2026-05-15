@@ -225,6 +225,18 @@ export default function AutomationTab({
                                       prev.filter((id) => id !== b.id)
                                     );
                                   } else {
+                                    // Auto-select all slideshows under this book
+                                    const newSels = b.slideshows.map((s) => ({
+                                      bookId: b.id,
+                                      slideshowId: s.id,
+                                    }));
+                                    setConfig({
+                                      ...config,
+                                      selections: [
+                                        ...sels.filter((s) => s.bookId !== b.id),
+                                        ...newSels,
+                                      ],
+                                    });
                                     setExpandedBooks((prev) => [...prev, b.id]);
                                   }
                                 }}
