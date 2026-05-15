@@ -309,37 +309,45 @@ export default function PostNowTab({
       </div>
 
       {/* Library actions */}
-      <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5 flex flex-wrap items-center gap-3">
-        <div className="text-sm text-zinc-400 mr-auto">
-          Library:
+      <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5 space-y-3">
+        <div className="text-sm text-zinc-400">Library:</div>
+        <div className="flex flex-wrap items-center gap-3">
+          <select
+            value={selectedBookId || ""}
+            onChange={(e) => setSelectedBookId(e.target.value || null)}
+            className="rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20"
+          >
+            <option value="">Select a book…</option>
+            {books.map((b) => (
+              <option key={b.id} value={b.id}>{b.name}</option>
+            ))}
+          </select>
+          {selectedBookId && (() => {
+            const book = books.find((b) => b.id === selectedBookId);
+            if (!book || book.slideshows.length === 0) return <span className="text-xs text-zinc-500">No slideshows</span>;
+            return (
+              <select
+                value=""
+                onChange={(e) => {
+                  const s = book.slideshows.find((x) => x.id === e.target.value);
+                  if (s) loadSlideshowIntoEditor(s, book, setImagePrompt, setBulkText, setCaption, setSelectedBookId);
+                }}
+                className="rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20"
+              >
+                <option value="">Select a slideshow…</option>
+                {book.slideshows.map((s) => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
+              </select>
+            );
+          })()}
+          <button
+            onClick={saveDraftToBook}
+            className="px-4 py-2 rounded-lg border border-zinc-700 text-zinc-200 hover:bg-zinc-800 transition-colors text-sm font-medium"
+          >
+            Save to book
+          </button>
         </div>
-        <select
-          value=""
-          onChange={(e) => {
-            const [bookId, slideshowId] = e.target.value.split("::");
-            const b = books.find((x) => x.id === bookId);
-            const s = b?.slideshows.find((x) => x.id === slideshowId);
-            if (s && b) loadSlideshowIntoEditor(s, b, setImagePrompt, setBulkText, setCaption, setSelectedBookId);
-          }}
-          className="rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20"
-        >
-          <option value="">Load from book…</option>
-          {books.map((b) => (
-            <optgroup key={b.id} label={b.name}>
-              {b.slideshows.map((s) => (
-                <option key={s.id} value={`${b.id}::${s.id}`}>
-                  {s.name}
-                </option>
-              ))}
-            </optgroup>
-          ))}
-        </select>
-        <button
-          onClick={saveDraftToBook}
-          className="px-4 py-2 rounded-lg border border-zinc-700 text-zinc-200 hover:bg-zinc-800 transition-colors text-sm font-medium"
-        >
-          Save to book
-        </button>
       </div>
 
       {/* Image prompt */}
