@@ -3,7 +3,7 @@ import {
   setVideoAutomation,
   getIgSlideshows,
   getVideoMusicTrack,
-  getBooks,
+  getBooksWithCovers,
 } from "@/lib/kv";
 import { generateImage } from "@/lib/gemini";
 import { renderSlide } from "@/lib/render-slide";
@@ -29,11 +29,15 @@ export async function runVideoPhase(
     const igSlideshows = await getIgSlideshows();
     if (igSlideshows.length === 0) return results;
 
-    const books = await getBooks();
+    const books = await getBooksWithCovers();
     const bookMusicMap = new Map<string, string[]>();
+    const bookCoverMap = new Map<string, string>();
     for (const book of books) {
       if (book.musicTrackIds && book.musicTrackIds.length > 0) {
         bookMusicMap.set(book.id, book.musicTrackIds);
+      }
+      if (book.coverImage) {
+        bookCoverMap.set(book.id, book.coverImage);
       }
     }
 
@@ -80,9 +84,22 @@ export async function runVideoPhase(
             continue;
           }
 
+          // Build slide durations: 2.5s per text slide, 5s for cover
+          const coverImage = ss.sourceBookId ? bookCoverMap.get(ss.sourceBookId) : undefined;
+          const slideTexts = coverImage && texts.length > 2 ? texts.slice(0, -1) : texts;
+
           const slideBufs: Buffer[] = [];
-          for (const text of texts) {
+          const durations: number[] = [];
+          for (const text of slideTexts) {
             slideBufs.push(await renderSlide(image, text));
+            durations.push(2.5);
+          }
+
+          // Add book cover as final slide
+          if (coverImage) {
+            const b64 = coverImage.includes(",") ? coverImage.split(",")[1] : coverImage;
+            slideBufs.push(Buffer.from(b64, "base64"));
+            durations.push(5);
           }
 
           // Pick a random music track (book-level first, then account-level)
@@ -99,7 +116,7 @@ export async function runVideoPhase(
           }
 
           const videoBuf = await renderVideo(slideBufs, {
-            durationPerSlide: accConfig.durationPerSlide || 2,
+            durations,
             audioBuffer,
           });
 

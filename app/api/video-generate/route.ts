@@ -56,14 +56,17 @@ export async function POST(req: NextRequest) {
     const slideTexts = book?.coverImage && texts.length > 2 ? texts.slice(0, -1) : texts;
 
     const slideBufs: Buffer[] = [];
+    const durations: number[] = [];
     for (const text of slideTexts) {
       slideBufs.push(await renderSlide(image, text));
+      durations.push(2.5);
     }
 
-    // Add book cover as final slide
+    // Add book cover as final slide (5s)
     if (book?.coverImage) {
       const b64 = book.coverImage.includes(",") ? book.coverImage.split(",")[1] : book.coverImage;
       slideBufs.push(Buffer.from(b64, "base64"));
+      durations.push(5);
     }
 
     if (slideBufs.length < 2) {
@@ -81,7 +84,7 @@ export async function POST(req: NextRequest) {
     }
 
     const videoBuf = await renderVideo(slideBufs, {
-      durationPerSlide: durationPerSlide || 2,
+      durations,
       audioBuffer,
     });
 

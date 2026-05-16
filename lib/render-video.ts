@@ -25,6 +25,7 @@ export async function renderVideo(
   slides: Buffer[],
   options?: {
     durationPerSlide?: number;
+    durations?: number[]; // per-slide durations (overrides durationPerSlide for that index)
     transitionDuration?: number;
     audioBuffer?: Buffer;
   }
@@ -44,7 +45,8 @@ export async function renderVideo(
       await writeFile(join(workDir, `slide-${String(i).padStart(3, "0")}.png`), slides[i]);
     }
 
-    const totalDuration = slides.length * durationPerSlide;
+    const getDuration = (i: number) => options?.durations?.[i] ?? durationPerSlide;
+    const totalDuration = slides.reduce((sum, _, i) => sum + getDuration(i), 0);
 
     let audioPath: string | null = null;
     if (options?.audioBuffer) {
@@ -64,7 +66,7 @@ export async function renderVideo(
         "-y",
         "-loop", "1",
         "-i", join(workDir, `slide-${String(i).padStart(3, "0")}.png`),
-        "-t", String(durationPerSlide),
+        "-t", String(getDuration(i)),
         "-vf", `scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2`,
         "-c:v", "libx264", "-preset", "ultrafast",
         "-pix_fmt", "yuv420p",
