@@ -48,12 +48,29 @@ export async function runVideoPhase(
       if (!accConfig.enabled || accConfig.intervals.length === 0) continue;
 
       // Build pool: filter by books, then by specific slideshows
-      let pool = igSlideshows;
+      let filtered = igSlideshows;
       if (accConfig.bookIds.length > 0) {
-        pool = pool.filter((s) => s.sourceBookId && accConfig.bookIds.includes(s.sourceBookId));
+        filtered = filtered.filter((s) => s.sourceBookId && accConfig.bookIds.includes(s.sourceBookId));
       }
       if (accConfig.slideshowIds.length > 0) {
-        pool = pool.filter((s) => accConfig.slideshowIds.includes(s.id));
+        filtered = filtered.filter((s) => accConfig.slideshowIds.includes(s.id));
+      }
+      if (filtered.length === 0) continue;
+
+      // Interleave by book so posts alternate between books
+      const byBook = new Map<string, typeof filtered>();
+      for (const s of filtered) {
+        const key = s.sourceBookId || "_none";
+        if (!byBook.has(key)) byBook.set(key, []);
+        byBook.get(key)!.push(s);
+      }
+      const bookGroups = [...byBook.values()];
+      const pool: typeof filtered = [];
+      const maxLen = Math.max(...bookGroups.map((g) => g.length));
+      for (let i = 0; i < maxLen; i++) {
+        for (const group of bookGroups) {
+          if (i < group.length) pool.push(group[i]);
+        }
       }
       if (pool.length === 0) continue;
 
