@@ -1338,9 +1338,28 @@ export default function InstagramPage() {
                         className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-white/20"
                       >
                         <option value="">Select slideshow...</option>
-                        {igSlideshows.map((s) => (
-                          <option key={s.id} value={s.id}>{s.name}</option>
-                        ))}
+                        {books.map((b) => {
+                          const bookSlideshows = igSlideshows.filter((s) => s.sourceBookId === b.id);
+                          if (bookSlideshows.length === 0) return null;
+                          return (
+                            <optgroup key={b.id} label={b.name}>
+                              {bookSlideshows.map((s) => (
+                                <option key={s.id} value={s.id}>{s.name}</option>
+                              ))}
+                            </optgroup>
+                          );
+                        })}
+                        {(() => {
+                          const unlinked = igSlideshows.filter((s) => !s.sourceBookId || !books.some((b) => b.id === s.sourceBookId));
+                          if (unlinked.length === 0) return null;
+                          return (
+                            <optgroup label="Other">
+                              {unlinked.map((s) => (
+                                <option key={s.id} value={s.id}>{s.name}</option>
+                              ))}
+                            </optgroup>
+                          );
+                        })()}
                       </select>
                     </div>
                     <div>
