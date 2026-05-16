@@ -1367,17 +1367,26 @@ export default function InstagramPage() {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-xs text-zinc-400 mb-1">Music (optional)</label>
-                      <select
-                        value={videoGenMusicId}
-                        onChange={(e) => setVideoGenMusicId(e.target.value)}
-                        className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-white/20"
-                      >
-                        <option value="">No music</option>
-                        {videoMusicTracks.map((t) => (
-                          <option key={t.id} value={t.id}>{t.name}</option>
-                        ))}
-                      </select>
+                      <label className="block text-xs text-zinc-400 mb-1">Music</label>
+                      {(() => {
+                        const bk = books.find((b) => b.id === videoGenBookId);
+                        const bookTrackIds = bk?.musicTrackIds || [];
+                        const filtered = bookTrackIds.length > 0
+                          ? videoMusicTracks.filter((t) => bookTrackIds.includes(t.id))
+                          : videoMusicTracks;
+                        return (
+                          <select
+                            value={videoGenMusicId}
+                            onChange={(e) => setVideoGenMusicId(e.target.value)}
+                            className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+                          >
+                            <option value="">No music</option>
+                            {filtered.map((t) => (
+                              <option key={t.id} value={t.id}>{t.name}</option>
+                            ))}
+                          </select>
+                        );
+                      })()}
                     </div>
                   </div>
 
