@@ -27,6 +27,7 @@ interface Book {
   imagePrompts: NamedItem[];
   captions: NamedItem[];
   slideshows: Slideshow[];
+  musicTrackIds?: string[];
 }
 
 interface TimeWindow {
@@ -1335,7 +1336,14 @@ export default function InstagramPage() {
                       <label className="block text-xs text-zinc-400 mb-1">Book</label>
                       <select
                         value={videoGenBookId}
-                        onChange={(e) => { setVideoGenBookId(e.target.value); setVideoGenSlideshowId(""); }}
+                        onChange={(e) => {
+                          const bid = e.target.value;
+                          setVideoGenBookId(bid);
+                          setVideoGenSlideshowId("");
+                          const bk = books.find((b) => b.id === bid);
+                          const bookTracks = bk?.musicTrackIds || [];
+                          setVideoGenMusicId(bookTracks.length > 0 ? bookTracks[Math.floor(Math.random() * bookTracks.length)] : "");
+                        }}
                         className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-white/20"
                       >
                         <option value="">Select book...</option>
