@@ -18,10 +18,9 @@ export async function POST(req: NextRequest) {
   const authErr = checkAuth(req);
   if (authErr) return authErr;
 
-  const { slideshowId, musicTrackId, durationPerSlide } = (await req.json()) as {
+  const { slideshowId, musicTrackId } = (await req.json()) as {
     slideshowId: string;
     musicTrackId?: string;
-    durationPerSlide?: number;
   };
 
   if (!slideshowId) {
