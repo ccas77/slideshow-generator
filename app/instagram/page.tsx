@@ -135,6 +135,7 @@ export default function InstagramPage() {
   const [videoMusicTracks, setVideoMusicTracks] = useState<MusicTrack[]>([]);
   const [uploadingVideoMusic, setUploadingVideoMusic] = useState(false);
   // Manual video generate + post
+  const [videoGenBookId, setVideoGenBookId] = useState("");
   const [videoGenSlideshowId, setVideoGenSlideshowId] = useState("");
   const [videoGenMusicId, setVideoGenMusicId] = useState("");
   const [videoGenerating, setVideoGenerating] = useState(false);
@@ -1329,37 +1330,32 @@ export default function InstagramPage() {
                 <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6 space-y-4">
                   <h3 className="text-sm font-semibold">Generate One Video</h3>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-xs text-zinc-400 mb-1">Book</label>
+                      <select
+                        value={videoGenBookId}
+                        onChange={(e) => { setVideoGenBookId(e.target.value); setVideoGenSlideshowId(""); }}
+                        className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+                      >
+                        <option value="">Select book...</option>
+                        {books.filter((b) => igSlideshows.some((s) => s.sourceBookId === b.id)).map((b) => (
+                          <option key={b.id} value={b.id}>{b.name}</option>
+                        ))}
+                      </select>
+                    </div>
                     <div>
                       <label className="block text-xs text-zinc-400 mb-1">Slideshow</label>
                       <select
                         value={videoGenSlideshowId}
                         onChange={(e) => setVideoGenSlideshowId(e.target.value)}
-                        className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+                        disabled={!videoGenBookId}
+                        className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-white/20 disabled:opacity-40"
                       >
                         <option value="">Select slideshow...</option>
-                        {books.map((b) => {
-                          const bookSlideshows = igSlideshows.filter((s) => s.sourceBookId === b.id);
-                          if (bookSlideshows.length === 0) return null;
-                          return (
-                            <optgroup key={b.id} label={b.name}>
-                              {bookSlideshows.map((s) => (
-                                <option key={s.id} value={s.id}>{s.name}</option>
-                              ))}
-                            </optgroup>
-                          );
-                        })}
-                        {(() => {
-                          const unlinked = igSlideshows.filter((s) => !s.sourceBookId || !books.some((b) => b.id === s.sourceBookId));
-                          if (unlinked.length === 0) return null;
-                          return (
-                            <optgroup label="Other">
-                              {unlinked.map((s) => (
-                                <option key={s.id} value={s.id}>{s.name}</option>
-                              ))}
-                            </optgroup>
-                          );
-                        })()}
+                        {igSlideshows.filter((s) => s.sourceBookId === videoGenBookId).map((s) => (
+                          <option key={s.id} value={s.id}>{s.name}</option>
+                        ))}
                       </select>
                     </div>
                     <div>
