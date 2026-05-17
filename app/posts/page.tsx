@@ -8,6 +8,7 @@ import HowItWorks from "@/components/HowItWorks";
 interface TikTokAccount {
   id: number;
   username: string;
+  platform?: "tiktok" | "instagram" | "facebook";
 }
 
 interface PostAnalytics {
@@ -78,15 +79,25 @@ export default function PostsPage() {
     if (!password) return;
     setLoading(true);
     try {
-      const [accRes, postsRes] = await Promise.all([
-        fetch(`/api/post-tiktok?password=${encodeURIComponent(password)}`),
-        fetch(
-          `/api/post-tiktok?action=posts&password=${encodeURIComponent(
-            password
-          )}`
-        ),
+      const pw = encodeURIComponent(password);
+      const [ttRes, igRes, fbRes, postsRes] = await Promise.all([
+        fetch(`/api/post-tiktok?password=${pw}&platform=tiktok`),
+        fetch(`/api/post-tiktok?password=${pw}&platform=instagram`),
+        fetch(`/api/post-tiktok?password=${pw}&platform=facebook`),
+        fetch(`/api/post-tiktok?action=posts&password=${pw}`),
       ]);
-      if (accRes.ok) setAccounts((await accRes.json()).accounts || []);
+      const allAccounts: TikTokAccount[] = [];
+      for (const [res, plat] of [
+        [ttRes, "tiktok"],
+        [igRes, "instagram"],
+        [fbRes, "facebook"],
+      ] as const) {
+        if (res.ok) {
+          const arr: TikTokAccount[] = (await res.json()).accounts || [];
+          for (const a of arr) allAccounts.push({ ...a, platform: plat });
+        }
+      }
+      setAccounts(allAccounts);
       if (postsRes.ok) setPosts((await postsRes.json()).posts || []);
     } catch {}
     setLoading(false);
@@ -158,11 +169,21 @@ export default function PostsPage() {
             className="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20"
           >
             <option value="all">All accounts</option>
-            {accounts.map((a) => (
-              <option key={a.id} value={a.id}>
-                @{a.username}
-              </option>
-            ))}
+            {(["tiktok", "instagram", "facebook"] as const).map((plat) => {
+              const platAccounts = accounts
+                .filter((a) => a.platform === plat)
+                .sort((a, b) => a.username.localeCompare(b.username));
+              if (platAccounts.length === 0) return null;
+              return (
+                <optgroup key={plat} label={plat === "tiktok" ? "TikTok" : plat === "instagram" ? "Instagram" : "Facebook"}>
+                  {platAccounts.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      @{a.username}
+                    </option>
+                  ))}
+                </optgroup>
+              );
+            })}
           </select>
           <select
             value={filterStatus}
