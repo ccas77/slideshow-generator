@@ -57,7 +57,8 @@ export async function runVideoPhase(
       }
       if (filtered.length === 0) continue;
 
-      // Interleave by book so posts alternate between books
+      // Interleave by book: cycle through books round-robin, each book
+      // wraps its own list independently so uneven sizes don't clump.
       const byBook = new Map<string, typeof filtered>();
       for (const s of filtered) {
         const key = s.sourceBookId || "_none";
@@ -65,12 +66,15 @@ export async function runVideoPhase(
         byBook.get(key)!.push(s);
       }
       const bookGroups = [...byBook.values()];
+      if (bookGroups.length === 0) continue;
+      const totalItems = filtered.length;
       const pool: typeof filtered = [];
-      const maxLen = Math.max(...bookGroups.map((g) => g.length));
-      for (let i = 0; i < maxLen; i++) {
-        for (const group of bookGroups) {
-          if (i < group.length) pool.push(group[i]);
-        }
+      const groupPointers = bookGroups.map(() => 0);
+      for (let i = 0; i < totalItems; i++) {
+        const groupIdx = i % bookGroups.length;
+        const group = bookGroups[groupIdx];
+        pool.push(group[groupPointers[groupIdx] % group.length]);
+        groupPointers[groupIdx]++;
       }
       if (pool.length === 0) continue;
 
