@@ -59,4 +59,4 @@ export interface AccountData {
   lastStatus?: string;
 }
 
-export type Tab = "automation" | "post-now";
+export type Tab = "automation" | "post-now" | "overview";
