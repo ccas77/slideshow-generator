@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getIgSlideshows, getBooksWithCovers, getVideoMusicTrack, redis } from "@/lib/kv";
 import { generateImage } from "@/lib/gemini";
-import { renderSlide } from "@/lib/render-slide";
+import { renderTextOverlay } from "@/lib/render-slide";
 import { renderVideo } from "@/lib/render-video";
 
 export const maxDuration = 300;
@@ -54,14 +54,18 @@ export async function POST(req: NextRequest) {
     const book = ss.sourceBookId ? books.find((b) => b.id === ss.sourceBookId) : undefined;
     const slideTexts = book?.coverImage && texts.length > 2 ? texts.slice(0, -1) : texts;
 
+    // Decode background image for camera motion
+    const bgB64 = image.includes(",") ? image.split(",")[1] : image;
+    const backgroundImage = Buffer.from(bgB64, "base64");
+
     const slideBufs: Buffer[] = [];
     const durations: number[] = [];
     for (const text of slideTexts) {
-      slideBufs.push(await renderSlide(image, text));
+      slideBufs.push(await renderTextOverlay(text));
       durations.push(2.5);
     }
 
-    // Add book cover as final slide (5s)
+    // Add book cover as final slide (5s) — no motion for cover
     if (book?.coverImage) {
       const b64 = book.coverImage.includes(",") ? book.coverImage.split(",")[1] : book.coverImage;
       slideBufs.push(Buffer.from(b64, "base64"));
@@ -85,6 +89,7 @@ export async function POST(req: NextRequest) {
     const videoBuf = await renderVideo(slideBufs, {
       durations,
       audioBuffer,
+      backgroundImage,
     });
 
     // Store in Redis (1 hour TTL)

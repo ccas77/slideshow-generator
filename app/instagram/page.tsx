@@ -601,6 +601,7 @@ export default function InstagramPage() {
           )}
         </div>
 
+
         {loading ? (
           <p className="text-zinc-500">Loading…</p>
         ) : (
@@ -1085,17 +1086,9 @@ export default function InstagramPage() {
                 });
               };
               const currentConfig = selConfig || { enabled: false, intervals: [{ start: "18:00", end: "20:00" }], bookIds: [], slideshowIds: [], pointer: 0 };
-              const configuredCount = Object.values(autoConfig.accounts).filter((c) => c.enabled).length;
 
               return (
               <div className="space-y-6">
-                {/* Summary */}
-                <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6">
-                  <p className="text-xs text-zinc-500">
-                    {configuredCount} account{configuredCount !== 1 ? "s" : ""} enabled. Each account round-robins through its assigned slideshows.
-                  </p>
-                </div>
-
                 {/* Account selector */}
                 <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6">
                   <h3 className="text-sm font-semibold mb-3">Configure Account</h3>
@@ -1126,6 +1119,31 @@ export default function InstagramPage() {
                         );
                       })}
                     </select>
+                  )}
+
+                  {/* Summary of all enabled accounts */}
+                  {Object.entries(autoConfig.accounts).filter(([, c]) => c.enabled).length > 0 && (
+                    <div className="mt-5 space-y-2">
+                      <h4 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">All enabled accounts</h4>
+                      {Object.entries(autoConfig.accounts).filter(([, c]) => c.enabled).map(([accId, cfg]) => {
+                        const acc = allAccs.find((a) => String(a.id) === accId);
+                        const bookNames = cfg.bookIds.length > 0
+                          ? cfg.bookIds.map((bid) => books.find((b) => b.id === bid)?.name || bid).join(", ")
+                          : "all books";
+                        const ssCount = cfg.slideshowIds.length > 0 ? cfg.slideshowIds.length : igSlideshows.filter((s) => cfg.bookIds.length === 0 || (s.sourceBookId && cfg.bookIds.includes(s.sourceBookId))).length;
+                        return (
+                          <div key={accId} className="rounded-lg border border-zinc-700/50 bg-zinc-800/50 px-3 py-2">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium text-white">@{acc?.username || accId}</span>
+                              <span className="text-[10px] uppercase tracking-wide text-zinc-500">{acc?.platform}</span>
+                            </div>
+                            <div className="text-xs text-zinc-400">
+                              {cfg.intervals.map((w) => `${w.start}–${w.end}`).join(", ") || "no windows"} · {bookNames} · {ssCount} slideshow{ssCount !== 1 ? "s" : ""} · ptr {cfg.pointer}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   )}
                 </div>
 
@@ -1323,7 +1341,6 @@ export default function InstagramPage() {
                 });
               };
               const currentConfig = selConfig || { enabled: false, intervals: [{ start: "18:00", end: "20:00" }], bookIds: [], slideshowIds: [], pointer: 0, musicTrackIds: [], durationPerSlide: 2 };
-              const configuredCount = Object.values(videoConfig.accounts).filter((c) => c.enabled).length;
 
               return (
               <div className="space-y-6">
@@ -1484,13 +1501,6 @@ export default function InstagramPage() {
                   )}
                 </div>
 
-                {/* Automation config */}
-                <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6">
-                  <p className="text-xs text-zinc-500">
-                    {configuredCount} account{configuredCount !== 1 ? "s" : ""} enabled for video posts. Each account round-robins through its assigned slideshows, rendering a video (2s/slide) with music.
-                  </p>
-                </div>
-
                 {/* Account selector */}
                 <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6">
                   <h3 className="text-sm font-semibold mb-3">Configure Account</h3>
@@ -1521,6 +1531,32 @@ export default function InstagramPage() {
                         );
                       })}
                     </select>
+                  )}
+
+                  {/* Summary of all enabled video accounts */}
+                  {Object.entries(videoConfig.accounts).filter(([, c]) => c.enabled).length > 0 && (
+                    <div className="mt-5 space-y-2">
+                      <h4 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">All enabled accounts</h4>
+                      {Object.entries(videoConfig.accounts).filter(([, c]) => c.enabled).map(([accId, cfg]) => {
+                        const acc = allAccs.find((a) => String(a.id) === accId);
+                        const bookNames = cfg.bookIds.length > 0
+                          ? cfg.bookIds.map((bid) => books.find((b) => b.id === bid)?.name || bid).join(", ")
+                          : "all books";
+                        const ssCount = cfg.slideshowIds.length > 0 ? cfg.slideshowIds.length : igSlideshows.filter((s) => cfg.bookIds.length === 0 || (s.sourceBookId && cfg.bookIds.includes(s.sourceBookId))).length;
+                        const trackCount = cfg.musicTrackIds?.length || 0;
+                        return (
+                          <div key={accId} className="rounded-lg border border-zinc-700/50 bg-zinc-800/50 px-3 py-2">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium text-white">@{acc?.username || accId}</span>
+                              <span className="text-[10px] uppercase tracking-wide text-zinc-500">{acc?.platform}</span>
+                            </div>
+                            <div className="text-xs text-zinc-400">
+                              {cfg.intervals.map((w) => `${w.start}–${w.end}`).join(", ") || "no windows"} · {bookNames} · {ssCount} slideshow{ssCount !== 1 ? "s" : ""} · {trackCount} track{trackCount !== 1 ? "s" : ""} · ptr {cfg.pointer}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   )}
                 </div>
 

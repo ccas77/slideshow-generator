@@ -6,7 +6,7 @@ import {
   getBooksWithCovers,
 } from "@/lib/kv";
 import { generateImage } from "@/lib/gemini";
-import { renderSlide } from "@/lib/render-slide";
+import { renderTextOverlay } from "@/lib/render-slide";
 import { renderVideo } from "@/lib/render-video";
 import { pbFetch, uploadVideo } from "@/lib/post-bridge";
 import { shouldProcessWindow, randomTimeInWindow } from "./window";
@@ -105,6 +105,10 @@ export async function runVideoPhase(
             continue;
           }
 
+          // Decode background image for camera motion
+          const bgB64 = image.includes(",") ? image.split(",")[1] : image;
+          const backgroundImage = Buffer.from(bgB64, "base64");
+
           // Build slide durations: 2.5s per text slide, 5s for cover
           const coverImage = ss.sourceBookId ? bookCoverMap.get(ss.sourceBookId) : undefined;
           const slideTexts = coverImage && texts.length > 2 ? texts.slice(0, -1) : texts;
@@ -112,7 +116,7 @@ export async function runVideoPhase(
           const slideBufs: Buffer[] = [];
           const durations: number[] = [];
           for (const text of slideTexts) {
-            slideBufs.push(await renderSlide(image, text));
+            slideBufs.push(await renderTextOverlay(text));
             durations.push(2.5);
           }
 
@@ -139,6 +143,7 @@ export async function runVideoPhase(
           const videoBuf = await renderVideo(slideBufs, {
             durations,
             audioBuffer,
+            backgroundImage,
           });
 
           const mediaId = await uploadVideo(videoBuf, `video-auto-${accIdStr}.mp4`);

@@ -989,17 +989,10 @@ export default function TopBooksPage() {
             ...igAccounts.map((a) => ({ ...a, platformLabel: "Instagram" })),
             ...fbAccounts.map((a) => ({ ...a, platformLabel: "Facebook" })),
           ];
-          const configuredCount = Object.values(topnAutoConfig.accounts).filter((c) => c.enabled).length;
           const selectedCfg = selectedTopnAccount ? topnAutoConfig.accounts[selectedTopnAccount] : null;
 
           return (
             <>
-              <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-4 mb-4">
-                <div className="text-sm text-zinc-400">
-                  {configuredCount} account{configuredCount !== 1 ? "s" : ""} configured for auto-posting
-                </div>
-              </div>
-
               {allAccts.length === 0 ? (
                 <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-10 text-center text-zinc-500">
                   No accounts available. Connect TikTok, Instagram, or Facebook accounts first.
@@ -1035,6 +1028,29 @@ export default function TopBooksPage() {
                           );
                         })}
                     </div>
+
+                    {/* Summary of all enabled accounts */}
+                    {Object.entries(topnAutoConfig.accounts).filter(([, c]) => c.enabled).length > 0 && (
+                      <div className="mt-4 space-y-2">
+                        <h4 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">All enabled accounts</h4>
+                        {Object.entries(topnAutoConfig.accounts).filter(([, c]) => c.enabled).map(([accId, cfg]) => {
+                          const acc = allAccts.find((a) => String(a.id) === accId);
+                          const listCount = cfg.listIds.length > 0 ? cfg.listIds.length : lists.length;
+                          const pLabel = (() => { switch(cfg.platform) { case "tiktok-carousel": return "TikTok Carousel"; case "tiktok-video": return "TikTok Video"; case "fb-video": return "FB Video"; case "ig-carousel": return "IG Carousel"; case "ig-video": return "IG Video"; default: return cfg.platform; } })();
+                          return (
+                            <div key={accId} className="rounded-lg border border-zinc-700/50 bg-zinc-800/50 px-3 py-2">
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-medium text-white">@{acc?.username || accId}</span>
+                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-700 text-zinc-300">{pLabel}</span>
+                              </div>
+                              <div className="text-xs text-zinc-400">
+                                {cfg.intervals.map((w) => `${w.start}–${w.end}`).join(", ") || "no windows"} · every {cfg.frequencyDays}d · {listCount} list{listCount !== 1 ? "s" : ""} · ptr {cfg.pointer}{cfg.lastPostDate ? ` · last ${cfg.lastPostDate}` : ""}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
 
                   {/* Per-account config */}
