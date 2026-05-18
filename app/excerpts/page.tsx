@@ -1009,6 +1009,29 @@ export default function ExcerptsPage() {
               {savingAuto && <span className="text-xs text-zinc-500">Saving…</span>}
             </div>
 
+            {/* Overview of all enabled accounts */}
+            {Object.entries(autoConfig.accounts).filter(([, c]) => c.enabled).length > 0 && (
+              <div className="mb-6 space-y-2">
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">All enabled accounts</h3>
+                {Object.entries(autoConfig.accounts).filter(([, c]) => c.enabled).map(([accId, cfg]) => {
+                  const acc = allAutoAccounts.find((a) => String(a.id) === accId);
+                  const excCount = cfg.excerptIds.length > 0 ? cfg.excerptIds.length : excerpts.filter((e) => e.imagePrompts.length > 0).length;
+                  return (
+                    <div key={accId} className="rounded-lg border border-zinc-700/50 bg-zinc-800/50 px-4 py-3">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-sm font-medium text-white">@{acc?.username || accId}</span>
+                        <span className="text-[10px] uppercase tracking-wide text-zinc-500">{cfg.platform}</span>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-500/20 text-green-400 font-medium">ON</span>
+                      </div>
+                      <div className="text-xs text-zinc-400">
+                        {cfg.intervals.map((w) => `${w.start}–${w.end}`).join(", ") || "no windows"} · {excCount} excerpt{excCount !== 1 ? "s" : ""} · ptr {cfg.pointer}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
             {allAutoAccounts.length === 0 ? (
               <p className="text-sm text-zinc-500">No accounts connected.</p>
             ) : (
