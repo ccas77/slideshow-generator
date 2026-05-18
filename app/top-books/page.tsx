@@ -141,7 +141,7 @@ export default function TopBooksPage() {
   const [generatingVideoForList, setGeneratingVideoForList] = useState<string | null>(null);
 
   // Active tab
-  const [tab, setTab] = useState<"books" | "lists" | "music" | "automation">("books");
+  const [tab, setTab] = useState<"books" | "lists" | "music" | "automation" | "overview">("books");
 
   useEffect(() => {
     const pw = localStorage.getItem("sg.password");
@@ -719,9 +719,9 @@ export default function TopBooksPage() {
 
         {/* Tabs */}
         <div className="flex gap-1 mb-6 bg-zinc-900 rounded-lg p-1 w-fit">
-          {(["books", "lists", "music", "automation"] as const).map((t) => {
+          {(["books", "lists", "music", "automation", "overview"] as const).map((t) => {
             const configuredCount = Object.values(topnAutoConfig.accounts).filter((c) => c.enabled).length;
-            const label = t === "books" ? `Books (${books.length})` : t === "lists" ? `Lists (${lists.length})` : t === "music" ? `Music (${musicTracks.length})` : `Automation${configuredCount > 0 ? ` (${configuredCount})` : ""}`;
+            const label = t === "books" ? `Books (${books.length})` : t === "lists" ? `Lists (${lists.length})` : t === "music" ? `Music (${musicTracks.length})` : t === "overview" ? "Overview" : `Automation${configuredCount > 0 ? ` (${configuredCount})` : ""}`;
             return (
               <button
                 key={t}
@@ -1270,6 +1270,52 @@ export default function TopBooksPage() {
                 </>
               )}
             </>
+          );
+        })()}
+
+        {/* ═══ OVERVIEW TAB ═══ */}
+        {tab === "overview" && (() => {
+          const allAccts = [
+            ...accounts.map((a) => ({ ...a, platform: "tiktok" as const })),
+            ...(igAccounts || []).map((a) => ({ ...a, platform: "instagram" as const })),
+            ...(fbAccounts || []).map((a) => ({ ...a, platform: "facebook" as const })),
+          ].sort((a, b) => a.username.localeCompare(b.username));
+
+          const enabled = Object.entries(topnAutoConfig.accounts).filter(([, c]) => c.enabled);
+
+          return (
+            <div className="space-y-6">
+              <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6">
+                <h2 className="text-lg font-semibold mb-1">Top Books Automation Overview</h2>
+                <p className="text-sm text-zinc-500 mb-6">
+                  {enabled.length} active account{enabled.length !== 1 ? "s" : ""}
+                </p>
+
+                {enabled.length === 0 ? (
+                  <p className="text-sm text-zinc-500 text-center py-4">No accounts have automation enabled.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {enabled.map(([accId, cfg]) => {
+                      const acc = allAccts.find((a) => String(a.id) === accId);
+                      const listCount = cfg.listIds.length > 0 ? cfg.listIds.length : lists.length;
+                      const pLabel = (() => { switch(cfg.platform) { case "tiktok-carousel": return "TikTok Carousel"; case "tiktok-video": return "TikTok Video"; case "fb-video": return "FB Video"; case "ig-carousel": return "IG Carousel"; case "ig-video": return "IG Video"; default: return cfg.platform; } })();
+                      return (
+                        <div key={accId} className="rounded-lg border border-zinc-700/50 bg-zinc-800/50 px-4 py-3">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-sm font-medium text-white">@{acc?.username || accId}</span>
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-700 text-zinc-300">{pLabel}</span>
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-500/20 text-green-400 font-medium">ON</span>
+                          </div>
+                          <div className="text-xs text-zinc-400">
+                            {cfg.intervals.map((w) => `${w.start}–${w.end}`).join(", ") || "no windows"} · every {cfg.frequencyDays}d · {listCount} list{listCount !== 1 ? "s" : ""} · ptr {cfg.pointer}{cfg.lastPostDate ? ` · last ${cfg.lastPostDate}` : ""}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
           );
         })()}
 
