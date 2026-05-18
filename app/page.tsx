@@ -30,7 +30,7 @@ export default function Home() {
     auth.password
   );
 
-  const [tab, setTab] = useState<Tab>("overview");
+  const [tab, setTab] = useState<Tab>("automation");
 
   if (!auth.authed) {
     return (
@@ -57,7 +57,7 @@ export default function Home() {
 
         {/* Tab switcher */}
         <div className="flex gap-1 p-1 rounded-xl bg-zinc-900/80 border border-zinc-800 mb-8">
-          {([["overview", "Overview"], ["automation", "Automation"], ["post-now", "Post Now"]] as const).map(([key, label]) => (
+          {([["automation", "Automation"], ["post-now", "Post Now"], ["overview", "Overview"]] as const).map(([key, label]) => (
             <button
               key={key}
               onClick={() => setTab(key)}
