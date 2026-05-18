@@ -5,6 +5,7 @@ import AppHeader from "@/components/AppHeader";
 import HowItWorks from "@/components/HowItWorks";
 import LoginScreen from "@/components/home/LoginScreen";
 import AutomationTab from "@/components/home/AutomationTab";
+import OverviewTab from "@/components/home/OverviewTab";
 import PostNowTab from "@/components/home/PostNowTab";
 import { useAuth } from "@/hooks/useAuth";
 import { useAccounts } from "@/hooks/useAccounts";
@@ -29,7 +30,7 @@ export default function Home() {
     auth.password
   );
 
-  const [tab, setTab] = useState<Tab>("automation");
+  const [tab, setTab] = useState<Tab>("overview");
 
   if (!auth.authed) {
     return (
@@ -56,7 +57,7 @@ export default function Home() {
 
         {/* Tab switcher */}
         <div className="flex gap-1 p-1 rounded-xl bg-zinc-900/80 border border-zinc-800 mb-8">
-          {([["automation", "Automation"], ["post-now", "Post Now"]] as const).map(([key, label]) => (
+          {([["overview", "Overview"], ["automation", "Automation"], ["post-now", "Post Now"]] as const).map(([key, label]) => (
             <button
               key={key}
               onClick={() => setTab(key)}
@@ -70,6 +71,14 @@ export default function Home() {
             </button>
           ))}
         </div>
+
+        {tab === "overview" && (
+          <OverviewTab
+            accounts={accounts}
+            books={books}
+            password={auth.password}
+          />
+        )}
 
         {tab === "automation" && (
           <AutomationTab
