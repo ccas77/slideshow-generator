@@ -68,6 +68,7 @@ interface VideoAccountConfig {
   pointer: number;
   musicTrackIds: string[];
   durationPerSlide: number;
+  platform?: "tiktok" | "instagram" | "facebook";
 }
 
 interface VideoAutomation {
