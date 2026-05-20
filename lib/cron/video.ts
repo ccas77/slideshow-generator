@@ -156,9 +156,12 @@ export async function runVideoPhase(
               media: [mediaId],
               social_accounts: [Number(accIdStr)],
               scheduled_at: scheduledAt.toISOString(),
-              platform_configurations: {
-                tiktok: { draft: false, is_aigc: false },
-              },
+              platform_configurations: (() => {
+                const plat = accConfig.platform || "tiktok";
+                if (plat === "facebook") return { facebook: {} };
+                if (plat === "instagram") return { instagram: {} };
+                return { tiktok: { draft: false, is_aigc: false } };
+              })(),
             }),
           });
 

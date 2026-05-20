@@ -448,6 +448,7 @@ export interface VideoAccountConfig {
   pointer: number;
   musicTrackIds: string[];  // random pick per post
   durationPerSlide: number; // seconds per slide (default 2)
+  platform?: "tiktok" | "instagram" | "facebook";
 }
 
 export interface VideoAutomation {

@@ -1333,15 +1333,16 @@ export default function InstagramPage() {
                 ...fbAccounts.map((a) => ({ ...a, platform: "facebook" as const })),
               ].sort((a, b) => a.username.localeCompare(b.username));
               const selConfig = selectedVideoAccount ? videoConfig.accounts[selectedVideoAccount] : null;
+              const getAccPlatform = (accId: string) => allAccs.find(a => String(a.id) === accId)?.platform || "tiktok";
               const updateVideoAccConfig = (patch: Partial<VideoAccountConfig>) => {
                 if (!selectedVideoAccount) return;
-                const current = videoConfig.accounts[selectedVideoAccount] || { enabled: false, intervals: [{ start: "18:00", end: "20:00" }], bookIds: [], slideshowIds: [], pointer: 0, musicTrackIds: [], durationPerSlide: 2 };
+                const current = videoConfig.accounts[selectedVideoAccount] || { enabled: false, intervals: [{ start: "18:00", end: "20:00" }], bookIds: [], slideshowIds: [], pointer: 0, musicTrackIds: [], durationPerSlide: 2, platform: getAccPlatform(selectedVideoAccount) };
                 setVideoConfig({
                   ...videoConfig,
-                  accounts: { ...videoConfig.accounts, [selectedVideoAccount]: { ...current, ...patch } },
+                  accounts: { ...videoConfig.accounts, [selectedVideoAccount]: { ...current, platform: current.platform || getAccPlatform(selectedVideoAccount), ...patch } },
                 });
               };
-              const currentConfig = selConfig || { enabled: false, intervals: [{ start: "18:00", end: "20:00" }], bookIds: [], slideshowIds: [], pointer: 0, musicTrackIds: [], durationPerSlide: 2 };
+              const currentConfig = selConfig || { enabled: false, intervals: [{ start: "18:00", end: "20:00" }], bookIds: [], slideshowIds: [], pointer: 0, musicTrackIds: [], durationPerSlide: 2, platform: getAccPlatform(selectedVideoAccount || "") };
 
               return (
               <div className="space-y-6">
