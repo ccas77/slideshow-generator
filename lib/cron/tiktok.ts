@@ -215,11 +215,14 @@ export async function runTikTokPhase(
         mediaIds.push(mediaId);
       }
 
+      debugLog.push(`${job.acc.username}: coverImage=${job.coverImage ? "yes (" + job.coverImage.slice(0, 40) + "...)" : "NO"}, mediaIds before cover=${mediaIds.length}`);
       if (job.coverImage) {
         const base64 = job.coverImage.replace(/^data:[^;]+;base64,/, "");
         const coverBuf = Buffer.from(base64, "base64");
+        debugLog.push(`${job.acc.username}: cover base64 length=${base64.length}, buf length=${coverBuf.length}`);
         const coverMediaId = await uploadPng(coverBuf, `slide-${slideBufs.length + 1}-cover.png`);
         mediaIds.push(coverMediaId);
+        debugLog.push(`${job.acc.username}: cover uploaded as ${coverMediaId}, total mediaIds=${mediaIds.length}`);
       }
 
       const scheduledAt = randomTimeInWindow(job.win.start, job.win.end);
