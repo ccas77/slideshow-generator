@@ -1501,12 +1501,12 @@ export default function TopBooksPage() {
                     <label className="text-xs text-zinc-400 block mb-2">TikTok accounts</label>
                     <div className="space-y-2">
                       {accounts.map((a) => (
-                        <label key={a.id} className="flex items-center gap-2 text-sm">
+                        <label key={a.id} className="flex items-center gap-2 text-sm cursor-pointer">
                           <input
                             type="checkbox"
                             checked={publishAccounts.includes(a.id)}
                             onChange={() => togglePublishAccount(a.id)}
-                            className="rounded"
+                            className="w-4 h-4 accent-blue-500 cursor-pointer"
                           />
                           @{a.username}
                         </label>
@@ -1519,12 +1519,12 @@ export default function TopBooksPage() {
                     <label className="text-xs text-zinc-400 block mb-2">Instagram accounts</label>
                     <div className="space-y-2">
                       {igAccounts.map((a) => (
-                        <label key={a.id} className="flex items-center gap-2 text-sm">
+                        <label key={a.id} className="flex items-center gap-2 text-sm cursor-pointer">
                           <input
                             type="checkbox"
                             checked={publishAccounts.includes(a.id)}
                             onChange={() => togglePublishAccount(a.id)}
-                            className="rounded"
+                            className="w-4 h-4 accent-blue-500 cursor-pointer"
                           />
                           @{a.username}
                         </label>
@@ -1537,12 +1537,12 @@ export default function TopBooksPage() {
                     <label className="text-xs text-zinc-400 block mb-2">Facebook accounts</label>
                     <div className="space-y-2">
                       {fbAccounts.map((a) => (
-                        <label key={a.id} className="flex items-center gap-2 text-sm">
+                        <label key={a.id} className="flex items-center gap-2 text-sm cursor-pointer">
                           <input
                             type="checkbox"
                             checked={publishAccounts.includes(a.id)}
                             onChange={() => togglePublishAccount(a.id)}
-                            className="rounded"
+                            className="w-4 h-4 accent-blue-500 cursor-pointer"
                           />
                           @{a.username}
                         </label>
