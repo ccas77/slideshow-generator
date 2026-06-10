@@ -117,6 +117,7 @@ export default function TopBooksPage() {
   const [publishing, setPublishing] = useState(false);
   const [publishResult, setPublishResult] = useState<string | null>(null);
   const [scheduledAt, setScheduledAt] = useState("");
+  const [refreshingAccounts, setRefreshingAccounts] = useState(false);
 
   // Automation (per-account)
   const [topnAutoConfig, setTopnAutoConfig] = useState<TopNGlobalAutomation>({ accounts: {} });
@@ -586,6 +587,22 @@ export default function TopBooksPage() {
     setPublishAccounts((prev) =>
       prev.includes(id) ? prev.filter((a) => a !== id) : [...prev, id]
     );
+  }
+
+  async function refreshAccounts() {
+    if (!password) return;
+    setRefreshingAccounts(true);
+    try {
+      const [aRes, igRes, fbRes] = await Promise.all([
+        fetch(`/api/post-tiktok?password=${encodeURIComponent(password)}&platform=tiktok`),
+        fetch(`/api/post-tiktok?password=${encodeURIComponent(password)}&platform=instagram`),
+        fetch(`/api/post-tiktok?password=${encodeURIComponent(password)}&platform=facebook`),
+      ]);
+      if (aRes.ok) setAccounts((await aRes.json()).accounts || []);
+      if (igRes.ok) setIgAccounts((await igRes.json()).accounts || []);
+      if (fbRes.ok) setFbAccounts((await fbRes.json()).accounts || []);
+    } catch {}
+    setRefreshingAccounts(false);
   }
 
   // ── Automation (per-account) ──
@@ -1495,6 +1512,15 @@ export default function TopBooksPage() {
         {publishListId && (
           <Modal onClose={() => setPublishListId(null)} title="Publish Top N">
             <div className="space-y-4">
+              <div className="flex justify-end">
+                <button
+                  onClick={refreshAccounts}
+                  disabled={refreshingAccounts}
+                  className="text-xs text-blue-400 hover:text-blue-300 disabled:text-zinc-600 transition-colors"
+                >
+                  {refreshingAccounts ? "Refreshing..." : "Refresh accounts"}
+                </button>
+              </div>
               <div className="space-y-4">
                 {accounts.length > 0 && (
                   <div>
