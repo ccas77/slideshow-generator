@@ -1539,7 +1539,7 @@ export default function TopBooksPage() {
                             type="checkbox"
                             checked={publishAccounts.includes(a.id)}
                             onChange={() => togglePublishAccount(a.id)}
-                            className="w-4 h-4 accent-blue-500 cursor-pointer"
+                            className="appearance-none w-5 h-5 rounded border border-zinc-500 bg-zinc-700 checked:bg-blue-500 checked:border-blue-500 hover:border-zinc-300 cursor-pointer transition-colors shrink-0 relative after:absolute after:inset-0 after:flex after:items-center after:justify-center after:text-white after:text-sm after:font-bold checked:after:content-['✓']"
                           />
                           @{a.username}
                         </label>
@@ -1557,7 +1557,7 @@ export default function TopBooksPage() {
                             type="checkbox"
                             checked={publishAccounts.includes(a.id)}
                             onChange={() => togglePublishAccount(a.id)}
-                            className="w-4 h-4 accent-blue-500 cursor-pointer"
+                            className="appearance-none w-5 h-5 rounded border border-zinc-500 bg-zinc-700 checked:bg-blue-500 checked:border-blue-500 hover:border-zinc-300 cursor-pointer transition-colors shrink-0 relative after:absolute after:inset-0 after:flex after:items-center after:justify-center after:text-white after:text-sm after:font-bold checked:after:content-['✓']"
                           />
                           @{a.username}
                         </label>
@@ -1575,7 +1575,7 @@ export default function TopBooksPage() {
                             type="checkbox"
                             checked={publishAccounts.includes(a.id)}
                             onChange={() => togglePublishAccount(a.id)}
-                            className="w-4 h-4 accent-blue-500 cursor-pointer"
+                            className="appearance-none w-5 h-5 rounded border border-zinc-500 bg-zinc-700 checked:bg-blue-500 checked:border-blue-500 hover:border-zinc-300 cursor-pointer transition-colors shrink-0 relative after:absolute after:inset-0 after:flex after:items-center after:justify-center after:text-white after:text-sm after:font-bold checked:after:content-['✓']"
                           />
                           @{a.username}
                         </label>
