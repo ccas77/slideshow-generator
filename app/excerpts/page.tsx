@@ -126,6 +126,22 @@ export default function ExcerptsPage() {
     if (password) load();
   }, [password, load]);
 
+  useEffect(() => {
+    const handler = async () => {
+      if (!password) return;
+      try {
+        const [ttRes, igRes] = await Promise.all([
+          fetch(`/api/post-tiktok?password=${encodeURIComponent(password)}&platform=tiktok`),
+          fetch(`/api/post-tiktok?password=${encodeURIComponent(password)}&platform=instagram`),
+        ]);
+        if (ttRes.ok) setAccounts((await ttRes.json()).accounts || []);
+        if (igRes.ok) setIgAccounts((await igRes.json()).accounts || []);
+      } catch {}
+    };
+    window.addEventListener("app:refresh-accounts", handler);
+    return () => window.removeEventListener("app:refresh-accounts", handler);
+  }, [password]);
+
   const persist = useCallback(
     async (next: Excerpt[]) => {
       if (!password) return;

@@ -183,6 +183,13 @@ export default function TopBooksPage() {
 
   useEffect(() => { if (password) load(); }, [password, load]);
 
+  useEffect(() => {
+    const handler = () => { refreshAccounts(); };
+    window.addEventListener("app:refresh-accounts", handler);
+    return () => window.removeEventListener("app:refresh-accounts", handler);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [password]);
+
   // ── Book CRUD ──
 
   function openBookForm(book?: TopBook) {

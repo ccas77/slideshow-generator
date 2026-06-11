@@ -2,14 +2,22 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useState } from "react";
 
 export default function AppHeader() {
   const pathname = usePathname();
   const router = useRouter();
+  const [refreshing, setRefreshing] = useState(false);
 
   function logout() {
     localStorage.removeItem("sg.password");
     router.push("/");
+  }
+
+  function refreshAccounts() {
+    setRefreshing(true);
+    window.dispatchEvent(new CustomEvent("app:refresh-accounts"));
+    setTimeout(() => setRefreshing(false), 1500);
   }
 
   const link = (href: string, label: string) => {
@@ -43,12 +51,22 @@ export default function AppHeader() {
           {link("/settings", "Settings")}
         </nav>
       </div>
-      <button
-        onClick={logout}
-        className="text-sm text-zinc-500 hover:text-white transition-colors shrink-0"
-      >
-        Log out
-      </button>
+      <div className="flex items-center gap-4 shrink-0">
+        <button
+          onClick={refreshAccounts}
+          disabled={refreshing}
+          className="text-sm text-blue-400 hover:text-blue-300 disabled:text-zinc-600 transition-colors"
+          title="Re-fetch accounts from PostBridge"
+        >
+          {refreshing ? "Refreshing..." : "Refresh accounts"}
+        </button>
+        <button
+          onClick={logout}
+          className="text-sm text-zinc-500 hover:text-white transition-colors"
+        >
+          Log out
+        </button>
+      </div>
     </header>
   );
 }

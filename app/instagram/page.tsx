@@ -195,6 +195,24 @@ export default function InstagramPage() {
     if (password) loadAll();
   }, [password, loadAll]);
 
+  useEffect(() => {
+    const handler = async () => {
+      if (!password) return;
+      try {
+        const [ttRes, igAccRes, fbAccRes] = await Promise.all([
+          fetch(`/api/post-tiktok?password=${encodeURIComponent(password)}&platform=tiktok`),
+          fetch(`/api/post-tiktok?password=${encodeURIComponent(password)}&platform=instagram`),
+          fetch(`/api/post-tiktok?password=${encodeURIComponent(password)}&platform=facebook`),
+        ]);
+        if (ttRes.ok) setAccounts((await ttRes.json()).accounts || []);
+        if (igAccRes.ok) setIgAccounts((await igAccRes.json()).accounts || []);
+        if (fbAccRes.ok) setFbAccounts((await fbAccRes.json()).accounts || []);
+      } catch {}
+    };
+    window.addEventListener("app:refresh-accounts", handler);
+    return () => window.removeEventListener("app:refresh-accounts", handler);
+  }, [password]);
+
   const persist = useCallback(async (next: InstagramSlideshow[]) => {
     setSaving(true);
     setIgSlideshows(next);

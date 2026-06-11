@@ -107,6 +107,34 @@ export default function PostsPage() {
     if (password) load();
   }, [password, load]);
 
+  useEffect(() => {
+    const handler = async () => {
+      if (!password) return;
+      try {
+        const pw = encodeURIComponent(password);
+        const [ttRes, igRes, fbRes] = await Promise.all([
+          fetch(`/api/post-tiktok?password=${pw}&platform=tiktok`),
+          fetch(`/api/post-tiktok?password=${pw}&platform=instagram`),
+          fetch(`/api/post-tiktok?password=${pw}&platform=facebook`),
+        ]);
+        const allAccounts: TikTokAccount[] = [];
+        for (const [res, plat] of [
+          [ttRes, "tiktok"],
+          [igRes, "instagram"],
+          [fbRes, "facebook"],
+        ] as const) {
+          if (res.ok) {
+            const arr: TikTokAccount[] = (await res.json()).accounts || [];
+            for (const a of arr) allAccounts.push({ ...a, platform: plat });
+          }
+        }
+        setAccounts(allAccounts);
+      } catch {}
+    };
+    window.addEventListener("app:refresh-accounts", handler);
+    return () => window.removeEventListener("app:refresh-accounts", handler);
+  }, [password]);
+
   async function cancelPost(id: string) {
     if (!window.confirm("Cancel this scheduled post?")) return;
     try {
