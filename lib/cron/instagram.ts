@@ -9,6 +9,7 @@ import { renderSlide } from "@/lib/render-slide";
 import { pbFetch, uploadPng } from "@/lib/post-bridge";
 import { shouldProcessWindow, randomTimeInWindow } from "./window";
 import { markScheduled } from "./scheduled-today";
+import { notify } from "@/lib/notify";
 import type { IgAutoResult } from "./types";
 
 function pickRandom<T>(arr: T[]): T | null {
@@ -145,6 +146,12 @@ export async function runInstagramPhase(
             } catch (err) {
               const msg = err instanceof Error ? err.message : String(err);
               igAutoResults.push({ status: `error (${accIdStr}): ${msg}` });
+              await notify({
+                subject: `Slideshow Generator: IG post failed for account ${accIdStr}`,
+                body: `Account: ${accIdStr}\nSlideshow: ${ss.name}\nWindow: ${win.start}-${win.end}\n\n${msg}`,
+                dedupeKey: `ig-fail:${accIdStr}:${new Date().toISOString().slice(0, 13)}`,
+                cooldownSec: 3600,
+              });
             }
 
             pointer++;
@@ -162,6 +169,12 @@ export async function runInstagramPhase(
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     igAutoResults.push({ status: `IG automation error: ${msg}` });
+    await notify({
+      subject: "Slideshow Generator: IG phase crashed",
+      body: `Instagram automation threw before completing.\n\n${msg}`,
+      dedupeKey: "ig-phase-crash",
+      cooldownSec: 3600,
+    });
   }
 
   return igAutoResults;

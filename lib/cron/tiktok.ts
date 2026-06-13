@@ -9,6 +9,7 @@ import { renderSlide, renderCoverSlide } from "@/lib/render-slide";
 import { listTikTokAccounts, pbFetch, uploadPng } from "@/lib/post-bridge";
 import { shouldProcessWindow, randomTimeInWindow } from "./window";
 import { markScheduled, unmarkScheduled, getScheduledToday } from "./scheduled-today";
+import { notify } from "@/lib/notify";
 import type { Job, CronAccountResult } from "./types";
 
 function pickRandom<T>(arr: T[]): T | null {
@@ -157,10 +158,16 @@ export async function runTikTokPhase(
         username: acc.username,
         status: `error: ${msg}`,
       });
+      await notify({
+        subject: `Slideshow Generator: job build failed for @${acc.username}`,
+        body: `Account: @${acc.username} (${acc.id})\nThis error happened while building jobs (before posting). Usually a config or data shape problem.\n\n${msg}`,
+        dedupeKey: `tiktok-build-fail:${acc.id}:${new Date().toISOString().slice(0, 13)}`,
+        cooldownSec: 3600,
+      });
     }
   }
 
-  // Mark all job keys as scheduled NOW — before heavy work starts.
+  // Mark all job keys as scheduled NOW - before heavy work starts.
   const allSchedKeys = jobs.map((j) => j.schedKey);
   if (allSchedKeys.length > 0) {
     await markScheduled(allSchedKeys);
@@ -264,7 +271,13 @@ export async function runTikTokPhase(
       };
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      debugLog.push(`${job.acc.username} (${job.acc.id}) ${job.win.start}: job error — ${msg}`);
+      debugLog.push(`${job.acc.username} (${job.acc.id}) ${job.win.start}: job error - ${msg}`);
+      await notify({
+        subject: `Slideshow Generator: TikTok post failed for @${job.acc.username}`,
+        body: `Account: @${job.acc.username} (${job.acc.id})\nWindow: ${job.win.start}-${job.win.end}\nBook: ${job.bookName}\nSlideshow: ${job.slideshowName}\nSource: ${job.source}\n\n${msg}`,
+        dedupeKey: `tiktok-fail:${job.acc.id}:${new Date().toISOString().slice(0, 13)}`,
+        cooldownSec: 3600,
+      });
       return { job, status: `error: ${msg}` };
     }
   }
@@ -455,6 +468,12 @@ export async function runTikTokPhase(
       const msg = err instanceof Error ? err.message : String(err);
       debugLog.push(`${acc.username} (${acc.id}) fallback error: ${msg}`);
       results.push({ accountId: acc.id, username: acc.username, status: `fallback error: ${msg}` });
+      await notify({
+        subject: `Slideshow Generator: TikTok fallback failed for @${acc.username}`,
+        body: `Account: @${acc.username} (${acc.id})\nFallback was triggered because no successful post happened in the day's windows, and it also failed.\n\n${msg}`,
+        dedupeKey: `tiktok-fallback-fail:${acc.id}:${new Date().toISOString().slice(0, 10)}`,
+        cooldownSec: 86400,
+      });
     }
   }
 

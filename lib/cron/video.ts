@@ -11,6 +11,7 @@ import { renderVideo } from "@/lib/render-video";
 import { pbFetch, uploadVideo } from "@/lib/post-bridge";
 import { shouldProcessWindow, randomTimeInWindow } from "./window";
 import { markScheduled } from "./scheduled-today";
+import { notify } from "@/lib/notify";
 import type { VideoAutoResult } from "./types";
 
 function pickRandom<T>(arr: T[]): T | null {
@@ -172,6 +173,12 @@ export async function runVideoPhase(
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err);
           results.push({ status: `error (${accIdStr}): ${msg}` });
+          await notify({
+            subject: `Slideshow Generator: video post failed for account ${accIdStr}`,
+            body: `Account: ${accIdStr}\nSlideshow: ${ss.name}\nWindow: ${win.start}-${win.end}\n\n${msg}`,
+            dedupeKey: `video-fail:${accIdStr}:${new Date().toISOString().slice(0, 13)}`,
+            cooldownSec: 3600,
+          });
         }
 
         pointer++;
@@ -187,6 +194,12 @@ export async function runVideoPhase(
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     results.push({ status: `Video automation error: ${msg}` });
+    await notify({
+      subject: "Slideshow Generator: video phase crashed",
+      body: `Video automation threw before completing.\n\n${msg}`,
+      dedupeKey: "video-phase-crash",
+      cooldownSec: 3600,
+    });
   }
 
   return results;

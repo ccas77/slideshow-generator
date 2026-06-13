@@ -113,6 +113,17 @@ types/
 | Variable | Purpose |
 |---|---|
 | `ANTHROPIC_API_KEY` | AI chat feature and top-N BookTok generator |
+| `RESEND_API_KEY` | Enables failure-notification emails. Without it, `notify()` no-ops silently and the cron behaves exactly as before. |
+| `NOTIFY_EMAIL` | Where failure emails go. Defaults to `cordeliacastel@gmail.com`. |
+| `NOTIFY_FROM` | From address. Defaults to `Slideshow Generator <onboarding@resend.dev>` which Resend free tier accepts for sending to your own verified email. |
+
+## Failure notifications
+
+`lib/notify.ts` wraps Resend with a Redis-backed dedupe cooldown so the same failure doesn't email more than once per cooldown window (default 1h). It no-ops when `RESEND_API_KEY` is unset, so preview/dev never sends mail. Wired in:
+
+- `app/api/cron/post/route.ts` — top-level catch (cron crashed) + per-phase wrappers, so one phase crashing alerts but doesn't kill the other phases.
+- `lib/cron/{tiktok,topn,instagram,video,excerpts}.ts` — per-post catches send "post failed for account X" emails (dedupe key includes accountId + the current hour). Per-phase outer catch sends "phase X crashed".
+- `lib/cron/stuck-detector.ts` — runs at the start of each cron, looks at the previous two days of `post-log`, and emails one summary if any account posted the same slideshow/list on both days. Dedupe key is per-day (cooldown 24h) so it can't spam. This is the alarm for the May 7 / June 2 class of stuck-pointer incidents.
 
 ## Top-N BookTok generator
 

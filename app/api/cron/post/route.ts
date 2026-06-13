@@ -6,8 +6,28 @@ import { runTopNPhase } from "@/lib/cron/topn";
 import { runInstagramPhase } from "@/lib/cron/instagram";
 import { runVideoPhase } from "@/lib/cron/video";
 import { runExcerptPhase } from "@/lib/cron/excerpts";
+import { checkStuckRotations } from "@/lib/cron/stuck-detector";
+import { notify } from "@/lib/notify";
 
 export const maxDuration = 800; // Pro max
+
+async function runPhase<T>(
+  name: string,
+  fn: () => Promise<T>
+): Promise<T | { error: string }> {
+  try {
+    return await fn();
+  } catch (err) {
+    const msg = err instanceof Error ? `${err.message}\n\n${err.stack || ""}` : String(err);
+    await notify({
+      subject: `Slideshow Generator: cron phase "${name}" crashed`,
+      body: `Phase ${name} threw an unhandled error during the cron run.\n\n${msg}`,
+      dedupeKey: `phase-crash:${name}`,
+      cooldownSec: 3600,
+    });
+    return { error: msg };
+  }
+}
 
 export async function GET(req: NextRequest) {
   const secret = process.env.CRON_SECRET;
@@ -28,31 +48,47 @@ export async function GET(req: NextRequest) {
 
     let cronResult;
     try {
+      // Stuck-rotation detector runs first, off the previous two days of
+      // post-log. Failure to detect is non-fatal; never let it kill the cron.
+      checkStuckRotations().catch((err) => {
+        console.error("stuck-detector failed", err);
+      });
+
       const scheduledToday = await getScheduledToday();
 
-      // Phases 1–4: TikTok automation
-      const { results, debugLog } = await runTikTokPhase(scheduledToday);
+      // Each phase is wrapped so one phase crashing doesn't silently lose the
+      // others and triggers its own alert.
+      const tikTok = await runPhase("tiktok", () => runTikTokPhase(scheduledToday));
+      const topNResults = await runPhase("topn", () => runTopNPhase(scheduledToday));
+      const igAutoResults = await runPhase("instagram", () => runInstagramPhase(scheduledToday));
+      const videoResults = await runPhase("video", () => runVideoPhase(scheduledToday));
+      const excerptResults = await runPhase("excerpts", () => runExcerptPhase(scheduledToday));
 
-      // Phase 5: Top N list automation
-      const topNResults = await runTopNPhase(scheduledToday);
+      const tikTokResults = "error" in tikTok ? [] : tikTok.results;
+      const debugLog = "error" in tikTok ? [`tiktok phase crashed: ${tikTok.error}`] : tikTok.debugLog;
 
-      // Phase 6: IG slideshow automation (carousels)
-      const igAutoResults = await runInstagramPhase(scheduledToday);
-
-      // Phase 7: Video automation
-      const videoResults = await runVideoPhase(scheduledToday);
-
-      // Phase 8: Excerpt automation
-      const excerptResults = await runExcerptPhase(scheduledToday);
-
-      cronResult = NextResponse.json({ ok: true, results, topNResults, igAutoResults, videoResults, excerptResults, debugLog });
+      cronResult = NextResponse.json({
+        ok: true,
+        results: tikTokResults,
+        topNResults,
+        igAutoResults,
+        videoResults,
+        excerptResults,
+        debugLog,
+      });
     } finally {
       await releaseLock();
     }
 
     return cronResult;
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
+    const msg = err instanceof Error ? `${err.message}\n\n${err.stack || ""}` : String(err);
+    await notify({
+      subject: "Slideshow Generator: cron run crashed",
+      body: `The cron run threw before completing.\n\n${msg}`,
+      dedupeKey: "cron-crash",
+      cooldownSec: 1800,
+    });
     return NextResponse.json({ error: msg }, { status: 500 });
   }
 }

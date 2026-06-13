@@ -7,6 +7,7 @@ import {
 import { publishTopN } from "@/lib/topn-publisher";
 import { shouldProcessWindow, randomTimeInWindow } from "./window";
 import { markScheduled, unmarkScheduled } from "./scheduled-today";
+import { notify } from "@/lib/notify";
 import type { TopNResult } from "./types";
 
 export async function runTopNPhase(
@@ -97,6 +98,12 @@ export async function runTopNPhase(
           const msg = err instanceof Error ? err.message : String(err);
           topNResults.push({ listName: selectedList.name, status: `error (${accIdStr}): ${msg}` });
           failedTopnKeys.push(`topn:${accIdStr}:${win.start}`);
+          await notify({
+            subject: `Slideshow Generator: TopN post failed for account ${accIdStr}`,
+            body: `Account: ${accIdStr}\nList: ${selectedList.name}\nWindow: ${win.start}-${win.end}\n\n${msg}`,
+            dedupeKey: `topn-fail:${accIdStr}:${new Date().toISOString().slice(0, 13)}`,
+            cooldownSec: 3600,
+          });
         }
       }
       if (failedTopnKeys.length > 0) {
@@ -120,6 +127,12 @@ export async function runTopNPhase(
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     topNResults.push({ listName: "(topn-auto)", status: `error: ${msg}` });
+    await notify({
+      subject: "Slideshow Generator: TopN phase crashed",
+      body: `TopN automation threw before completing.\n\n${msg}`,
+      dedupeKey: "topn-phase-crash",
+      cooldownSec: 3600,
+    });
   }
 
   return topNResults;

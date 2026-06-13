@@ -9,6 +9,7 @@ import { renderSlide } from "@/lib/render-slide";
 import { pbFetch, uploadPng } from "@/lib/post-bridge";
 import { shouldProcessWindow, randomTimeInWindow } from "./window";
 import { markScheduled, unmarkScheduled } from "./scheduled-today";
+import { notify } from "@/lib/notify";
 import type { ExcerptAutoResult } from "./types";
 
 function pickRandom<T>(arr: T[]): T | undefined {
@@ -180,6 +181,12 @@ export async function runExcerptPhase(
           const msg = err instanceof Error ? err.message : String(err);
           results.push({ status: `error (${accIdStr}): ${msg}` });
           failedExcerptKeys.push(`excerpt:${accIdStr}:${win.start}`);
+          await notify({
+            subject: `Slideshow Generator: excerpt post failed for account ${accIdStr}`,
+            body: `Account: ${accIdStr}\nExcerpt: ${excerpt.name}\nWindow: ${win.start}-${win.end}\n\n${msg}`,
+            dedupeKey: `excerpt-fail:${accIdStr}:${new Date().toISOString().slice(0, 13)}`,
+            cooldownSec: 3600,
+          });
         }
 
         pointer++;
@@ -199,6 +206,12 @@ export async function runExcerptPhase(
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     results.push({ status: `Excerpt automation error: ${msg}` });
+    await notify({
+      subject: "Slideshow Generator: excerpt phase crashed",
+      body: `Excerpt automation threw before completing.\n\n${msg}`,
+      dedupeKey: "excerpt-phase-crash",
+      cooldownSec: 3600,
+    });
   }
 
   return results;
