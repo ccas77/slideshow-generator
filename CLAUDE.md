@@ -124,6 +124,7 @@ types/
 - `app/api/cron/post/route.ts` — top-level catch (cron crashed) + per-phase wrappers, so one phase crashing alerts but doesn't kill the other phases.
 - `lib/cron/{tiktok,topn,instagram,video,excerpts}.ts` — per-post catches send "post failed for account X" emails (dedupe key includes accountId + the current hour). Per-phase outer catch sends "phase X crashed".
 - `lib/cron/stuck-detector.ts` — runs at the start of each cron, looks at the previous two days of `post-log`, and emails one summary if any account posted the same slideshow/list on both days. Dedupe key is per-day (cooldown 24h) so it can't spam. This is the alarm for the May 7 / June 2 class of stuck-pointer incidents.
+- `app/api/admin/test-notify` — POST (gated by `x-password`) sends a one-shot test email so you can confirm the path works without waiting for a real failure. Bypasses dedupe via per-call dedupeKey.
 
 ## Top-N BookTok generator
 
