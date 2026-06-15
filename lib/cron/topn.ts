@@ -10,6 +10,14 @@ import { markScheduled, unmarkScheduled } from "./scheduled-today";
 import { notify } from "@/lib/notify";
 import type { TopNResult } from "./types";
 
+interface TopNJob {
+  accIdStr: string;
+  accConfig: Awaited<ReturnType<typeof getTopNAutomation>>["accounts"][string];
+  selectedList: Awaited<ReturnType<typeof getTopNLists>>[0];
+  win: { start: string; end: string };
+  schedKey: string;
+}
+
 export async function runTopNPhase(
   scheduledToday: Set<string>
 ): Promise<TopNResult[]> {
@@ -18,8 +26,11 @@ export async function runTopNPhase(
     const topNLists = await getTopNLists();
     const topNAuto = await getTopNAutomation();
     const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
-    let topNUpdated = false;
     const updatedTopNAccounts = { ...topNAuto.accounts };
+
+    // Phase 1: build all jobs across accounts, advancing the pointer for each.
+    const topNJobs: TopNJob[] = [];
+    const excessSchedKeys: string[] = [];
 
     for (const [accIdStr, accConfig] of Object.entries(topNAuto.accounts)) {
       if (!accConfig.enabled || accConfig.intervals.length === 0) continue;
@@ -46,83 +57,114 @@ export async function runTopNPhase(
       });
       if (activeWindows.length === 0) continue;
 
-      // Mark all TopN window keys for this account before heavy work
-      const topnSchedKeys = activeWindows.map((w) => `topn:${accIdStr}:${w.start}`);
-      await markScheduled(topnSchedKeys);
-
-      const failedTopnKeys: string[] = [];
-      let successCount = 0;
-      let currentPointer = accConfig.pointer;
-      // Cap windows to pool size so we never post the same list twice
+      // Cap windows to pool size so we never post the same list twice.
+      // Mark ALL window keys (including excess) so skipped windows don't fire on later cron runs.
       const windowsToProcess = activeWindows.slice(0, pool.length);
+      const excessKeys = activeWindows
+        .slice(pool.length)
+        .map((w) => `topn:${accIdStr}:${w.start}`);
+      excessSchedKeys.push(...excessKeys);
+
+      let currentPointer = accConfig.pointer;
       for (const win of windowsToProcess) {
-        // Each window picks the next list in rotation
         const listIndex = currentPointer % pool.length;
         const selectedList = pool[listIndex];
         currentPointer++;
-        try {
-          const scheduledAt = randomTimeInWindow(win.start, win.end);
-          const r = await publishTopN({
-            listId: selectedList.id,
-            accountIds: [Number(accIdStr)],
-            scheduledAt: scheduledAt.toISOString(),
-            platform: accConfig.platform,
-            backgroundPrompts: accConfig.backgroundPrompts,
-          });
-          topNResults.push({
-            listName: selectedList.name,
-            status: `${accIdStr}: scheduled ${r.slides} slides for ${scheduledAt.toISOString()} [post:${r.postId}]`,
-          });
-
-          const tnNow = new Date();
-          await appendPostLog({
-            date: tnNow.toISOString().slice(0, 10),
-            time: tnNow.toISOString().slice(11, 16),
-            accountId: Number(accIdStr),
-            accountName: accIdStr,
-            bookName: "",
-            slideshowId: selectedList.id,
-            slideshowName: selectedList.name,
-            imagePromptId: "",
-            imagePromptText: "",
-            captionId: "",
-            captionText: "",
-            postBridgeId: String(r.postId),
-            postBridgeUrl: r.postUrl || "",
-            source: "cron-topn",
-            timestamp: tnNow.toISOString(),
-          }).catch(() => {});
-
-          successCount++;
-        } catch (err) {
-          const msg = err instanceof Error ? err.message : String(err);
-          topNResults.push({ listName: selectedList.name, status: `error (${accIdStr}): ${msg}` });
-          failedTopnKeys.push(`topn:${accIdStr}:${win.start}`);
-          await notify({
-            subject: `Slideshow Generator: TopN post failed for account ${accIdStr}`,
-            body: `Account: ${accIdStr}\nList: ${selectedList.name}\nWindow: ${win.start}-${win.end}\n\n${msg}`,
-            dedupeKey: `topn-fail:${accIdStr}:${new Date().toISOString().slice(0, 13)}`,
-            cooldownSec: 3600,
-          });
-        }
-      }
-      if (failedTopnKeys.length > 0) {
-        await unmarkScheduled(failedTopnKeys);
+        topNJobs.push({
+          accIdStr,
+          accConfig,
+          selectedList,
+          win,
+          schedKey: `topn:${accIdStr}:${win.start}`,
+        });
       }
 
-      // Advance pointer by number of windows attempted, mark today if any succeeded
-      if (successCount > 0) {
+      // EARLY pointer save: stage the advance in updatedTopNAccounts now.
+      // Even if publishTopN times out below, the pointer write happens before
+      // heavy work via setTopNAutomation. Mirror of Creator's 2026-06-02 fix.
+      // +1 bump prevents pointer cycling back to the same start position when
+      // windowsPerDay is a multiple of pool size (2026-05-07 incident class).
+      if (windowsToProcess.length > 0) {
         updatedTopNAccounts[accIdStr] = {
           ...accConfig,
-          pointer: currentPointer,
+          pointer: currentPointer + 1,
           lastPostDate: today,
         };
-        topNUpdated = true;
       }
     }
 
-    if (topNUpdated) {
-      await setTopNAutomation({ accounts: updatedTopNAccounts });
+    // Mark all schedule keys NOW, before any heavy work.
+    const allSchedKeys = [...topNJobs.map((j) => j.schedKey), ...excessSchedKeys];
+    if (allSchedKeys.length > 0) {
+      await markScheduled(allSchedKeys);
+    }
+
+    // EARLY save: persist pointer advances and lastPostDate BEFORE publishTopN.
+    if (topNJobs.length > 0) {
+      try {
+        await setTopNAutomation({ accounts: updatedTopNAccounts });
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        await notify({
+          subject: "Slideshow Generator: TopN early pointer save failed",
+          body: `setTopNAutomation threw during the early save. Pointer may not advance for today; tomorrow's cron may repeat today's lists.\n\n${msg}`,
+          dedupeKey: "topn-early-save-fail",
+          cooldownSec: 3600,
+        });
+      }
+    }
+
+    // Phase 2: heavy work. Pointer is already saved, so even if this times
+    // out the next day's cron rotates correctly.
+    const failedTopnKeys: string[] = [];
+    for (const job of topNJobs) {
+      const { accIdStr, accConfig, selectedList, win, schedKey } = job;
+      try {
+        const scheduledAt = randomTimeInWindow(win.start, win.end);
+        const r = await publishTopN({
+          listId: selectedList.id,
+          accountIds: [Number(accIdStr)],
+          scheduledAt: scheduledAt.toISOString(),
+          platform: accConfig.platform,
+          backgroundPrompts: accConfig.backgroundPrompts,
+        });
+        topNResults.push({
+          listName: selectedList.name,
+          status: `${accIdStr}: scheduled ${r.slides} slides for ${scheduledAt.toISOString()} [post:${r.postId}]`,
+        });
+
+        const tnNow = new Date();
+        await appendPostLog({
+          date: tnNow.toISOString().slice(0, 10),
+          time: tnNow.toISOString().slice(11, 16),
+          accountId: Number(accIdStr),
+          accountName: accIdStr,
+          bookName: "",
+          slideshowId: selectedList.id,
+          slideshowName: selectedList.name,
+          imagePromptId: "",
+          imagePromptText: "",
+          captionId: "",
+          captionText: "",
+          postBridgeId: String(r.postId),
+          postBridgeUrl: r.postUrl || "",
+          source: "cron-topn",
+          timestamp: tnNow.toISOString(),
+        }).catch(() => {});
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        topNResults.push({ listName: selectedList.name, status: `error (${accIdStr}): ${msg}` });
+        failedTopnKeys.push(schedKey);
+        await notify({
+          subject: `Slideshow Generator: TopN post failed for account ${accIdStr}`,
+          body: `Account: ${accIdStr}\nList: ${selectedList.name}\nWindow: ${win.start}-${win.end}\n\n${msg}`,
+          dedupeKey: `topn-fail:${accIdStr}:${new Date().toISOString().slice(0, 13)}`,
+          cooldownSec: 3600,
+        });
+      }
+    }
+    if (failedTopnKeys.length > 0) {
+      await unmarkScheduled(failedTopnKeys);
     }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
