@@ -126,6 +126,14 @@ types/
 - `lib/cron/stuck-detector.ts` — runs at the start of each cron, looks at the previous two days of `post-log`, and emails one summary if any account posted the same slideshow/list on both days. Dedupe key is per-day (cooldown 24h) so it can't spam. This is the alarm for the May 7 / June 2 class of stuck-pointer incidents.
 - `app/api/admin/test-notify` — POST (gated by `x-password`) sends a one-shot test email so you can confirm the path works without waiting for a real failure. Bypasses dedupe via per-call dedupeKey.
 
+## Image generation with Vercel AI Gateway failover
+
+`lib/image-gen.ts` is the primary image-generation surface. It calls the Vercel AI Gateway (`experimental_generateImage` from the `ai` package) and walks an ordered fallback chain: `google/gemini-2.5-flash-image` → `google/imagen-4.0-generate-001` → `openai/dall-e-3`. The first model that returns an image wins. When deployed on Vercel, auth is automatic via OIDC; `AI_GATEWAY_API_KEY` is only needed for local dev.
+
+`lib/gemini.ts` keeps its existing exports (`generateImage`, `generateImageWithInfo`, `describeImageForPrompt`) for backward compatibility but now delegates the two image-gen functions to `lib/image-gen.ts`. If the Gateway call returns no data or throws, it falls back to the direct `@google/genai` SDK path through the same three Gemini model names that were tried before. This means a complete Gateway outage still produces images as long as Gemini direct is reachable.
+
+The result of each call now includes `providerUsed` (e.g. `"google/gemini-2.5-flash-image"` or `"direct:gemini-2.5-flash-image"`) so logs can show which provider rendered the image. The cron's "image gen failed" notify path only fires when BOTH Gateway and direct Gemini are dead, which should be vanishingly rare.
+
 ## Top-N BookTok generator
 
 In the Top Books page → Lists tab, the list editor modal has a "Generate" button between the List Name and Title Slide Texts fields. It calls `app/api/topn-booktok/route.ts`, which sends the list name, the selected genres, and the current contents of the three pools (titles, captions, background image prompts) to Claude Sonnet 4.6 and appends 16-20 new items to each textarea. Repeat clicks pass the current pools so the model skips duplicates; a hard dedup runs server-side as a safety net. The list name overrides genre when they disagree (e.g. "Books like Harry Potter" + "YA fantasy" produces Harry-Potter-likes, not generic YA fantasy). System prompt + genre notes live in `lib/booktok-prompt.ts` and use ephemeral prompt caching so repeat calls are cheap.
