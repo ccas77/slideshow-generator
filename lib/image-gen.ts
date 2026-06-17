@@ -8,7 +8,7 @@
 // On Vercel, AI Gateway auth is handled automatically via OIDC; no key needs
 // to be set explicitly. Locally, set AI_GATEWAY_API_KEY in .env.local.
 
-import { generateImage as aiGenerateImage } from "ai";
+import { experimental_generateImage as aiGenerateImage } from "ai";
 
 export type ImageResult = {
   data: string | null;
