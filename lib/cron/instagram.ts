@@ -147,8 +147,8 @@ export async function runInstagramPhase(
               const msg = err instanceof Error ? err.message : String(err);
               igAutoResults.push({ status: `error (${accIdStr}): ${msg}` });
               await notify({
-                subject: `Slideshow Generator: IG post failed for account ${accIdStr}`,
-                body: `Account: ${accIdStr}\nSlideshow: ${ss.name}\nWindow: ${win.start}-${win.end}\n\n${msg}`,
+                subject: `[CONFIRMED] IG post failed for account ${accIdStr}`,
+                body: `Confirmed failure after retries.\n\nAccount: ${accIdStr}\nStep: IG post pipeline\nSlideshow: ${ss.name}\nWindow: ${win.start}-${win.end}\n\n${msg}`,
                 dedupeKey: `ig-fail:${accIdStr}:${new Date().toISOString().slice(0, 13)}`,
                 cooldownSec: 3600,
               });

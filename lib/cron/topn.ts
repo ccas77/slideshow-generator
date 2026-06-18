@@ -156,8 +156,8 @@ export async function runTopNPhase(
         topNResults.push({ listName: selectedList.name, status: `error (${accIdStr}): ${msg}` });
         failedTopnKeys.push(schedKey);
         await notify({
-          subject: `Slideshow Generator: TopN post failed for account ${accIdStr}`,
-          body: `Account: ${accIdStr}\nList: ${selectedList.name}\nWindow: ${win.start}-${win.end}\n\n${msg}`,
+          subject: `[CONFIRMED] TopN post failed for account ${accIdStr}`,
+          body: `Confirmed failure after retries.\n\nAccount: ${accIdStr}\nStep: TopN post pipeline\nList: ${selectedList.name}\nWindow: ${win.start}-${win.end}\n\n${msg}`,
           dedupeKey: `topn-fail:${accIdStr}:${new Date().toISOString().slice(0, 13)}`,
           cooldownSec: 3600,
         });

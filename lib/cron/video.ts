@@ -174,8 +174,8 @@ export async function runVideoPhase(
           const msg = err instanceof Error ? err.message : String(err);
           results.push({ status: `error (${accIdStr}): ${msg}` });
           await notify({
-            subject: `Slideshow Generator: video post failed for account ${accIdStr}`,
-            body: `Account: ${accIdStr}\nSlideshow: ${ss.name}\nWindow: ${win.start}-${win.end}\n\n${msg}`,
+            subject: `[CONFIRMED] Video post failed for account ${accIdStr}`,
+            body: `Confirmed failure after retries.\n\nAccount: ${accIdStr}\nStep: video post pipeline\nSlideshow: ${ss.name}\nWindow: ${win.start}-${win.end}\n\n${msg}`,
             dedupeKey: `video-fail:${accIdStr}:${new Date().toISOString().slice(0, 13)}`,
             cooldownSec: 3600,
           });

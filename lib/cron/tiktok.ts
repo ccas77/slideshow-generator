@@ -159,8 +159,8 @@ export async function runTikTokPhase(
         status: `error: ${msg}`,
       });
       await notify({
-        subject: `Slideshow Generator: job build failed for @${acc.username}`,
-        body: `Account: @${acc.username} (${acc.id})\nThis error happened while building jobs (before posting). Usually a config or data shape problem.\n\n${msg}`,
+        subject: `[CONFIRMED] Job build failed for @${acc.username}`,
+        body: `Confirmed failure - this is config or data shape, not a transient blip.\n\nAccount: @${acc.username} (${acc.id})\nStep: build jobs (before posting)\n\n${msg}`,
         dedupeKey: `tiktok-build-fail:${acc.id}:${new Date().toISOString().slice(0, 13)}`,
         cooldownSec: 3600,
       });
@@ -273,8 +273,8 @@ export async function runTikTokPhase(
       const msg = err instanceof Error ? err.message : String(err);
       debugLog.push(`${job.acc.username} (${job.acc.id}) ${job.win.start}: job error - ${msg}`);
       await notify({
-        subject: `Slideshow Generator: TikTok post failed for @${job.acc.username}`,
-        body: `Account: @${job.acc.username} (${job.acc.id})\nWindow: ${job.win.start}-${job.win.end}\nBook: ${job.bookName}\nSlideshow: ${job.slideshowName}\nSource: ${job.source}\n\n${msg}`,
+        subject: `[CONFIRMED] TikTok post failed for @${job.acc.username}`,
+        body: `Confirmed failure (safe upload steps retried up to 3x with 30s between attempts; final attempt still failed, or this was a fail-fast 4xx / POST /v1/posts).\n\nAccount: @${job.acc.username} (${job.acc.id})\nStep: TikTok post pipeline\nWindow: ${job.win.start}-${job.win.end}\nBook: ${job.bookName}\nSlideshow: ${job.slideshowName}\nSource: ${job.source}\n\n${msg}`,
         dedupeKey: `tiktok-fail:${job.acc.id}:${new Date().toISOString().slice(0, 13)}`,
         cooldownSec: 3600,
       });
@@ -469,8 +469,8 @@ export async function runTikTokPhase(
       debugLog.push(`${acc.username} (${acc.id}) fallback error: ${msg}`);
       results.push({ accountId: acc.id, username: acc.username, status: `fallback error: ${msg}` });
       await notify({
-        subject: `Slideshow Generator: TikTok fallback failed for @${acc.username}`,
-        body: `Account: @${acc.username} (${acc.id})\nFallback was triggered because no successful post happened in the day's windows, and it also failed.\n\n${msg}`,
+        subject: `[CONFIRMED] TikTok fallback failed for @${acc.username}`,
+        body: `Confirmed failure after retries.\n\nAccount: @${acc.username} (${acc.id})\nStep: TikTok fallback (triggered because no successful post happened in the day's windows, and the fallback also failed).\n\n${msg}`,
         dedupeKey: `tiktok-fallback-fail:${acc.id}:${new Date().toISOString().slice(0, 10)}`,
         cooldownSec: 86400,
       });

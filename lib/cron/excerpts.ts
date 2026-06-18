@@ -182,8 +182,8 @@ export async function runExcerptPhase(
           results.push({ status: `error (${accIdStr}): ${msg}` });
           failedExcerptKeys.push(`excerpt:${accIdStr}:${win.start}`);
           await notify({
-            subject: `Slideshow Generator: excerpt post failed for account ${accIdStr}`,
-            body: `Account: ${accIdStr}\nExcerpt: ${excerpt.name}\nWindow: ${win.start}-${win.end}\n\n${msg}`,
+            subject: `[CONFIRMED] Excerpt post failed for account ${accIdStr}`,
+            body: `Confirmed failure after retries.\n\nAccount: ${accIdStr}\nStep: excerpt post pipeline\nExcerpt: ${excerpt.name}\nWindow: ${win.start}-${win.end}\n\n${msg}`,
             dedupeKey: `excerpt-fail:${accIdStr}:${new Date().toISOString().slice(0, 13)}`,
             cooldownSec: 3600,
           });
