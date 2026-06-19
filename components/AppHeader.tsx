@@ -43,14 +43,6 @@ export default function AppHeader() {
           {link("/create", "Create")}
           {link("/books", "Books")}
           {link("/top-books", "Top Books")}
-          <a
-            href="https://bookshelf.bookpulls.com/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-sm text-zinc-500 hover:text-white transition-colors"
-          >
-            Bookshelf
-          </a>
           {link("/excerpts", "Excerpts")}
           {link("/instagram", "Instagram")}
           {link("/posts", "Posts")}
