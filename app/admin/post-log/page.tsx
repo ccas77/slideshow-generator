@@ -44,7 +44,7 @@ export default function PostLogPage() {
 
   function loadLog() {
     setLoading(true);
-    fetch(`/api/post-log?date=${date}&password=${getPassword()}`)
+    fetch(`/api/admin/post-log?date=${date}&password=${getPassword()}`)
       .then((r) => r.json())
       .then((d) => setEntries(d.entries || []))
       .catch(() => setEntries([]))
@@ -59,7 +59,7 @@ export default function PostLogPage() {
     setSyncing(true);
     setSyncMsg("");
     try {
-      const r = await fetch("/api/post-log", {
+      const r = await fetch("/api/admin/post-log", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ date, password: getPassword() }),
@@ -78,7 +78,7 @@ export default function PostLogPage() {
     setSyncing(true);
     setSyncMsg("");
     try {
-      const r = await fetch(`/api/post-log/backfill?password=${getPassword()}`, { method: "POST" });
+      const r = await fetch(`/api/admin/post-log/backfill?password=${getPassword()}`, { method: "POST" });
       const d = await r.json();
       setSyncMsg(`Backfilled ${d.entriesAdded} posts from ${d.accountsWithData} accounts (${(d.datesFound || []).join(", ")})`);
       loadLog();
