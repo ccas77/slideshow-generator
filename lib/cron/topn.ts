@@ -8,6 +8,7 @@ import { publishTopN } from "@/lib/topn-publisher";
 import { shouldProcessWindow, randomTimeInWindow } from "./window";
 import { markScheduled, unmarkScheduled } from "./scheduled-today";
 import { notify } from "@/lib/notify";
+import { notifyPostFailure } from "@/lib/post-failure";
 import type { TopNResult } from "./types";
 
 interface TopNJob {
@@ -119,8 +120,9 @@ export async function runTopNPhase(
     const failedTopnKeys: string[] = [];
     for (const job of topNJobs) {
       const { accIdStr, accConfig, selectedList, win, schedKey } = job;
+      let scheduledAt: Date | undefined;
       try {
-        const scheduledAt = randomTimeInWindow(win.start, win.end);
+        scheduledAt = randomTimeInWindow(win.start, win.end);
         const r = await publishTopN({
           listId: selectedList.id,
           accountIds: [Number(accIdStr)],
@@ -153,14 +155,21 @@ export async function runTopNPhase(
         }).catch(() => {});
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        topNResults.push({ listName: selectedList.name, status: `error (${accIdStr}): ${msg}` });
-        failedTopnKeys.push(schedKey);
-        await notify({
+        const result = await notifyPostFailure({
           subject: `[CONFIRMED] TopN post failed for account ${accIdStr}`,
           body: `Confirmed failure after retries.\n\nAccount: ${accIdStr}\nStep: TopN post pipeline\nList: ${selectedList.name}\nWindow: ${win.start}-${win.end}\n\n${msg}`,
+          error: err,
+          accountId: Number(accIdStr),
+          scheduledAt,
           dedupeKey: `topn-fail:${accIdStr}:${new Date().toISOString().slice(0, 13)}`,
           cooldownSec: 3600,
         });
+        if (result.verified) {
+          topNResults.push({ listName: selectedList.name, status: `${accIdStr}: verified-after-error` });
+        } else {
+          topNResults.push({ listName: selectedList.name, status: `error (${accIdStr}): ${msg}` });
+          failedTopnKeys.push(schedKey);
+        }
       }
     }
     if (failedTopnKeys.length > 0) {

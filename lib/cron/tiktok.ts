@@ -10,6 +10,7 @@ import { listTikTokAccounts, pbFetch, uploadPng } from "@/lib/post-bridge";
 import { shouldProcessWindow, randomTimeInWindow } from "./window";
 import { markScheduled, unmarkScheduled, getScheduledToday } from "./scheduled-today";
 import { notify } from "@/lib/notify";
+import { notifyPostFailure } from "@/lib/post-failure";
 import type { Job, CronAccountResult } from "./types";
 
 function pickRandom<T>(arr: T[]): T | null {
@@ -203,6 +204,7 @@ export async function runTikTokPhase(
   const postResults: Array<{ job: Job; status: string }> = [];
 
   async function processJob(job: Job): Promise<{ job: Job; status: string }> {
+    let scheduledAt: Date | undefined;
     try {
       const imgResult = await generateImageWithInfo(job.imagePrompt);
       if (!imgResult.data) {
@@ -228,7 +230,7 @@ export async function runTikTokPhase(
         mediaIds.push(coverMediaId);
       }
 
-      const scheduledAt = randomTimeInWindow(job.win.start, job.win.end);
+      scheduledAt = randomTimeInWindow(job.win.start, job.win.end);
 
       const postResp = await pbFetch("/v1/posts", {
         method: "POST",
@@ -272,12 +274,21 @@ export async function runTikTokPhase(
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       debugLog.push(`${job.acc.username} (${job.acc.id}) ${job.win.start}: job error - ${msg}`);
-      await notify({
+
+      const result = await notifyPostFailure({
         subject: `[CONFIRMED] TikTok post failed for @${job.acc.username}`,
-        body: `Confirmed failure (safe upload steps retried up to 3x with 30s between attempts; final attempt still failed, or this was a fail-fast 4xx / POST /v1/posts).\n\nAccount: @${job.acc.username} (${job.acc.id})\nStep: TikTok post pipeline\nWindow: ${job.win.start}-${job.win.end}\nBook: ${job.bookName}\nSlideshow: ${job.slideshowName}\nSource: ${job.source}\n\n${msg}`,
+        body: `Confirmed failure - either an upload retry was exhausted, a fail-fast 4xx, or a POST /v1/posts response error with no matching post found at PostBridge after verification.\n\nAccount: @${job.acc.username} (${job.acc.id})\nStep: TikTok post pipeline\nWindow: ${job.win.start}-${job.win.end}\nBook: ${job.bookName}\nSlideshow: ${job.slideshowName}\nSource: ${job.source}\n\n${msg}`,
+        error: err,
+        accountId: job.acc.id,
+        scheduledAt,
+        captionSlice: job.captionText,
         dedupeKey: `tiktok-fail:${job.acc.id}:${new Date().toISOString().slice(0, 13)}`,
         cooldownSec: 3600,
       });
+      if (result.verified) {
+        debugLog.push(`${job.acc.username} (${job.acc.id}) verified at PostBridge despite ${msg}`);
+        return { job, status: `verified-after-error (${msg.slice(0, 80)})` };
+      }
       return { job, status: `error: ${msg}` };
     }
   }
@@ -397,6 +408,7 @@ export async function runTikTokPhase(
     const allowedCaptions = linkedCaptions.length > 0 ? linkedCaptions : book.captions || [];
     const captionText = pickRandom(allowedCaptions)?.value || "";
 
+    let scheduledAt: Date | undefined;
     try {
       const imgResult = await generateImageWithInfo(pickedPrompt.value);
       if (!imgResult.data) {
@@ -419,7 +431,7 @@ export async function runTikTokPhase(
       }
 
       // Schedule 5 minutes from now
-      const scheduledAt = new Date(Date.now() + 5 * 60 * 1000);
+      scheduledAt = new Date(Date.now() + 5 * 60 * 1000);
       const postResp = await pbFetch("/v1/posts", {
         method: "POST",
         body: JSON.stringify({
@@ -467,13 +479,23 @@ export async function runTikTokPhase(
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       debugLog.push(`${acc.username} (${acc.id}) fallback error: ${msg}`);
-      results.push({ accountId: acc.id, username: acc.username, status: `fallback error: ${msg}` });
-      await notify({
+
+      const result = await notifyPostFailure({
         subject: `[CONFIRMED] TikTok fallback failed for @${acc.username}`,
         body: `Confirmed failure after retries.\n\nAccount: @${acc.username} (${acc.id})\nStep: TikTok fallback (triggered because no successful post happened in the day's windows, and the fallback also failed).\n\n${msg}`,
+        error: err,
+        accountId: acc.id,
+        scheduledAt,
+        captionSlice: captionText,
         dedupeKey: `tiktok-fallback-fail:${acc.id}:${new Date().toISOString().slice(0, 10)}`,
         cooldownSec: 86400,
       });
+      if (result.verified) {
+        debugLog.push(`${acc.username} (${acc.id}) fallback verified at PostBridge despite ${msg}`);
+        results.push({ accountId: acc.id, username: acc.username, status: `fallback verified-after-error` });
+      } else {
+        results.push({ accountId: acc.id, username: acc.username, status: `fallback error: ${msg}` });
+      }
     }
   }
 

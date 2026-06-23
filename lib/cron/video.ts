@@ -12,6 +12,7 @@ import { pbFetch, uploadVideo } from "@/lib/post-bridge";
 import { shouldProcessWindow, randomTimeInWindow } from "./window";
 import { markScheduled } from "./scheduled-today";
 import { notify } from "@/lib/notify";
+import { notifyPostFailure } from "@/lib/post-failure";
 import type { VideoAutoResult } from "./types";
 
 function pickRandom<T>(arr: T[]): T | null {
@@ -99,6 +100,7 @@ export async function runVideoPhase(
         const texts = ss.slideTexts.split("\n").map((t) => t.trim()).filter(Boolean);
         if (texts.length < 2) continue;
 
+        let scheduledAt: Date | undefined;
         try {
           const image = await generateImage(prompt.value);
           if (!image) {
@@ -149,7 +151,7 @@ export async function runVideoPhase(
 
           const mediaId = await uploadVideo(videoBuf, `video-auto-${accIdStr}.mp4`);
 
-          const scheduledAt = randomTimeInWindow(win.start, win.end);
+          scheduledAt = randomTimeInWindow(win.start, win.end);
           const postResp = await pbFetch("/v1/posts", {
             method: "POST",
             body: JSON.stringify({
@@ -172,13 +174,21 @@ export async function runVideoPhase(
           });
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err);
-          results.push({ status: `error (${accIdStr}): ${msg}` });
-          await notify({
+          const result = await notifyPostFailure({
             subject: `[CONFIRMED] Video post failed for account ${accIdStr}`,
             body: `Confirmed failure after retries.\n\nAccount: ${accIdStr}\nStep: video post pipeline\nSlideshow: ${ss.name}\nWindow: ${win.start}-${win.end}\n\n${msg}`,
+            error: err,
+            accountId: Number(accIdStr),
+            scheduledAt,
+            captionSlice: caption?.value || "",
             dedupeKey: `video-fail:${accIdStr}:${new Date().toISOString().slice(0, 13)}`,
             cooldownSec: 3600,
           });
+          if (result.verified) {
+            results.push({ status: `${ss.name} -> ${accIdStr} video verified-after-error` });
+          } else {
+            results.push({ status: `error (${accIdStr}): ${msg}` });
+          }
         }
 
         pointer++;

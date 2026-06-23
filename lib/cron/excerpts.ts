@@ -10,6 +10,7 @@ import { pbFetch, uploadPng } from "@/lib/post-bridge";
 import { shouldProcessWindow, randomTimeInWindow } from "./window";
 import { markScheduled, unmarkScheduled } from "./scheduled-today";
 import { notify } from "@/lib/notify";
+import { notifyPostFailure } from "@/lib/post-failure";
 import type { ExcerptAutoResult } from "./types";
 
 function pickRandom<T>(arr: T[]): T | undefined {
@@ -65,6 +66,7 @@ export async function runExcerptPhase(
         const prompt = pickRandom(excerpt.imagePrompts);
         const hookText = pickRandom(excerpt.overlayTexts);
 
+        let scheduledAt: Date | undefined;
         try {
           // Build slides
           const mediaIds: string[] = [];
@@ -162,7 +164,7 @@ export async function runExcerptPhase(
               ? { instagram: {} }
               : { tiktok: { draft: false, is_aigc: false } };
 
-          const scheduledAt = randomTimeInWindow(win.start, win.end);
+          scheduledAt = randomTimeInWindow(win.start, win.end);
           const postResp = await pbFetch("/v1/posts", {
             method: "POST",
             body: JSON.stringify({
@@ -179,14 +181,21 @@ export async function runExcerptPhase(
           });
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err);
-          results.push({ status: `error (${accIdStr}): ${msg}` });
-          failedExcerptKeys.push(`excerpt:${accIdStr}:${win.start}`);
-          await notify({
+          const result = await notifyPostFailure({
             subject: `[CONFIRMED] Excerpt post failed for account ${accIdStr}`,
             body: `Confirmed failure after retries.\n\nAccount: ${accIdStr}\nStep: excerpt post pipeline\nExcerpt: ${excerpt.name}\nWindow: ${win.start}-${win.end}\n\n${msg}`,
+            error: err,
+            accountId: Number(accIdStr),
+            scheduledAt,
             dedupeKey: `excerpt-fail:${accIdStr}:${new Date().toISOString().slice(0, 13)}`,
             cooldownSec: 3600,
           });
+          if (result.verified) {
+            results.push({ status: `${excerpt.name} → ${accIdStr} verified-after-error` });
+          } else {
+            results.push({ status: `error (${accIdStr}): ${msg}` });
+            failedExcerptKeys.push(`excerpt:${accIdStr}:${win.start}`);
+          }
         }
 
         pointer++;
