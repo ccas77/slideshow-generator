@@ -318,6 +318,36 @@ export async function verifyPostScheduled(p: VerifyParams): Promise<boolean> {
 // importing the error classes themselves. Only those errors should trigger
 // verifyPostScheduled — upload / build / 4xx errors are real failures and
 // should email immediately.
+// Broader "has this account got anything scheduled today" check. Used to
+// suppress alerts when an earlier window failed but a later one (or the
+// fallback) succeeded — so by the time we'd alert, the account is fine.
+//
+// Catches the upload-step-exhausted case too: even if our specific attempt
+// truly failed, if another attempt earlier or later in the day succeeded,
+// the account isn't silent and we don't need to email.
+export async function verifyAccountHasPostsToday(
+  accountId: number,
+  waitMs = 5000,
+): Promise<boolean> {
+  await new Promise((r) => setTimeout(r, waitMs));
+  try {
+    const resp = await pbFetch(
+      `/v1/posts?social_account_id=${accountId}&limit=20`,
+      {},
+      { retryable: true },
+    );
+    const posts: Array<{ scheduled_at?: string; created_at?: string }> =
+      resp.data || resp.posts || [];
+    const today = new Date().toISOString().slice(0, 10);
+    return posts.some((p) => {
+      const d = (p.scheduled_at || p.created_at || "").slice(0, 10);
+      return d === today;
+    });
+  } catch {
+    return false;
+  }
+}
+
 export function isPostsCreateError(err: unknown): boolean {
   if (err instanceof PostBridgeError) {
     return err.method === "POST" && err.path === "/v1/posts";
