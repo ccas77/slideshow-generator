@@ -3,6 +3,40 @@ import { Redis } from "@upstash/redis";
 // Auto-detects KV_REST_API_URL/TOKEN or UPSTASH_REDIS_REST_URL/TOKEN
 export const redis = Redis.fromEnv();
 
+// ── Blob materialization (phase 2 of the Redis-blob migration) ──
+//
+// Records may carry EITHER an inline base64 data URL (legacy) OR a Blob URL
+// pointing at Vercel Blob storage (new). Getters transparently materialize
+// URL-backed records into the legacy `*Data` / `coverImage` fields so that
+// callers keep working exactly as before.
+//
+// During phase 2, no writes produce URL fields yet, so every record still
+// has its legacy inline data and materialization is a no-op. Once phase 3
+// ships and phase 4 backfills, records will carry the URL and materialization
+// will pull bytes from Blob at read time.
+
+async function fetchAsBase64DataUrl(url: string): Promise<string | null> {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const ct = res.headers.get("content-type") || "application/octet-stream";
+    const buf = Buffer.from(await res.arrayBuffer());
+    return `data:${ct};base64,${buf.toString("base64")}`;
+  } catch {
+    return null;
+  }
+}
+
+// Returns the coverImage / coverData / audioData string as a base64 data URL,
+// materializing from a Blob URL if that's what's stored.
+async function materializeCoverString(stored: string | undefined): Promise<string | undefined> {
+  if (!stored) return undefined;
+  if (stored.startsWith("http://") || stored.startsWith("https://")) {
+    return (await fetchAsBase64DataUrl(stored)) ?? undefined;
+  }
+  return stored;
+}
+
 export interface SavedItem {
   name: string;
   value: string;
@@ -257,7 +291,7 @@ const BOOK_COVER_PREFIX = "book-cover:";
 
 export async function getBookCover(bookId: string): Promise<string | undefined> {
   const data = await redis.get<string>(BOOK_COVER_PREFIX + bookId);
-  return data || undefined;
+  return materializeCoverString(data || undefined);
 }
 
 export async function setBookCover(bookId: string, coverData: string): Promise<void> {
@@ -277,7 +311,7 @@ export async function getBooks(): Promise<Book[]> {
 export async function getBooksWithCovers(): Promise<Book[]> {
   const books = await getBooks();
   const coverPromises = books.map((b) =>
-    b.coverImage ? Promise.resolve(b.coverImage) : getBookCover(b.id)
+    b.coverImage ? materializeCoverString(b.coverImage) : getBookCover(b.id)
   );
   const covers = await Promise.all(coverPromises);
   for (let i = 0; i < books.length; i++) {
@@ -307,7 +341,7 @@ export interface TopBook {
   title: string;
   author: string;
   genre: string;
-  coverData: string; // base64 data URL
+  coverData: string; // base64 data URL, OR a Vercel Blob URL (materialized on read)
   pinned: boolean;
 }
 
@@ -341,19 +375,25 @@ function topBookKey(id: string) {
   return `top-book:${id}`;
 }
 
+async function materializeTopBook(book: TopBook): Promise<TopBook> {
+  const cover = await materializeCoverString(book.coverData);
+  return cover ? { ...book, coverData: cover } : book;
+}
+
 export async function getTopBooks(): Promise<TopBook[]> {
   const ids = await redis.get<string[]>(TOP_BOOKS_INDEX_KEY);
   if (!ids || ids.length === 0) return [];
   const books: TopBook[] = [];
   for (const id of ids) {
     const book = await redis.get<TopBook>(topBookKey(id));
-    if (book) books.push(book);
+    if (book) books.push(await materializeTopBook(book));
   }
   return books;
 }
 
 export async function getTopBook(id: string): Promise<TopBook | null> {
-  return await redis.get<TopBook>(topBookKey(id));
+  const book = await redis.get<TopBook>(topBookKey(id));
+  return book ? await materializeTopBook(book) : null;
 }
 
 export async function setTopBook(book: TopBook): Promise<void> {
@@ -505,7 +545,12 @@ export async function setIgAutomation(config: IgGlobalAutomation): Promise<void>
 export interface MusicTrack {
   id: string;
   name: string;
-  audioData: string; // base64 data URL (audio/mpeg or audio/mp4)
+  audioData: string; // base64 data URL, OR a Vercel Blob URL (materialized on read)
+}
+
+async function materializeMusicTrack(track: MusicTrack): Promise<MusicTrack> {
+  const audio = await materializeCoverString(track.audioData);
+  return audio ? { ...track, audioData: audio } : track;
 }
 
 const MUSIC_INDEX_KEY = "music-tracks-index";
@@ -520,13 +565,14 @@ export async function getMusicTracks(): Promise<MusicTrack[]> {
   const tracks: MusicTrack[] = [];
   for (const id of ids) {
     const track = await redis.get<MusicTrack>(musicTrackKey(id));
-    if (track) tracks.push(track);
+    if (track) tracks.push(await materializeMusicTrack(track));
   }
   return tracks;
 }
 
 export async function getMusicTrack(id: string): Promise<MusicTrack | null> {
-  return await redis.get<MusicTrack>(musicTrackKey(id));
+  const track = await redis.get<MusicTrack>(musicTrackKey(id));
+  return track ? await materializeMusicTrack(track) : null;
 }
 
 export async function setMusicTrack(track: MusicTrack): Promise<void> {
@@ -558,13 +604,14 @@ export async function getVideoMusicTracks(): Promise<MusicTrack[]> {
   const tracks: MusicTrack[] = [];
   for (const id of ids) {
     const track = await redis.get<MusicTrack>(videoMusicKey(id));
-    if (track) tracks.push(track);
+    if (track) tracks.push(await materializeMusicTrack(track));
   }
   return tracks;
 }
 
 export async function getVideoMusicTrack(id: string): Promise<MusicTrack | null> {
-  return await redis.get<MusicTrack>(videoMusicKey(id));
+  const track = await redis.get<MusicTrack>(videoMusicKey(id));
+  return track ? await materializeMusicTrack(track) : null;
 }
 
 export async function setVideoMusicTrack(track: MusicTrack): Promise<void> {
