@@ -56,11 +56,14 @@ export async function uploadDataUrlToBlob(
   if (!parsed) return null;
   const ext = extForMime(parsed.mimeType);
   const pathname = `${pathnamePrefix}.${ext}`;
+  // addRandomSuffix already prevents accidental overwrites by giving each
+  // upload a unique pathname. The `allowOverwrite` flag was added in a later
+  // @vercel/blob version and isn't in the one pinned here; not needed with
+  // random suffixes anyway.
   const { url } = await put(pathname, parsed.buffer, {
     access: "public",
     contentType: parsed.mimeType,
     addRandomSuffix: true,
-    allowOverwrite: false,
   });
   return url;
 }
