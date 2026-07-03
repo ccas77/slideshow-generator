@@ -1,7 +1,26 @@
 import { Redis } from "@upstash/redis";
+import { uploadDataUrlToBlob, isRemoteUrl } from "@/lib/blob";
 
 // Auto-detects KV_REST_API_URL/TOKEN or UPSTASH_REDIS_REST_URL/TOKEN
 export const redis = Redis.fromEnv();
+
+// Phase 3 helper: if the caller passed a base64 data URL, upload it to Vercel
+// Blob first and return the Blob URL. If it's already a remote URL, return
+// as-is (idempotent - safe to call on already-migrated fields). Returns null
+// if the input was undefined/null so callers can distinguish "no change" from
+// "upload failed" via the outer if-guard.
+async function toBlobUrlIfNeeded(
+  pathnamePrefix: string,
+  raw: string | undefined,
+): Promise<string | undefined> {
+  if (!raw) return raw;
+  if (isRemoteUrl(raw)) return raw;
+  const uploaded = await uploadDataUrlToBlob(pathnamePrefix, raw);
+  // If upload failed (malformed data URL, Blob down, etc.), fall back to
+  // storing the raw data URL. Cron read paths still work off base64, so no
+  // regression - just no space savings for this record.
+  return uploaded ?? raw;
+}
 
 // ── Blob materialization (phase 2 of the Redis-blob migration) ──
 //
@@ -295,7 +314,8 @@ export async function getBookCover(bookId: string): Promise<string | undefined> 
 }
 
 export async function setBookCover(bookId: string, coverData: string): Promise<void> {
-  await redis.set(BOOK_COVER_PREFIX + bookId, coverData);
+  const stored = await toBlobUrlIfNeeded(`book-cover/${bookId}`, coverData);
+  await redis.set(BOOK_COVER_PREFIX + bookId, stored);
 }
 
 export async function deleteBookCover(bookId: string): Promise<void> {
@@ -397,7 +417,9 @@ export async function getTopBook(id: string): Promise<TopBook | null> {
 }
 
 export async function setTopBook(book: TopBook): Promise<void> {
-  await redis.set(topBookKey(book.id), book);
+  const coverUrl = await toBlobUrlIfNeeded(`top-book/${book.id}`, book.coverData);
+  const toStore: TopBook = { ...book, coverData: coverUrl ?? book.coverData };
+  await redis.set(topBookKey(book.id), toStore);
   const ids = (await redis.get<string[]>(TOP_BOOKS_INDEX_KEY)) || [];
   if (!ids.includes(book.id)) {
     ids.push(book.id);
@@ -414,7 +436,9 @@ export async function deleteTopBook(id: string): Promise<void> {
 // Keep for backward compat but shouldn't be needed
 export async function setTopBooks(books: TopBook[]): Promise<void> {
   for (const book of books) {
-    await redis.set(topBookKey(book.id), book);
+    const coverUrl = await toBlobUrlIfNeeded(`top-book/${book.id}`, book.coverData);
+    const toStore: TopBook = { ...book, coverData: coverUrl ?? book.coverData };
+    await redis.set(topBookKey(book.id), toStore);
   }
   await redis.set(TOP_BOOKS_INDEX_KEY, books.map((b) => b.id));
 }
@@ -576,7 +600,9 @@ export async function getMusicTrack(id: string): Promise<MusicTrack | null> {
 }
 
 export async function setMusicTrack(track: MusicTrack): Promise<void> {
-  await redis.set(musicTrackKey(track.id), track);
+  const audioUrl = await toBlobUrlIfNeeded(`music-track/${track.id}`, track.audioData);
+  const toStore: MusicTrack = { ...track, audioData: audioUrl ?? track.audioData };
+  await redis.set(musicTrackKey(track.id), toStore);
   const ids = (await redis.get<string[]>(MUSIC_INDEX_KEY)) || [];
   if (!ids.includes(track.id)) {
     ids.push(track.id);
@@ -615,7 +641,9 @@ export async function getVideoMusicTrack(id: string): Promise<MusicTrack | null>
 }
 
 export async function setVideoMusicTrack(track: MusicTrack): Promise<void> {
-  await redis.set(videoMusicKey(track.id), track);
+  const audioUrl = await toBlobUrlIfNeeded(`video-music/${track.id}`, track.audioData);
+  const toStore: MusicTrack = { ...track, audioData: audioUrl ?? track.audioData };
+  await redis.set(videoMusicKey(track.id), toStore);
   const ids = (await redis.get<string[]>(VIDEO_MUSIC_INDEX_KEY)) || [];
   if (!ids.includes(track.id)) {
     ids.push(track.id);
