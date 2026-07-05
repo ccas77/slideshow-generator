@@ -11,6 +11,14 @@ import { notify } from "@/lib/notify";
 import { notifyPostFailure } from "@/lib/post-failure";
 import type { TopNResult } from "./types";
 
+// Cap how many TopN publishes run at once. Each publishTopN takes 30-90s
+// (Gemini bg image + slide render + N PB uploads + POST + verify). Serial
+// processing at 13 accounts blew past Vercel's request timeout and killed
+// the function mid-loop with no thrown error to catch. See 2026-07-05
+// incident-log entry. Batch of 3 keeps wall-clock under ~5 min for 13
+// accounts even in the worst case.
+const TOPN_BATCH_SIZE = 3;
+
 interface TopNJob {
   accIdStr: string;
   accConfig: Awaited<ReturnType<typeof getTopNAutomation>>["accounts"][string];
@@ -80,16 +88,23 @@ export async function runTopNPhase(
         });
       }
 
-      // EARLY pointer save: stage the advance in updatedTopNAccounts now.
-      // Even if publishTopN times out below, the pointer write happens before
-      // heavy work via setTopNAutomation. Mirror of Creator's 2026-06-02 fix.
-      // +1 bump prevents pointer cycling back to the same start position when
-      // windowsPerDay is a multiple of pool size (2026-05-07 incident class).
+      // EARLY pointer save: stage the pointer advance in updatedTopNAccounts
+      // now. Even if publishTopN times out below, the pointer write happens
+      // before heavy work via setTopNAutomation (2026-06-02 stuck-rotation
+      // fix). +1 bump prevents pointer cycling back to the same start
+      // position when windowsPerDay is a multiple of pool size (2026-05-07
+      // incident class).
+      //
+      // NOTE (2026-07-05 incident fix): we no longer batch-save lastPostDate
+      // here. The old code set lastPostDate=today for every account before
+      // publishTopN ran, so a Vercel timeout killed the loop mid-flight and
+      // then subsequent crons skipped every unprocessed account via the
+      // frequency check. lastPostDate is now saved per-account AFTER
+      // publishTopN succeeds, in phase 3 below.
       if (windowsToProcess.length > 0) {
         updatedTopNAccounts[accIdStr] = {
           ...accConfig,
           pointer: currentPointer + 1,
-          lastPostDate: today,
         };
       }
     }
@@ -115,10 +130,14 @@ export async function runTopNPhase(
       }
     }
 
-    // Phase 2: heavy work. Pointer is already saved, so even if this times
-    // out the next day's cron rotates correctly.
+    // Phase 2: heavy work. Batched via Promise.allSettled so 13 accounts at
+    // ~30-90s each don't blow past Vercel's request timeout. Pointer is
+    // already saved above, so even if this times out the next day's cron
+    // rotates to different lists correctly.
     const failedTopnKeys: string[] = [];
-    for (const job of topNJobs) {
+    const successfulAccountIds = new Set<string>();
+
+    async function runJob(job: TopNJob): Promise<void> {
       const { accIdStr, accConfig, selectedList, win, schedKey } = job;
       let scheduledAt: Date | undefined;
       try {
@@ -153,6 +172,10 @@ export async function runTopNPhase(
           source: "cron-topn",
           timestamp: tnNow.toISOString(),
         }).catch(() => {});
+
+        // Mark this account as truly-posted-today so the per-account
+        // lastPostDate save at phase 3 covers it (and only it).
+        successfulAccountIds.add(accIdStr);
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         const result = await notifyPostFailure({
@@ -166,14 +189,51 @@ export async function runTopNPhase(
         });
         if (result.verified) {
           topNResults.push({ listName: selectedList.name, status: `${accIdStr}: verified-after-error` });
+          // Verified-after-error means PostBridge has the post, so this
+          // account did effectively publish today. Mark it as such so we
+          // don't retry tomorrow morning.
+          successfulAccountIds.add(accIdStr);
         } else {
           topNResults.push({ listName: selectedList.name, status: `error (${accIdStr}): ${msg}` });
           failedTopnKeys.push(schedKey);
         }
       }
     }
+
+    for (let i = 0; i < topNJobs.length; i += TOPN_BATCH_SIZE) {
+      const batch = topNJobs.slice(i, i + TOPN_BATCH_SIZE);
+      await Promise.allSettled(batch.map(runJob));
+    }
+
     if (failedTopnKeys.length > 0) {
       await unmarkScheduled(failedTopnKeys);
+    }
+
+    // Phase 3: save lastPostDate=today for accounts that actually published.
+    // Read the current config fresh to avoid stomping any concurrent changes
+    // (early pointer save already committed above).
+    if (successfulAccountIds.size > 0) {
+      try {
+        const currentAuto = await getTopNAutomation();
+        const finalUpdated = { ...currentAuto.accounts };
+        for (const accIdStr of successfulAccountIds) {
+          if (finalUpdated[accIdStr]) {
+            finalUpdated[accIdStr] = {
+              ...finalUpdated[accIdStr],
+              lastPostDate: today,
+            };
+          }
+        }
+        await setTopNAutomation({ accounts: finalUpdated });
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        await notify({
+          subject: "Slideshow Generator: TopN lastPostDate save failed",
+          body: `Post-publish lastPostDate save threw. Accounts that published today may retry tomorrow if the pointer save already committed; harmless but noisy.\n\n${msg}`,
+          dedupeKey: "topn-lastpost-save-fail",
+          cooldownSec: 3600,
+        });
+      }
     }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
