@@ -56,6 +56,133 @@ async function safeGet<T>(c: Redis, key: string): Promise<T | null> {
   }
 }
 
+const PB_BASE = "https://api.post-bridge.com";
+const PB_CHUNK = 20;
+
+async function pbGet(path: string): Promise<any> {
+  const key = process.env.POSTBRIDGE_API_KEY || process.env.POST_BRIDGE_API_KEY;
+  if (!key) throw new Error("no PB key");
+  const res = await fetch(`${PB_BASE}${path}`, {
+    headers: { Authorization: `Bearer ${key}` },
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    // 500 on /v1/posts/{id} means "not found" in Post Bridge's semantics.
+    const body = await res.text();
+    const err: any = new Error(`PB ${res.status}: ${body.slice(0, 200)}`);
+    err.status = res.status;
+    throw err;
+  }
+  return res.json();
+}
+
+async function selfCrossCheckAgainstPB(
+  postLog: PostLogEntry[],
+  windowStartMs: number,
+): Promise<{
+  claimed24h: number;
+  confirmed24h: number;
+  queuedAtPB24h: number;
+  rejectedByPB24h: number;
+  missingFromPB24h: number;
+  rejectedDetail: Array<{ id: string; postedAt: string; target: string | null; error: string }>;
+  missingDetail: Array<{ id: string; postedAt: string; target: string | null }>;
+  error: string | null;
+}> {
+  const empty = {
+    claimed24h: 0, confirmed24h: 0, queuedAtPB24h: 0,
+    rejectedByPB24h: 0, missingFromPB24h: 0,
+    rejectedDetail: [], missingDetail: [], error: null as string | null,
+  };
+  const nowMs = Date.now();
+  const inWindowEntries = postLog.filter(
+    (e) => e.postBridgeId && Date.parse(e.timestamp) >= windowStartMs,
+  );
+  empty.claimed24h = inWindowEntries.length;
+  if (inWindowEntries.length === 0) return empty;
+  if (!(process.env.POSTBRIDGE_API_KEY || process.env.POST_BRIDGE_API_KEY)) {
+    empty.error = "no PB key on this app";
+    return empty;
+  }
+
+  const ids = [...new Set(inWindowEntries.map((e) => e.postBridgeId))];
+  const resultsByPostId = new Map<string, any[]>();
+  const chunks: string[][] = [];
+  for (let i = 0; i < ids.length; i += PB_CHUNK) chunks.push(ids.slice(i, i + PB_CHUNK));
+  try {
+    for (const chunk of chunks) {
+      const qs = new URLSearchParams({ limit: "100" });
+      for (const id of chunk) qs.append("post_id", id);
+      const r = await pbGet(`/v1/post-results?${qs}`);
+      for (const row of r.data || []) {
+        const pid = row.post_id;
+        if (!pid) continue;
+        if (!resultsByPostId.has(pid)) resultsByPostId.set(pid, []);
+        resultsByPostId.get(pid)!.push(row);
+      }
+    }
+  } catch (e) {
+    empty.error = (e as Error).message;
+    return empty;
+  }
+
+  // For each id with no post-results, check if the parent post exists in PB
+  // (queued) or truly doesn't (silent failure). One /v1/posts/{id} call per
+  // id, throttled by the app's own network stack. 500 = truly missing.
+  const parentStatus = new Map<string, "queued" | "missing" | "unknown">();
+  const idsNeedingParentCheck = ids.filter((id) => !(resultsByPostId.get(id) || []).length);
+  for (const id of idsNeedingParentCheck) {
+    try {
+      const post = await pbGet(`/v1/posts/${encodeURIComponent(id)}`);
+      const st = post?.status;
+      if (st === "scheduled" || st === "processing") parentStatus.set(id, "queued");
+      else parentStatus.set(id, "unknown");
+    } catch (e) {
+      const status = (e as any).status;
+      if (status === 500 || status === 404) parentStatus.set(id, "missing");
+      else parentStatus.set(id, "unknown");
+    }
+  }
+
+  const out = {
+    ...empty,
+    rejectedDetail: [] as typeof empty.rejectedDetail,
+    missingDetail: [] as typeof empty.missingDetail,
+  };
+  for (const e of inWindowEntries) {
+    const rows = resultsByPostId.get(e.postBridgeId) || [];
+    const target = e.accountName || null;
+    if (rows.some((r: any) => r.success === true)) {
+      out.confirmed24h += 1;
+      continue;
+    }
+    if (rows.length === 0) {
+      const p = parentStatus.get(e.postBridgeId);
+      if (p === "queued") out.queuedAtPB24h += 1;
+      else if (p === "missing") {
+        out.missingFromPB24h += 1;
+        if (out.missingDetail.length < 10) {
+          out.missingDetail.push({ id: e.postBridgeId, postedAt: e.timestamp, target });
+        }
+      }
+      continue;
+    }
+    if (rows.every((r: any) => r.success === false)) {
+      out.rejectedByPB24h += 1;
+      if (out.rejectedDetail.length < 10) {
+        const firstErr = rows.find((r: any) => r.error);
+        out.rejectedDetail.push({
+          id: e.postBridgeId,
+          postedAt: e.timestamp,
+          target,
+          error: firstErr?.error ? JSON.stringify(firstErr.error).slice(0, 200) : "unknown",
+        });
+      }
+    }
+  }
+  return out;
+}
+
 export async function GET(req: Request) {
   const expected = process.env.CRON_SECRET;
   const provided = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
@@ -110,6 +237,11 @@ export async function GET(req: Request) {
 
   const nowMinusDay = nowMs - DAY_MS;
   const nowMinus7d = nowMs - 7 * DAY_MS;
+
+  // Self cross-check against Post Bridge using this app's own PB key. The
+  // manager can't get sensitive keys across projects, so each app has to
+  // do this locally and report the honest counts.
+  const crossCheck = await selfCrossCheckAgainstPB(postLogRecent, nowMinusDay);
 
   const posts24hEntries = postLogRecent.filter((e) => inWindow(e.timestamp, nowMinusDay, nowMs));
   const posts7dEntries = postLogRecent.filter((e) => inWindow(e.timestamp, nowMinus7d, nowMs));
@@ -186,6 +318,7 @@ export async function GET(req: Request) {
       anyRecentFailure: failing.length > 0,
       kvOk: kvReachable,
     },
+    crossCheck,
     generatedAt: new Date().toISOString(),
   });
 }
