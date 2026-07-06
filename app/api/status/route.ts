@@ -303,7 +303,7 @@ export async function GET(req: Request) {
   const now = new Date();
   const nowMs = now.getTime();
   const today = dateKey(now);
-  const yesterday = dateKey(new Date(nowMs - DAY_MS));
+  const yesterdayKey = dateKey(new Date(nowMs - DAY_MS));
 
   let kvReachable = true;
   let kvError: string | null = null;
@@ -326,7 +326,7 @@ export async function GET(req: Request) {
     // Recent attempts from last 2 days for failure signal.
     const attemptLogs = await Promise.all([
       safeGet<string[]>(c, `retry-log:${today}`),
-      safeGet<string[]>(c, `retry-log:${yesterday}`),
+      safeGet<string[]>(c, `retry-log:${yesterdayKey}`),
     ]);
     for (const arr of attemptLogs) {
       if (Array.isArray(arr)) {
