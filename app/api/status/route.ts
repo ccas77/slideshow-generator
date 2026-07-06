@@ -58,38 +58,49 @@ async function safeGet<T>(c: Redis, key: string): Promise<T | null> {
 
 async function computeYesterday(now: Date): Promise<{
   date: string;
-  planned: number;
+  planned: number | null;
   attempted: number;
   confirmed: number;
-  attemptGap: number;
+  attemptGap: number | null;
   confirmGap: number;
   error: string | null;
 }> {
   const utcMidnight = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
   const yesterdayStart = utcMidnight.getTime() - DAY_MS;
   const yDate = new Date(yesterdayStart).toISOString().slice(0, 10);
-  const out = {
+  const out: {
+    date: string;
+    planned: number | null;
+    attempted: number;
+    confirmed: number;
+    attemptGap: number | null;
+    confirmGap: number;
+    error: string | null;
+  } = {
     date: yDate,
-    planned: 0,
+    planned: null,
     attempted: 0,
     confirmed: 0,
-    attemptGap: 0,
+    attemptGap: null,
     confirmGap: 0,
-    error: null as string | null,
+    error: null,
   };
-  let planned = 0;
+  let planned: number | null = null;
   let attempted = 0;
   const attemptedPostBridgeIds: string[] = [];
 
   try {
     const c = client();
-    // Planned: cron-scheduled:{yesterday} lists slots the cron intended to fire.
-    const scheduledKey = `cron-scheduled:${yDate}`;
-    const scheduledSet =
-      (await safeGet<string[]>(c, scheduledKey)) ??
-      ((await c.smembers?.(scheduledKey).catch(() => null)) as string[] | null) ??
-      [];
-    planned = Array.isArray(scheduledSet) ? scheduledSet.length : 0;
+    // Planned: cron-scheduled:{yesterday} is a set the cron populates during
+    // the day, but the app expires it at midnight UTC + 1h. So by the time
+    // we query for yesterday, the key is gone. Try to read it in case it
+    // hasn't expired yet, otherwise report null so the manager shows "—".
+    try {
+      const members = await c.smembers(`cron-scheduled:${yDate}`);
+      if (Array.isArray(members) && members.length > 0) planned = members.length;
+    } catch {
+      // ignore
+    }
 
     // Attempted: post-log:{yesterday} lists posts the app tried to make.
     const postLog =
@@ -103,12 +114,12 @@ async function computeYesterday(now: Date): Promise<{
     return out;
   }
 
-  out.planned = planned;
+  out.planned = planned as number;
   out.attempted = attempted;
 
   // Confirmed: verify each attempted post_id with Post Bridge (success=true).
   if (attemptedPostBridgeIds.length === 0) {
-    out.attemptGap = Math.max(0, planned - attempted);
+    out.attemptGap = planned === null ? null : Math.max(0, planned - attempted);
     return out;
   }
   if (!(process.env.POSTBRIDGE_API_KEY || process.env.POST_BRIDGE_API_KEY)) {
@@ -138,7 +149,7 @@ async function computeYesterday(now: Date): Promise<{
     out.error = (e as Error).message;
   }
 
-  out.attemptGap = Math.max(0, out.planned - out.attempted);
+  out.attemptGap = out.planned === null ? null : Math.max(0, out.planned - out.attempted);
   out.confirmGap = Math.max(0, out.attempted - out.confirmed);
   return out;
 }
