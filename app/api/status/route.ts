@@ -56,6 +56,94 @@ async function safeGet<T>(c: Redis, key: string): Promise<T | null> {
   }
 }
 
+async function computeYesterday(now: Date): Promise<{
+  date: string;
+  planned: number;
+  attempted: number;
+  confirmed: number;
+  attemptGap: number;
+  confirmGap: number;
+  error: string | null;
+}> {
+  const utcMidnight = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  const yesterdayStart = utcMidnight.getTime() - DAY_MS;
+  const yesterdayEnd = utcMidnight.getTime();
+  const yDate = new Date(yesterdayStart).toISOString().slice(0, 10);
+  const out = {
+    date: yDate,
+    planned: 0,
+    attempted: 0,
+    confirmed: 0,
+    attemptGap: 0,
+    confirmGap: 0,
+    error: null as string | null,
+  };
+  let planned = 0;
+  let attempted = 0;
+  const attemptedPostBridgeIds: string[] = [];
+
+  try {
+    const c = client();
+    // Planned: cron-scheduled:{yesterday} lists slots the cron intended to fire.
+    const scheduledKey = `cron-scheduled:${yDate}`;
+    const scheduledSet =
+      (await safeGet<string[]>(c, scheduledKey)) ??
+      ((await c.smembers?.(scheduledKey).catch(() => null)) as string[] | null) ??
+      [];
+    planned = Array.isArray(scheduledSet) ? scheduledSet.length : 0;
+
+    // Attempted: post-log:{yesterday} lists posts the app tried to make.
+    const postLog =
+      (await safeGet<PostLogEntry[]>(c, `post-log:${yDate}`)) ?? [];
+    attempted = postLog.length;
+    for (const e of postLog) {
+      if (e.postBridgeId) attemptedPostBridgeIds.push(e.postBridgeId);
+    }
+  } catch (e) {
+    out.error = (e as Error).message;
+    return out;
+  }
+
+  out.planned = planned;
+  out.attempted = attempted;
+
+  // Confirmed: verify each attempted post_id with Post Bridge (success=true).
+  if (attemptedPostBridgeIds.length === 0) {
+    out.attemptGap = Math.max(0, planned - attempted);
+    return out;
+  }
+  if (!(process.env.POSTBRIDGE_API_KEY || process.env.POST_BRIDGE_API_KEY)) {
+    out.error = "no PB key on this app";
+    return out;
+  }
+  try {
+    const uniq = [...new Set(attemptedPostBridgeIds)];
+    const chunks: string[][] = [];
+    for (let i = 0; i < uniq.length; i += PB_CHUNK) chunks.push(uniq.slice(i, i + PB_CHUNK));
+    const successById = new Set<string>();
+    for (const chunk of chunks) {
+      const qs = new URLSearchParams({ limit: "100" });
+      for (const id of chunk) qs.append("post_id", id);
+      const r = await pbGet<{ data?: PBPostResult[] }>(`/v1/post-results?${qs}`);
+      for (const row of r.data || []) {
+        if (row.post_id && row.success === true) successById.add(row.post_id);
+      }
+    }
+    // Confirmed = attempted rows whose postBridgeId shows success in PB.
+    let confirmed = 0;
+    for (const id of attemptedPostBridgeIds) {
+      if (successById.has(id)) confirmed += 1;
+    }
+    out.confirmed = confirmed;
+  } catch (e) {
+    out.error = (e as Error).message;
+  }
+
+  out.attemptGap = Math.max(0, out.planned - out.attempted);
+  out.confirmGap = Math.max(0, out.attempted - out.confirmed);
+  return out;
+}
+
 const PB_BASE = "https://api.post-bridge.com";
 const PB_CHUNK = 20;
 
@@ -260,9 +348,11 @@ export async function GET(req: Request) {
   const nowMinusDay = nowMs - DAY_MS;
   const nowMinus7d = nowMs - 7 * DAY_MS;
 
-  // Self cross-check against Post Bridge using this app's own PB key. The
-  // manager can't get sensitive keys across projects, so each app has to
-  // do this locally and report the honest counts.
+  // "Yesterday" = previous full UTC day. Closed data, unlike today which is
+  // still in progress. Compute planned / attempted / confirmed for that day.
+  const yesterday = await computeYesterday(now);
+
+  // Legacy crossCheck kept for backwards compat during migration.
   const crossCheck = await selfCrossCheckAgainstPB(postLogRecent, nowMinusDay);
 
   const posts24hEntries = postLogRecent.filter((e) => inWindow(e.timestamp, nowMinusDay, nowMs));
@@ -341,6 +431,7 @@ export async function GET(req: Request) {
       kvOk: kvReachable,
     },
     crossCheck,
+    yesterday,
     generatedAt: new Date().toISOString(),
   });
 }
