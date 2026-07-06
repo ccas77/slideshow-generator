@@ -7,7 +7,7 @@ import { runInstagramPhase } from "@/lib/cron/instagram";
 import { runVideoPhase } from "@/lib/cron/video";
 import { runExcerptPhase } from "@/lib/cron/excerpts";
 import { checkStuckRotations } from "@/lib/cron/stuck-detector";
-import { notify } from "@/lib/notify";
+import { notify, processPendingAlerts } from "@/lib/notify";
 
 export const maxDuration = 800; // Pro max
 
@@ -53,6 +53,13 @@ export async function GET(req: NextRequest) {
       checkStuckRotations().catch((err) => {
         console.error("stuck-detector failed", err);
       });
+
+      // Drain the deferred-alert queue. Each per-account alert waits 30 min
+      // and only fires if the account still shows no posts today at PB.
+      // Fire-and-forget: any failure here shouldn't take down the cron.
+      processPendingAlerts()
+        .then((s) => console.log(`[cron] processPendingAlerts ${JSON.stringify(s)}`))
+        .catch((err) => console.error("[cron] processPendingAlerts failed", err));
 
       const scheduledToday = await getScheduledToday();
 
