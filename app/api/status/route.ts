@@ -67,7 +67,6 @@ async function computeYesterday(now: Date): Promise<{
 }> {
   const utcMidnight = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
   const yesterdayStart = utcMidnight.getTime() - DAY_MS;
-  const yesterdayEnd = utcMidnight.getTime();
   const yDate = new Date(yesterdayStart).toISOString().slice(0, 10);
   const out = {
     date: yDate,
