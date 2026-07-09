@@ -65,9 +65,54 @@ type YesterdayResult = {
   confirmGap: number;
   error: string | null;
   unconfirmed: Array<{ target: string; postBridgeId: string; error?: string }>;
+  unattempted: Array<{ target: string; slot: string }>;
 };
 
-async function computeYesterday(now: Date): Promise<YesterdayResult> {
+// Scheduled-set members per phase (lib/cron/*): "<accId>:<startMin>" and
+// "<accId>:fallback" (tiktok), "topn:<accId>:<startMin>", "ig:<accId>:<startMin>",
+// "video:<accId>:<startMin>", "excerpt:<accId>:<startMin>". Only phases that
+// write post-log can be matched to an attempt; video/excerpt don't, so they
+// are excluded from planned/unattempted to avoid perpetual false gaps.
+const SOURCE_BY_PHASE: Record<string, string> = {
+  tiktok: "cron",
+  fallback: "cron-fallback",
+  ig: "cron-ig",
+  topn: "cron-topn",
+};
+
+type SchedSlot = { phase: string; accountId: number; startMin: number | null };
+
+function parseSchedMember(m: string): SchedSlot | null {
+  const parts = m.split(":");
+  let phase: string;
+  let accRaw: string;
+  let slotRaw: string;
+  if (parts.length === 2) {
+    [accRaw, slotRaw] = parts;
+    phase = slotRaw === "fallback" ? "fallback" : "tiktok";
+  } else if (parts.length === 3) {
+    [phase, accRaw, slotRaw] = parts;
+  } else {
+    return null;
+  }
+  const accountId = Number(accRaw);
+  if (!Number.isFinite(accountId)) return null;
+  const startMin = slotRaw === "fallback" ? null : Number(slotRaw);
+  return { phase, accountId, startMin: Number.isFinite(startMin as number) ? startMin : null };
+}
+
+function slotLabel(s: SchedSlot): string {
+  const time =
+    s.startMin === null
+      ? "fallback"
+      : `${String(Math.floor(s.startMin / 60) % 24).padStart(2, "0")}:${String(s.startMin % 60).padStart(2, "0")}`;
+  return s.phase === "tiktok" || s.phase === "fallback" ? time : `${s.phase} ${time}`;
+}
+
+async function computeYesterday(
+  now: Date,
+  accountNames: Map<number, string>,
+): Promise<YesterdayResult> {
   const utcMidnight = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
   const yesterdayStart = utcMidnight.getTime() - DAY_MS;
   const yDate = new Date(yesterdayStart).toISOString().slice(0, 10);
@@ -80,22 +125,30 @@ async function computeYesterday(now: Date): Promise<YesterdayResult> {
     confirmGap: 0,
     error: null,
     unconfirmed: [],
+    unattempted: [],
   };
   let planned: number | null = null;
   let attempted = 0;
   const attemptedEntries: PostLogEntry[] = [];
+  const plannedSlots: SchedSlot[] = [];
+  let postLog: PostLogEntry[] = [];
 
   try {
     const c = client();
     try {
       const members = await c.smembers(`cron-scheduled:${yDate}`);
-      if (Array.isArray(members) && members.length > 0) planned = members.length;
+      if (Array.isArray(members) && members.length > 0) {
+        for (const m of members) {
+          const slot = parseSchedMember(String(m));
+          if (slot && SOURCE_BY_PHASE[slot.phase]) plannedSlots.push(slot);
+        }
+        planned = plannedSlots.length;
+      }
     } catch {
       // ignore
     }
 
-    const postLog =
-      (await safeGet<PostLogEntry[]>(c, `post-log:${yDate}`)) ?? [];
+    postLog = (await safeGet<PostLogEntry[]>(c, `post-log:${yDate}`)) ?? [];
     attempted = postLog.length;
     for (const e of postLog) {
       if (e.postBridgeId) attemptedEntries.push(e);
@@ -105,8 +158,37 @@ async function computeYesterday(now: Date): Promise<YesterdayResult> {
     return out;
   }
 
-  out.planned = planned as number;
+  out.planned = planned;
   out.attempted = attempted;
+
+  // Which planned slots have no matching post-log entry? Match per
+  // (source, accountId); within a group, assume slots fired in chronological
+  // order, so the surplus beyond the attempted count is the latest slots.
+  if (plannedSlots.length > 0) {
+    const attemptedByGroup = new Map<string, number>();
+    for (const e of postLog) {
+      const k = `${e.source}:${e.accountId}`;
+      attemptedByGroup.set(k, (attemptedByGroup.get(k) ?? 0) + 1);
+    }
+    const slotsByGroup = new Map<string, SchedSlot[]>();
+    for (const s of plannedSlots) {
+      const k = `${SOURCE_BY_PHASE[s.phase]}:${s.accountId}`;
+      if (!slotsByGroup.has(k)) slotsByGroup.set(k, []);
+      slotsByGroup.get(k)!.push(s);
+    }
+    for (const [k, slots] of slotsByGroup) {
+      const done = attemptedByGroup.get(k) ?? 0;
+      if (done >= slots.length) continue;
+      slots.sort((a, b) => (a.startMin ?? Infinity) - (b.startMin ?? Infinity));
+      for (const s of slots.slice(done)) {
+        if (out.unattempted.length >= 25) break;
+        out.unattempted.push({
+          target: accountNames.get(s.accountId) || `account:${s.accountId}`,
+          slot: slotLabel(s),
+        });
+      }
+    }
+  }
 
   if (attemptedEntries.length === 0) {
     out.attemptGap = planned === null ? null : Math.max(0, planned - attempted);
@@ -363,7 +445,13 @@ export async function GET(req: Request) {
 
   // "Yesterday" = previous full UTC day. Closed data, unlike today which is
   // still in progress. Compute planned / attempted / confirmed for that day.
-  const yesterday = await computeYesterday(now);
+  const accountNames = new Map<number, string>();
+  for (const e of postLogRecent) {
+    if (e.accountId && e.accountName && !accountNames.has(e.accountId)) {
+      accountNames.set(e.accountId, e.accountName);
+    }
+  }
+  const yesterday = await computeYesterday(now, accountNames);
 
   // Legacy crossCheck kept for backwards compat during migration.
   const crossCheck = await selfCrossCheckAgainstPB(postLogRecent, nowMinusDay);
