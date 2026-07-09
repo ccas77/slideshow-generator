@@ -70,14 +70,14 @@ type YesterdayResult = {
 
 // Scheduled-set members per phase (lib/cron/*): "<accId>:<startMin>" and
 // "<accId>:fallback" (tiktok), "topn:<accId>:<startMin>", "ig:<accId>:<startMin>",
-// "video:<accId>:<startMin>", "excerpt:<accId>:<startMin>". Only phases that
-// write post-log can be matched to an attempt; video/excerpt don't, so they
-// are excluded from planned/unattempted to avoid perpetual false gaps.
+// "video:<accId>:<startMin>", "excerpt:<accId>:<startMin>".
 const SOURCE_BY_PHASE: Record<string, string> = {
   tiktok: "cron",
   fallback: "cron-fallback",
   ig: "cron-ig",
   topn: "cron-topn",
+  video: "cron-video",
+  excerpt: "cron-excerpt",
 };
 
 type SchedSlot = { phase: string; accountId: number; startMin: number | null };

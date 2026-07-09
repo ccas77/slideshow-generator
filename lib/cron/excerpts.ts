@@ -3,6 +3,7 @@ import {
   setExcerptAutomation,
   getExcerpts,
   getBooksWithCovers,
+  appendPostLog,
 } from "@/lib/kv";
 import { generateImageWithInfo } from "@/lib/gemini";
 import { renderSlide } from "@/lib/render-slide";
@@ -176,9 +177,29 @@ export async function runExcerptPhase(
             }),
           });
           const postId = postResp.id || postResp.data?.id || "unknown";
+          const postUrl = postResp.url || postResp.data?.url || "";
           results.push({
             status: `${excerpt.name} → ${accIdStr} at ${scheduledAt.toISOString()} [post:${postId}]`,
           });
+
+          const exNow = new Date();
+          await appendPostLog({
+            date: exNow.toISOString().slice(0, 10),
+            time: exNow.toISOString().slice(11, 16),
+            accountId: Number(accIdStr),
+            accountName: accIdStr,
+            bookName: "",
+            slideshowId: excerpt.id,
+            slideshowName: excerpt.name,
+            imagePromptId: "",
+            imagePromptText: (prompt || "").slice(0, 100),
+            captionId: "",
+            captionText: (hookText || "").slice(0, 100),
+            postBridgeId: String(postId),
+            postBridgeUrl: String(postUrl),
+            source: "cron-excerpt",
+            timestamp: exNow.toISOString(),
+          }).catch(() => {});
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err);
           const result = await notifyPostFailure({

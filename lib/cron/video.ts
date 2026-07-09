@@ -4,6 +4,7 @@ import {
   getIgSlideshows,
   getVideoMusicTrack,
   getBooksWithCovers,
+  appendPostLog,
 } from "@/lib/kv";
 import { generateImage } from "@/lib/gemini";
 import { renderTextOverlay } from "@/lib/render-slide";
@@ -169,9 +170,29 @@ export async function runVideoPhase(
           });
 
           const postId = postResp.id || postResp.data?.id || "unknown";
+          const postUrl = postResp.url || postResp.data?.url || "";
           results.push({
             status: `${ss.name} -> ${accIdStr} video at ${scheduledAt.toISOString()} [post:${postId}]`,
           });
+
+          const vNow = new Date();
+          await appendPostLog({
+            date: vNow.toISOString().slice(0, 10),
+            time: vNow.toISOString().slice(11, 16),
+            accountId: Number(accIdStr),
+            accountName: accIdStr,
+            bookName: "",
+            slideshowId: ss.id,
+            slideshowName: ss.name,
+            imagePromptId: prompt?.id || "",
+            imagePromptText: (prompt?.value || "").slice(0, 100),
+            captionId: caption?.id || "",
+            captionText: (caption?.value || "").slice(0, 100),
+            postBridgeId: String(postId),
+            postBridgeUrl: String(postUrl),
+            source: "cron-video",
+            timestamp: vNow.toISOString(),
+          }).catch(() => {});
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err);
           const result = await notifyPostFailure({
