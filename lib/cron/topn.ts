@@ -9,6 +9,7 @@ import { shouldProcessWindow, randomTimeInWindow } from "./window";
 import { markScheduled, unmarkScheduled } from "./scheduled-today";
 import { notify } from "@/lib/notify";
 import { notifyPostFailure } from "@/lib/post-failure";
+import { withJobTimeout, JOB_TIMEOUT_MS } from "./with-timeout";
 import type { TopNResult } from "./types";
 
 // Cap how many TopN publishes run at once. Each publishTopN takes 30-90s
@@ -142,13 +143,17 @@ export async function runTopNPhase(
       let scheduledAt: Date | undefined;
       try {
         scheduledAt = randomTimeInWindow(win.start, win.end);
-        const r = await publishTopN({
-          listId: selectedList.id,
-          accountIds: [Number(accIdStr)],
-          scheduledAt: scheduledAt.toISOString(),
-          platform: accConfig.platform,
-          backgroundPrompts: accConfig.backgroundPrompts,
-        });
+        const r = await withJobTimeout(
+          publishTopN({
+            listId: selectedList.id,
+            accountIds: [Number(accIdStr)],
+            scheduledAt: scheduledAt.toISOString(),
+            platform: accConfig.platform,
+            backgroundPrompts: accConfig.backgroundPrompts,
+          }),
+          JOB_TIMEOUT_MS,
+          `topn ${accIdStr} list=${selectedList.id}`,
+        );
         topNResults.push({
           listName: selectedList.name,
           status: `${accIdStr}: scheduled ${r.slides} slides for ${scheduledAt.toISOString()} [post:${r.postId}]`,
