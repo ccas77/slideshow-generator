@@ -14,6 +14,7 @@ import { shouldProcessWindow, randomTimeInWindow } from "./window";
 import { markScheduled } from "./scheduled-today";
 import { notify } from "@/lib/notify";
 import { notifyPostFailure } from "@/lib/post-failure";
+import { withJobTimeout, VIDEO_JOB_TIMEOUT_MS } from "./with-timeout";
 import type { VideoAutoResult } from "./types";
 
 function pickRandom<T>(arr: T[]): T | null {
@@ -103,10 +104,10 @@ export async function runVideoPhase(
 
         let scheduledAt: Date | undefined;
         try {
+          const skipReason = await withJobTimeout((async (): Promise<string | null> => {
           const image = await generateImage(prompt.value);
           if (!image) {
-            results.push({ status: `skip: image gen failed for ${ss.name} (${accIdStr})` });
-            continue;
+            return `skip: image gen failed for ${ss.name} (${accIdStr})`;
           }
 
           // Decode background image for camera motion
@@ -193,6 +194,12 @@ export async function runVideoPhase(
             source: "cron-video",
             timestamp: vNow.toISOString(),
           }).catch(() => {});
+          return null;
+          })(), VIDEO_JOB_TIMEOUT_MS, `video ${accIdStr} ss=${ss.id}`);
+          if (skipReason) {
+            results.push({ status: skipReason });
+            continue;
+          }
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err);
           const result = await notifyPostFailure({

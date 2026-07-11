@@ -12,6 +12,7 @@ import { shouldProcessWindow, randomTimeInWindow } from "./window";
 import { markScheduled, unmarkScheduled } from "./scheduled-today";
 import { notify } from "@/lib/notify";
 import { notifyPostFailure } from "@/lib/post-failure";
+import { withJobTimeout, JOB_TIMEOUT_MS } from "./with-timeout";
 import type { ExcerptAutoResult } from "./types";
 
 function pickRandom<T>(arr: T[]): T | undefined {
@@ -69,6 +70,7 @@ export async function runExcerptPhase(
 
         let scheduledAt: Date | undefined;
         try {
+          const skipReason = await withJobTimeout((async (): Promise<string | null> => {
           // Build slides
           const mediaIds: string[] = [];
 
@@ -152,12 +154,7 @@ export async function runExcerptPhase(
           }
 
           if (mediaIds.length < 2) {
-            results.push({
-              status: `skip: ${excerpt.name} — not enough slides (${mediaIds.length})`,
-            });
-            failedExcerptKeys.push(`excerpt:${accIdStr}:${win.start}`);
-            pointer++;
-            continue;
+            return `skip: ${excerpt.name} — not enough slides (${mediaIds.length})`;
           }
 
           const platformCfg =
@@ -200,6 +197,16 @@ export async function runExcerptPhase(
             source: "cron-excerpt",
             timestamp: exNow.toISOString(),
           }).catch(() => {});
+          return null;
+          })(), JOB_TIMEOUT_MS, `excerpt ${accIdStr} name=${excerpt.name}`);
+          if (skipReason) {
+            results.push({ status: skipReason });
+            if (skipReason.startsWith("skip:")) {
+              failedExcerptKeys.push(`excerpt:${accIdStr}:${win.start}`);
+            }
+            pointer++;
+            continue;
+          }
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err);
           const result = await notifyPostFailure({

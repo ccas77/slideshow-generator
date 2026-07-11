@@ -11,6 +11,7 @@ import { shouldProcessWindow, randomTimeInWindow } from "./window";
 import { markScheduled } from "./scheduled-today";
 import { notify } from "@/lib/notify";
 import { notifyPostFailure } from "@/lib/post-failure";
+import { withJobTimeout, JOB_TIMEOUT_MS } from "./with-timeout";
 import type { IgAutoResult } from "./types";
 
 function pickRandom<T>(arr: T[]): T | null {
@@ -88,63 +89,69 @@ export async function runInstagramPhase(
 
             let scheduledAt: Date | undefined;
             try {
-              const image = await generateImage(prompt.value);
-              if (!image) {
-                igAutoResults.push({ status: `skip: image gen failed for ${ss.name} (${accIdStr})` });
+              const skipReason = await withJobTimeout((async (): Promise<string | null> => {
+                const image = await generateImage(prompt.value);
+                if (!image) {
+                  return `skip: image gen failed for ${ss.name} (${accIdStr})`;
+                }
+                const slideBufs: Buffer[] = [];
+
+                for (const text of texts) {
+                  slideBufs.push(await renderSlide(image, text));
+                }
+                const mediaIds: string[] = [];
+                for (let j = 0; j < slideBufs.length; j++) {
+                  mediaIds.push(await uploadPng(slideBufs[j], `ig-auto-${accIdStr}-${j + 1}.png`));
+                }
+
+                // Determine platform config based on account type
+                const accId = Number(accIdStr);
+                const isIg = igAuto.igAccountIds?.includes(accId) || !igAuto.tiktokAccountIds?.includes(accId);
+                const platformCfg = isIg
+                  ? { instagram: {} }
+                  : { tiktok: { draft: false, is_aigc: false } };
+
+                scheduledAt = randomTimeInWindow(win.start, win.end);
+                const postResp = await pbFetch("/v1/posts", {
+                  method: "POST",
+                  body: JSON.stringify({
+                    caption: caption?.value || "",
+                    media: mediaIds,
+                    social_accounts: [accId],
+                    scheduled_at: scheduledAt.toISOString(),
+                    platform_configurations: platformCfg,
+                  }),
+                });
+                const postId = postResp.id || postResp.data?.id || "unknown";
+                const postUrl = postResp.url || postResp.data?.url || "";
+                igAutoResults.push({
+                  status: `${ss.name} → ${accIdStr} at ${scheduledAt.toISOString()} [post:${postId}]`,
+                });
+
+                const igNow = new Date();
+                await appendPostLog({
+                  date: igNow.toISOString().slice(0, 10),
+                  time: igNow.toISOString().slice(11, 16),
+                  accountId: accId,
+                  accountName: accIdStr,
+                  bookName: "",
+                  slideshowId: ss.id,
+                  slideshowName: ss.name,
+                  imagePromptId: prompt?.id || "",
+                  imagePromptText: (prompt?.value || "").slice(0, 100),
+                  captionId: caption?.id || "",
+                  captionText: (caption?.value || "").slice(0, 100),
+                  postBridgeId: String(postId),
+                  postBridgeUrl: String(postUrl),
+                  source: "cron-ig",
+                  timestamp: igNow.toISOString(),
+                }).catch(() => {});
+                return null;
+              })(), JOB_TIMEOUT_MS, `ig ${accIdStr} ss=${ss.id}`);
+              if (skipReason) {
+                igAutoResults.push({ status: skipReason });
                 continue;
               }
-              const slideBufs: Buffer[] = [];
-
-              for (const text of texts) {
-                slideBufs.push(await renderSlide(image, text));
-              }
-              const mediaIds: string[] = [];
-              for (let j = 0; j < slideBufs.length; j++) {
-                mediaIds.push(await uploadPng(slideBufs[j], `ig-auto-${accIdStr}-${j + 1}.png`));
-              }
-
-              // Determine platform config based on account type
-              const accId = Number(accIdStr);
-              const isIg = igAuto.igAccountIds?.includes(accId) || !igAuto.tiktokAccountIds?.includes(accId);
-              const platformCfg = isIg
-                ? { instagram: {} }
-                : { tiktok: { draft: false, is_aigc: false } };
-
-              scheduledAt = randomTimeInWindow(win.start, win.end);
-              const postResp = await pbFetch("/v1/posts", {
-                method: "POST",
-                body: JSON.stringify({
-                  caption: caption?.value || "",
-                  media: mediaIds,
-                  social_accounts: [accId],
-                  scheduled_at: scheduledAt.toISOString(),
-                  platform_configurations: platformCfg,
-                }),
-              });
-              const postId = postResp.id || postResp.data?.id || "unknown";
-              const postUrl = postResp.url || postResp.data?.url || "";
-              igAutoResults.push({
-                status: `${ss.name} → ${accIdStr} at ${scheduledAt.toISOString()} [post:${postId}]`,
-              });
-
-              const igNow = new Date();
-              await appendPostLog({
-                date: igNow.toISOString().slice(0, 10),
-                time: igNow.toISOString().slice(11, 16),
-                accountId: accId,
-                accountName: accIdStr,
-                bookName: "",
-                slideshowId: ss.id,
-                slideshowName: ss.name,
-                imagePromptId: prompt?.id || "",
-                imagePromptText: (prompt?.value || "").slice(0, 100),
-                captionId: caption?.id || "",
-                captionText: (caption?.value || "").slice(0, 100),
-                postBridgeId: String(postId),
-                postBridgeUrl: String(postUrl),
-                source: "cron-ig",
-                timestamp: igNow.toISOString(),
-              }).catch(() => {});
             } catch (err) {
               const msg = err instanceof Error ? err.message : String(err);
               const result = await notifyPostFailure({

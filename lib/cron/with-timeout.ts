@@ -32,3 +32,8 @@ export async function withJobTimeout<T>(
 // Anything longer gets aborted so the surrounding catch can fire, unmark
 // the schedule key, and emit a digest entry via notifyPostFailure.
 export const JOB_TIMEOUT_MS = 120_000;
+
+// Video jobs run ffmpeg encoding plus the same upload+PB path as the
+// carousel phases. Encoding alone can take 60-120s on the Vercel Node
+// runtime, so give video a bigger budget before we consider it hung.
+export const VIDEO_JOB_TIMEOUT_MS = 240_000;
