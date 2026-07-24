@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import { redis } from "@/lib/kv";
 
 const PB_BASE = "https://api.post-bridge.com";
+const ACCOUNTS_CACHE_TTL_SECONDS = 120;
 
 async function pbFetch(path: string, init: RequestInit = {}) {
   const res = await fetch(`${PB_BASE}${path}`, {
@@ -167,6 +169,11 @@ export async function GET(req: NextRequest) {
     }
 
     const platform = url.searchParams.get("platform");
+    const cacheKey = `pb-accounts:${platform || "all"}`;
+    const cached = await redis.get<Array<{ id: number; username: string }>>(cacheKey);
+    if (cached) {
+      return NextResponse.json({ accounts: cached });
+    }
     const accountsResp = await pbFetch(
       platform
         ? `/v1/social-accounts?platform=${platform}&limit=100`
@@ -178,6 +185,7 @@ export async function GET(req: NextRequest) {
         username: a.username,
       })
     );
+    await redis.set(cacheKey, accounts, { ex: ACCOUNTS_CACHE_TTL_SECONDS });
     return NextResponse.json({ accounts });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Failed";
