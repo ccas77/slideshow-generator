@@ -139,6 +139,7 @@ export default function TopBooksPage() {
   // Music
   const [musicTracks, setMusicTracks] = useState<MusicTrack[]>([]);
   const [uploadingMusic, setUploadingMusic] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<{ current: number; total: number } | null>(null);
 
   // Preview
   const [previewListId, setPreviewListId] = useState<string | null>(null);
@@ -514,60 +515,69 @@ export default function TopBooksPage() {
 
   // ── Music ──
 
-  async function handleMusicUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setUploadingMusic(true);
-    try {
-      // Convert to base64 in chunks to avoid call stack overflow
-      const buf = await file.arrayBuffer();
-      const bytes = new Uint8Array(buf);
-      let binary = "";
-      const chunkSize = 8192;
-      for (let i = 0; i < bytes.length; i += chunkSize) {
-        binary += String.fromCharCode(...bytes.slice(i, i + chunkSize));
-      }
-      const base64 = btoa(binary);
-      const mimeType = file.type || "audio/mpeg";
-      const audioData = `data:${mimeType};base64,${base64}`;
-
-      // Upload in chunks if large (Vercel body limit ~4.5MB)
-      const name = file.name.replace(/\.[^.]+$/, "");
-      const CHUNK_SIZE = 3_000_000; // ~3MB per chunk (safe under body limit with JSON overhead)
-
-      if (audioData.length <= CHUNK_SIZE) {
-        await fetch("/api/music-tracks", {
-          method: "POST",
-          headers: headers(),
-          body: JSON.stringify({ name, audioData }),
-        });
-      } else {
-        // First request: create track with first chunk
-        const totalChunks = Math.ceil(audioData.length / CHUNK_SIZE);
-        const firstChunk = audioData.slice(0, CHUNK_SIZE);
-        const res = await fetch("/api/music-tracks", {
-          method: "POST",
-          headers: headers(),
-          body: JSON.stringify({ name, audioData: firstChunk, chunked: true, chunkIndex: 0, totalChunks }),
-        });
-        const { id } = await res.json();
-
-        // Subsequent chunks
-        for (let i = 1; i < totalChunks; i++) {
-          const chunk = audioData.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
-          await fetch("/api/music-tracks", {
-            method: "POST",
-            headers: headers(),
-            body: JSON.stringify({ id, audioData: chunk, chunked: true, chunkIndex: i, totalChunks }),
-          });
-        }
-      }
-      await load();
-    } catch (err) {
-      alert("Upload failed: " + (err instanceof Error ? err.message : "Unknown error"));
+  async function uploadOneMusicFile(file: File) {
+    const buf = await file.arrayBuffer();
+    const bytes = new Uint8Array(buf);
+    let binary = "";
+    const chunkSize = 8192;
+    for (let i = 0; i < bytes.length; i += chunkSize) {
+      binary += String.fromCharCode(...bytes.slice(i, i + chunkSize));
     }
+    const base64 = btoa(binary);
+    const mimeType = file.type || "audio/mpeg";
+    const audioData = `data:${mimeType};base64,${base64}`;
+
+    const name = file.name.replace(/\.[^.]+$/, "");
+    const CHUNK_SIZE = 3_000_000;
+
+    if (audioData.length <= CHUNK_SIZE) {
+      await fetch("/api/music-tracks", {
+        method: "POST",
+        headers: headers(),
+        body: JSON.stringify({ name, audioData }),
+      });
+      return;
+    }
+    const totalChunks = Math.ceil(audioData.length / CHUNK_SIZE);
+    const firstChunk = audioData.slice(0, CHUNK_SIZE);
+    const res = await fetch("/api/music-tracks", {
+      method: "POST",
+      headers: headers(),
+      body: JSON.stringify({ name, audioData: firstChunk, chunked: true, chunkIndex: 0, totalChunks }),
+    });
+    const { id } = await res.json();
+
+    for (let i = 1; i < totalChunks; i++) {
+      const chunk = audioData.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
+      await fetch("/api/music-tracks", {
+        method: "POST",
+        headers: headers(),
+        body: JSON.stringify({ id, audioData: chunk, chunked: true, chunkIndex: i, totalChunks }),
+      });
+    }
+  }
+
+  async function handleMusicUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    setUploadingMusic(true);
+    setUploadProgress({ current: 0, total: files.length });
+    const failed: string[] = [];
+    for (let i = 0; i < files.length; i++) {
+      setUploadProgress({ current: i + 1, total: files.length });
+      try {
+        await uploadOneMusicFile(files[i]);
+      } catch (err) {
+        failed.push(`${files[i].name}: ${err instanceof Error ? err.message : "unknown"}`);
+      }
+    }
+    await load();
     setUploadingMusic(false);
+    setUploadProgress(null);
     e.target.value = "";
+    if (failed.length > 0) {
+      alert(`${failed.length} of ${files.length} uploads failed:\n\n${failed.join("\n")}`);
+    }
   }
 
   async function deleteMusic(id: string) {
@@ -1042,8 +1052,12 @@ export default function TopBooksPage() {
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold text-white">Music Tracks</h2>
               <label className={`px-4 py-2 rounded-lg text-sm font-medium cursor-pointer transition-colors ${uploadingMusic ? "bg-zinc-700 text-zinc-400" : "bg-white text-black hover:bg-zinc-200"}`}>
-                {uploadingMusic ? "Uploading..." : "+ Upload Track"}
-                <input type="file" accept="audio/*" onChange={handleMusicUpload} className="hidden" disabled={uploadingMusic} />
+                {uploadingMusic
+                  ? uploadProgress
+                    ? `Uploading ${uploadProgress.current}/${uploadProgress.total}...`
+                    : "Uploading..."
+                  : "+ Upload Tracks"}
+                <input type="file" accept="audio/*" multiple onChange={handleMusicUpload} className="hidden" disabled={uploadingMusic} />
               </label>
             </div>
             <p className="text-xs text-zinc-500">Upload MP3 or M4A files. Assign them to lists in the list editor. A random track is picked for each video post.</p>
