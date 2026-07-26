@@ -197,7 +197,7 @@ export default function CreatePage() {
   if (!password) return null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-zinc-900 to-black text-white">
+    <div className="min-h-screen bg-gradient-to-br from-stone-50 via-white to-stone-100 text-stone-900">
       <div className="mx-auto w-full max-w-3xl px-6 sm:px-10 py-10">
         <AppHeader />
         <HowItWorks>
@@ -207,7 +207,7 @@ export default function CreatePage() {
         </HowItWorks>
 
         <h1 className="text-2xl font-bold mb-1">Create Slideshow</h1>
-        <p className="text-sm text-zinc-500 mb-8">
+        <p className="text-sm text-stone-500 mb-8">
           Paste a passage. Get slides. Export to a book.
         </p>
 
@@ -269,43 +269,43 @@ export default function CreatePage() {
               !hook.trim() ||
               !twist.trim()
             }
-            className="w-full px-6 py-3 rounded-lg bg-white text-black font-semibold hover:bg-zinc-200 transition-colors disabled:opacity-40 disabled:cursor-not-allowed text-sm"
+            className="w-full px-6 py-3 rounded-lg bg-stone-900 text-white font-semibold hover:bg-stone-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed text-sm"
           >
             {loading ? "Generating..." : "Generate Slides"}
           </button>
         </div>
 
         {loading && (
-          <p className="text-center text-zinc-500 italic py-8 text-sm">
+          <p className="text-center text-stone-500 italic py-8 text-sm">
             Building your slideshow...
           </p>
         )}
         {tightening && (
-          <p className="text-center text-zinc-500 italic py-4 text-sm">
+          <p className="text-center text-stone-500 italic py-4 text-sm">
             Cutting the fat...
           </p>
         )}
         {error && (
-          <p className="text-center text-red-400 py-4 text-sm">{error}</p>
+          <p className="text-center text-red-600 py-4 text-sm">{error}</p>
         )}
 
         {output && (
           <div className="mt-8">
             <div className="flex items-center justify-between mb-3">
-              <span className="text-sm text-zinc-400">
+              <span className="text-sm text-stone-600">
                 {slideCount} slides
               </span>
               <div className="flex gap-2">
                 <button
                   onClick={tighten}
                   disabled={tightening}
-                  className="px-4 py-2 rounded-lg border border-zinc-700 text-zinc-300 hover:bg-zinc-800 transition-colors text-xs disabled:opacity-40"
+                  className="px-4 py-2 rounded-lg border border-stone-300 text-stone-700 hover:bg-stone-100 transition-colors text-xs disabled:opacity-40"
                 >
                   {tightening ? "Tightening..." : "Tighten"}
                 </button>
                 <button
                   onClick={copyAll}
-                  className="px-4 py-2 rounded-lg border border-zinc-700 text-zinc-300 hover:bg-zinc-800 transition-colors text-xs"
+                  className="px-4 py-2 rounded-lg border border-stone-300 text-stone-700 hover:bg-stone-100 transition-colors text-xs"
                 >
                   {copied ? "Copied" : "Copy All"}
                 </button>
@@ -320,7 +320,7 @@ export default function CreatePage() {
             />
 
             {/* Export to Book */}
-            <div className="mt-6 rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5 space-y-4">
+            <div className="mt-6 rounded-2xl border border-stone-200 bg-white/70 p-5 space-y-4">
               <h3 className="text-sm font-semibold">Export to Book</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <select
@@ -330,7 +330,7 @@ export default function CreatePage() {
                     setSelectedPromptIds([]);
                     setSelectedCaptionIds([]);
                   }}
-                  className="rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20"
+                  className="rounded-lg border border-stone-200 bg-stone-100 px-3 py-2 text-stone-900 text-sm focus:outline-none focus:ring-2 focus:ring-stone-900/15"
                 >
                   <option value="">Select a book...</option>
                   {books.map((b) => (
@@ -343,7 +343,7 @@ export default function CreatePage() {
                   value={exportName}
                   onChange={(e) => setExportName(e.target.value)}
                   placeholder="Slideshow name"
-                  className="rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20"
+                  className="rounded-lg border border-stone-200 bg-stone-100 px-3 py-2 text-stone-900 text-sm focus:outline-none focus:ring-2 focus:ring-stone-900/15"
                 />
               </div>
 
@@ -354,15 +354,15 @@ export default function CreatePage() {
                   <div className="space-y-4">
                     {/* Image prompts */}
                     <div>
-                      <label className="block text-xs font-medium text-zinc-400 mb-2">
+                      <label className="block text-xs font-medium text-stone-600 mb-2">
                         Image prompts
                       </label>
                       {book.imagePrompts.length > 0 && (
-                        <div className="space-y-1 max-h-32 overflow-y-auto rounded-lg border border-zinc-800 bg-zinc-900 p-2 mb-2">
+                        <div className="space-y-1 max-h-32 overflow-y-auto rounded-lg border border-stone-200 bg-white p-2 mb-2">
                           {book.imagePrompts.map((p) => (
                             <label
                               key={p.id}
-                              className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-zinc-800 cursor-pointer"
+                              className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-stone-100 cursor-pointer"
                             >
                               <input
                                 type="checkbox"
@@ -374,9 +374,9 @@ export default function CreatePage() {
                                       : [...prev, p.id]
                                   )
                                 }
-                                className="accent-white"
+                                className="accent-stone-900"
                               />
-                              <span className="text-sm text-zinc-300 truncate">
+                              <span className="text-sm text-stone-700 truncate">
                                 {p.name}
                               </span>
                             </label>
@@ -394,15 +394,15 @@ export default function CreatePage() {
 
                     {/* Captions */}
                     <div>
-                      <label className="block text-xs font-medium text-zinc-400 mb-2">
+                      <label className="block text-xs font-medium text-stone-600 mb-2">
                         Captions
                       </label>
                       {book.captions.length > 0 && (
-                        <div className="space-y-1 max-h-32 overflow-y-auto rounded-lg border border-zinc-800 bg-zinc-900 p-2 mb-2">
+                        <div className="space-y-1 max-h-32 overflow-y-auto rounded-lg border border-stone-200 bg-white p-2 mb-2">
                           {book.captions.map((c) => (
                             <label
                               key={c.id}
-                              className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-zinc-800 cursor-pointer"
+                              className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-stone-100 cursor-pointer"
                             >
                               <input
                                 type="checkbox"
@@ -414,9 +414,9 @@ export default function CreatePage() {
                                       : [...prev, c.id]
                                   )
                                 }
-                                className="accent-white"
+                                className="accent-stone-900"
                               />
-                              <span className="text-sm text-zinc-300 truncate">
+                              <span className="text-sm text-stone-700 truncate">
                                 {c.name}
                               </span>
                             </label>
@@ -438,7 +438,7 @@ export default function CreatePage() {
               <button
                 onClick={exportToBook}
                 disabled={exporting || !exportBookId || !exportName.trim()}
-                className="w-full px-5 py-3 rounded-lg bg-white text-black font-semibold hover:bg-zinc-200 transition-colors text-sm disabled:opacity-40 disabled:cursor-not-allowed"
+                className="w-full px-5 py-3 rounded-lg bg-stone-900 text-white font-semibold hover:bg-stone-700 transition-colors text-sm disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {exporting ? "Exporting..." : "Export to Book"}
               </button>
@@ -451,19 +451,19 @@ export default function CreatePage() {
         .input-field {
           width: 100%;
           border-radius: 0.5rem;
-          border: 1px solid #27272a;
-          background: #18181b;
+          border: 1px solid #e7e5e4;
+          background: #ffffff;
           padding: 0.625rem 0.75rem;
-          color: white;
+          color: #1c1917;
           font-size: 0.875rem;
           outline: none;
           transition: box-shadow 0.15s;
         }
         .input-field:focus {
-          box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
+          box-shadow: 0 0 0 2px rgba(28, 25, 23, 0.12);
         }
         .input-field::placeholder {
-          color: #52525b;
+          color: #a8a29e;
         }
         textarea.input-field {
           resize: vertical;
@@ -482,7 +482,7 @@ function Field({
 }) {
   return (
     <div>
-      <label className="block text-xs font-medium text-zinc-400 mb-1.5 uppercase tracking-wide">
+      <label className="block text-xs font-medium text-stone-600 mb-1.5 uppercase tracking-wide">
         {label}
       </label>
       {children}

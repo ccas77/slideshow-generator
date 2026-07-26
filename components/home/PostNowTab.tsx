@@ -275,19 +275,19 @@ export default function PostNowTab({
   return (
     <section className="space-y-6">
       {/* Account selector for posting */}
-      <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6">
-        <label className="block text-sm font-medium text-zinc-400 mb-2">
+      <div className="rounded-2xl border border-stone-200 bg-white/70 p-6">
+        <label className="block text-sm font-medium text-stone-600 mb-2">
           Post to account
         </label>
         {accounts.length === 0 ? (
-          <p className="text-sm text-zinc-500">Loading accounts…</p>
+          <p className="text-sm text-stone-500">Loading accounts…</p>
         ) : (
           <select
             value={accountId ?? ""}
             onChange={(e) =>
               setAccountId(e.target.value ? Number(e.target.value) : null)
             }
-            className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+            className="w-full rounded-lg border border-stone-200 bg-stone-100 px-4 py-3 text-stone-900 focus:outline-none focus:ring-2 focus:ring-stone-900/15"
           >
             <option value="">Select an account…</option>
             {(["tiktok", "instagram", "facebook"] as const).map((plat) => {
@@ -309,13 +309,13 @@ export default function PostNowTab({
       </div>
 
       {/* Library actions */}
-      <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5 space-y-3">
-        <div className="text-sm text-zinc-400">Library:</div>
+      <div className="rounded-2xl border border-stone-200 bg-white/70 p-5 space-y-3">
+        <div className="text-sm text-stone-600">Library:</div>
         <div className="flex flex-wrap items-center gap-3">
           <select
             value={selectedBookId || ""}
             onChange={(e) => setSelectedBookId(e.target.value || null)}
-            className="rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20"
+            className="rounded-lg border border-stone-200 bg-stone-100 px-3 py-2 text-stone-900 text-sm focus:outline-none focus:ring-2 focus:ring-stone-900/15"
           >
             <option value="">Select a book…</option>
             {books.map((b) => (
@@ -324,7 +324,7 @@ export default function PostNowTab({
           </select>
           {selectedBookId && (() => {
             const book = books.find((b) => b.id === selectedBookId);
-            if (!book || book.slideshows.length === 0) return <span className="text-xs text-zinc-500">No slideshows</span>;
+            if (!book || book.slideshows.length === 0) return <span className="text-xs text-stone-500">No slideshows</span>;
             return (
               <select
                 value=""
@@ -332,7 +332,7 @@ export default function PostNowTab({
                   const s = book.slideshows.find((x) => x.id === e.target.value);
                   if (s) loadSlideshowIntoEditor(s, book, setImagePrompt, setBulkText, setCaption, setSelectedBookId);
                 }}
-                className="rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20"
+                className="rounded-lg border border-stone-200 bg-stone-100 px-3 py-2 text-stone-900 text-sm focus:outline-none focus:ring-2 focus:ring-stone-900/15"
               >
                 <option value="">Select a slideshow…</option>
                 {book.slideshows.map((s) => (
@@ -343,7 +343,7 @@ export default function PostNowTab({
           })()}
           <button
             onClick={saveDraftToBook}
-            className="px-4 py-2 rounded-lg border border-zinc-700 text-zinc-200 hover:bg-zinc-800 transition-colors text-sm font-medium"
+            className="px-4 py-2 rounded-lg border border-stone-300 text-stone-800 hover:bg-stone-100 transition-colors text-sm font-medium"
           >
             Save to book
           </button>
@@ -351,8 +351,8 @@ export default function PostNowTab({
       </div>
 
       {/* Image prompt */}
-      <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6">
-        <label className="block text-sm font-medium text-zinc-300 mb-2">
+      <div className="rounded-2xl border border-stone-200 bg-white/70 p-6">
+        <label className="block text-sm font-medium text-stone-700 mb-2">
           Background image prompt
         </label>
         <textarea
@@ -360,16 +360,16 @@ export default function PostNowTab({
           onChange={(e) => setImagePrompt(e.target.value)}
           placeholder="Describe the background image for all slides..."
           rows={3}
-          className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-4 py-3 text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-white/20 resize-none"
+          className="w-full rounded-lg border border-stone-200 bg-stone-100 px-4 py-3 text-stone-900 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-900/15 resize-none"
         />
       </div>
 
       {/* Slide texts */}
-      <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6">
-        <label className="block text-sm font-medium text-zinc-300 mb-2">
+      <div className="rounded-2xl border border-stone-200 bg-white/70 p-6">
+        <label className="block text-sm font-medium text-stone-700 mb-2">
           Slide texts
         </label>
-        <p className="text-xs text-zinc-500 mb-3">
+        <p className="text-xs text-stone-500 mb-3">
           One slide per line. Empty lines are ignored.
         </p>
         <textarea
@@ -377,16 +377,16 @@ export default function PostNowTab({
           onChange={(e) => setBulkText(e.target.value)}
           placeholder={"First slide text\nSecond slide text\nThird slide text"}
           rows={8}
-          className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-4 py-3 text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-white/20"
+          className="w-full rounded-lg border border-stone-200 bg-stone-100 px-4 py-3 text-stone-900 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-900/15"
         />
-        <p className="text-xs text-zinc-600 mt-2">
+        <p className="text-xs text-stone-400 mt-2">
           {slideCount} slide{slideCount !== 1 ? "s" : ""}
         </p>
       </div>
 
       {/* Caption */}
-      <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6">
-        <label className="block text-sm font-medium text-zinc-300 mb-2">
+      <div className="rounded-2xl border border-stone-200 bg-white/70 p-6">
+        <label className="block text-sm font-medium text-stone-700 mb-2">
           TikTok caption
         </label>
         <textarea
@@ -394,12 +394,12 @@ export default function PostNowTab({
           onChange={(e) => setCaption(e.target.value)}
           placeholder="Caption that appears on the TikTok post..."
           rows={3}
-          className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-4 py-3 text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-white/20 resize-none"
+          className="w-full rounded-lg border border-stone-200 bg-stone-100 px-4 py-3 text-stone-900 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-900/15 resize-none"
         />
       </div>
 
       {error && (
-        <div className="p-4 rounded-lg bg-red-950/50 border border-red-900/50 text-red-400 text-sm">
+        <div className="p-4 rounded-lg bg-red-100/70 border border-red-200 text-red-600 text-sm">
           {error}
         </div>
       )}
@@ -408,12 +408,12 @@ export default function PostNowTab({
       <button
         onClick={generate}
         disabled={loading || !imagePrompt.trim() || slideCount === 0}
-        className="w-full px-6 py-3 rounded-lg bg-white text-black font-semibold hover:bg-zinc-200 transition-colors disabled:opacity-40 disabled:cursor-not-allowed text-sm flex items-center justify-center gap-2"
+        className="w-full px-6 py-3 rounded-lg bg-stone-900 text-white font-semibold hover:bg-stone-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed text-sm flex items-center justify-center gap-2"
       >
         {loading ? (
           <>
             <span
-              className="inline-block w-4 h-4 border-2 border-black/20 border-t-black rounded-full"
+              className="inline-block w-4 h-4 border-2 border-stone-900/15 border-t-black rounded-full"
               style={{ animation: "spin 0.6s linear infinite" }}
             />
             Generating…
@@ -425,11 +425,11 @@ export default function PostNowTab({
 
       {/* Preview + Post (appears after generation) */}
       {slideshow && (
-        <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6 sm:p-8">
+        <div className="rounded-2xl border border-stone-200 bg-white/70 p-6 sm:p-8">
           <div className="flex flex-col items-center">
             {/* Slide frame */}
             <div
-              className="relative rounded-2xl overflow-hidden shadow-2xl bg-zinc-950"
+              className="relative rounded-2xl overflow-hidden shadow-2xl bg-stone-100"
               style={{
                 width: "min(100%, 320px)",
                 aspectRatio: "9 / 16",
@@ -466,6 +466,9 @@ export default function PostNowTab({
                       }}
                     />
                   ) : (
+                    // Stand-in for the AI image. Kept dark to match the posted
+                    // slide, which renders on #18181b under a black scrim with
+                    // white text (see lib/render-slide.ts, lib/slide-utils.ts).
                     <div
                       style={{
                         position: "absolute",
@@ -514,11 +517,11 @@ export default function PostNowTab({
               <button
                 onClick={() => setCurrentSlide((i) => Math.max(0, i - 1))}
                 disabled={currentSlide === 0}
-                className="w-10 h-10 rounded-full border border-zinc-700 text-white disabled:text-zinc-700 disabled:border-zinc-800 hover:bg-zinc-800 transition-colors"
+                className="w-10 h-10 rounded-full border border-stone-300 text-stone-900 disabled:text-stone-300 disabled:border-stone-200 hover:bg-stone-100 transition-colors"
               >
                 ‹
               </button>
-              <div className="text-sm text-zinc-400 tabular-nums">
+              <div className="text-sm text-stone-600 tabular-nums">
                 {currentSlide + 1} / {totalPreviewSlides}
               </div>
               <button
@@ -528,7 +531,7 @@ export default function PostNowTab({
                   )
                 }
                 disabled={currentSlide === totalPreviewSlides - 1}
-                className="w-10 h-10 rounded-full border border-zinc-700 text-white disabled:text-zinc-700 disabled:border-zinc-800 hover:bg-zinc-800 transition-colors"
+                className="w-10 h-10 rounded-full border border-stone-300 text-stone-900 disabled:text-stone-300 disabled:border-stone-200 hover:bg-stone-100 transition-colors"
               >
                 ›
               </button>
@@ -546,7 +549,7 @@ export default function PostNowTab({
                     borderRadius: 4,
                     border: "none",
                     background:
-                      i === currentSlide ? "white" : "rgba(255,255,255,0.25)",
+                      i === currentSlide ? "#1c1917" : "rgba(28,25,23,0.25)",
                     cursor: "pointer",
                     transition: "all 0.3s",
                   }}
@@ -557,7 +560,7 @@ export default function PostNowTab({
             {postStatus && (
               <div
                 className={`mt-5 text-sm ${
-                  postStatus.includes("Posted") ? "text-green-400" : "text-red-400"
+                  postStatus.includes("Posted") ? "text-green-600" : "text-red-600"
                 }`}
               >
                 {postStatus}
@@ -572,14 +575,14 @@ export default function PostNowTab({
                   setPostStatus(null);
                   setCurrentSlide(0);
                 }}
-                className="px-5 py-2.5 rounded-lg border border-zinc-700 text-zinc-300 hover:bg-zinc-800 transition-colors text-sm font-medium"
+                className="px-5 py-2.5 rounded-lg border border-stone-300 text-stone-700 hover:bg-stone-100 transition-colors text-sm font-medium"
               >
                 Clear preview
               </button>
               <button
                 onClick={downloadAll}
                 disabled={downloading}
-                className="px-5 py-2.5 rounded-lg bg-zinc-800 text-white hover:bg-zinc-700 transition-colors text-sm font-medium disabled:opacity-50"
+                className="px-5 py-2.5 rounded-lg bg-stone-100 text-stone-900 hover:bg-stone-200 transition-colors text-sm font-medium disabled:opacity-50"
               >
                 {downloading ? "Downloading…" : "Download all"}
               </button>

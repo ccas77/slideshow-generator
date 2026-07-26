@@ -465,7 +465,7 @@ export default function ExcerptsPage() {
     1 + ex.excerptImages.length + (ex.bookId && books.find((b) => b.id === ex.bookId)?.coverImage ? 1 : 0);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-zinc-900 to-black text-white">
+    <div className="min-h-screen bg-gradient-to-br from-stone-50 via-white to-stone-100 text-stone-900">
       <div className="mx-auto w-full max-w-5xl px-6 sm:px-10 py-10">
         <AppHeader />
         <HowItWorks>
@@ -485,11 +485,11 @@ export default function ExcerptsPage() {
           <h1 className="text-2xl font-bold">Excerpts</h1>
           <div className="flex items-center gap-3">
             {saving && (
-              <span className="text-xs text-zinc-500">Saving…</span>
+              <span className="text-xs text-stone-500">Saving…</span>
             )}
             <button
               onClick={createExcerpt}
-              className="px-4 py-2 rounded-lg bg-white text-black font-semibold hover:bg-zinc-200 transition-colors text-sm"
+              className="px-4 py-2 rounded-lg bg-stone-900 text-white font-semibold hover:bg-stone-700 transition-colors text-sm"
             >
               + New excerpt
             </button>
@@ -497,13 +497,13 @@ export default function ExcerptsPage() {
         </div>
 
         {loading ? (
-          <p className="text-zinc-500">Loading…</p>
+          <p className="text-stone-500">Loading…</p>
         ) : excerpts.length === 0 ? (
-          <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-10 text-center">
-            <p className="text-zinc-400 mb-4">No excerpts yet.</p>
+          <div className="rounded-2xl border border-stone-200 bg-white/70 p-10 text-center">
+            <p className="text-stone-600 mb-4">No excerpts yet.</p>
             <button
               onClick={createExcerpt}
-              className="px-5 py-2 rounded-lg bg-white text-black font-semibold text-sm"
+              className="px-5 py-2 rounded-lg bg-stone-900 text-white font-semibold text-sm"
             >
               Create your first excerpt
             </button>
@@ -517,11 +517,11 @@ export default function ExcerptsPage() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search excerpts..."
-                className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-white text-sm mb-1 focus:outline-none focus:ring-2 focus:ring-white/20 placeholder:text-zinc-600"
+                className="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-stone-900 text-sm mb-1 focus:outline-none focus:ring-2 focus:ring-stone-900/15 placeholder:text-stone-400"
               />
               {grouped.map((group) => (
                 <div key={group.bookId ?? "__ungrouped"}>
-                  <div className="text-[10px] uppercase tracking-wider font-semibold text-zinc-500 px-2 pt-3 pb-1">
+                  <div className="text-[10px] uppercase tracking-wider font-semibold text-stone-500 px-2 pt-3 pb-1">
                     {group.label}
                   </div>
                   {group.items.map((e) => (
@@ -530,14 +530,14 @@ export default function ExcerptsPage() {
                       onClick={() => setActiveId(e.id)}
                       className={`w-full text-left px-4 py-3 rounded-lg border transition-colors mb-1 ${
                         activeId === e.id
-                          ? "border-white bg-zinc-900 text-white"
-                          : "border-zinc-800 bg-zinc-900/40 text-zinc-300 hover:border-zinc-700"
+                          ? "border-stone-900 bg-white text-stone-900"
+                          : "border-stone-200 bg-white/60 text-stone-700 hover:border-stone-400"
                       }`}
                     >
                       <div className="font-medium text-sm truncate">
                         {e.name}
                       </div>
-                      <div className="text-xs text-zinc-500 mt-0.5">
+                      <div className="text-xs text-stone-500 mt-0.5">
                         {slideCount(e)} slide{slideCount(e) === 1 ? "" : "s"}
                       </div>
                     </button>
@@ -547,9 +547,9 @@ export default function ExcerptsPage() {
             </aside>
 
             {/* Main panel */}
-            <main className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6">
+            <main className="rounded-2xl border border-stone-200 bg-white/70 p-6">
               {!active ? (
-                <p className="text-zinc-500 text-sm">
+                <p className="text-stone-500 text-sm">
                   Select an excerpt to edit it.
                 </p>
               ) : (
@@ -559,13 +559,13 @@ export default function ExcerptsPage() {
                     <div className="flex gap-2">
                       <button
                         onClick={() => renameExcerpt(active.id)}
-                        className="text-xs text-zinc-500 hover:text-white transition-colors"
+                        className="text-xs text-stone-500 hover:text-stone-900 transition-colors"
                       >
                         Rename
                       </button>
                       <button
                         onClick={() => deleteExcerpt(active.id)}
-                        className="text-xs text-red-500 hover:text-red-400 transition-colors"
+                        className="text-xs text-red-600 hover:text-red-600 transition-colors"
                       >
                         Delete
                       </button>
@@ -574,7 +574,7 @@ export default function ExcerptsPage() {
 
                   {/* Book selector */}
                   <div className="mb-6">
-                    <label className="block text-xs font-medium text-zinc-400 mb-1.5">
+                    <label className="block text-xs font-medium text-stone-600 mb-1.5">
                       Book
                     </label>
                     <select
@@ -585,7 +585,7 @@ export default function ExcerptsPage() {
                           bookId: e.target.value || undefined,
                         }))
                       }
-                      className="rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20 w-full sm:w-auto"
+                      className="rounded-lg border border-stone-200 bg-stone-100 px-3 py-2 text-stone-900 text-sm focus:outline-none focus:ring-2 focus:ring-stone-900/15 w-full sm:w-auto"
                     >
                       <option value="">Select a book...</option>
                       {books.map((b) => (
@@ -599,7 +599,7 @@ export default function ExcerptsPage() {
                   {/* SLIDE 1: Hook */}
                   <Section number={1} title="Hook slide" subtitle="AI-generated image with overlay text (random pick each generate)">
                     {/* Image prompts */}
-                    <label className="block text-xs font-medium text-zinc-400 mb-1">
+                    <label className="block text-xs font-medium text-stone-600 mb-1">
                       Image prompts ({active.imagePrompts.length})
                     </label>
                     {active.imagePrompts.length > 0 && (
@@ -614,11 +614,11 @@ export default function ExcerptsPage() {
                                 updateExcerpt(active.id, (ex) => ({ ...ex, imagePrompts: next }));
                               }}
                               rows={2}
-                              className="flex-1 rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20"
+                              className="flex-1 rounded-lg border border-stone-200 bg-white px-3 py-2 text-stone-900 text-sm focus:outline-none focus:ring-2 focus:ring-stone-900/15"
                             />
                             <button
                               onClick={() => updateExcerpt(active.id, (ex) => ({ ...ex, imagePrompts: ex.imagePrompts.filter((_, j) => j !== i) }))}
-                              className="text-xs text-red-500 hover:text-red-400 shrink-0 self-start mt-2"
+                              className="text-xs text-red-600 hover:text-red-600 shrink-0 self-start mt-2"
                             >
                               Remove
                             </button>
@@ -629,14 +629,14 @@ export default function ExcerptsPage() {
                     <div className="flex flex-wrap gap-2 mb-4">
                       <button
                         onClick={() => updateExcerpt(active.id, (ex) => ({ ...ex, imagePrompts: [...ex.imagePrompts, ""] }))}
-                        className="px-3 py-1.5 rounded-lg border border-zinc-700 bg-zinc-900 text-xs text-zinc-300 hover:bg-zinc-800 transition-colors"
+                        className="px-3 py-1.5 rounded-lg border border-stone-300 bg-white text-xs text-stone-700 hover:bg-stone-100 transition-colors"
                       >
                         + Add prompt
                       </button>
                       <button
                         onClick={() => uploadAndExtractPrompt(active.id)}
                         disabled={extracting}
-                        className="px-3 py-1.5 rounded-lg border border-zinc-700 bg-zinc-900 text-xs text-zinc-300 hover:bg-zinc-800 transition-colors disabled:opacity-40"
+                        className="px-3 py-1.5 rounded-lg border border-stone-300 bg-white text-xs text-stone-700 hover:bg-stone-100 transition-colors disabled:opacity-40"
                       >
                         {extracting ? "Extracting..." : "Extract from image"}
                       </button>
@@ -647,19 +647,19 @@ export default function ExcerptsPage() {
                         value={imageUrl}
                         onChange={(e) => setImageUrl(e.target.value)}
                         placeholder="Paste image URL to extract prompt..."
-                        className="flex-1 rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20 placeholder:text-zinc-600"
+                        className="flex-1 rounded-lg border border-stone-200 bg-white px-3 py-2 text-stone-900 text-sm focus:outline-none focus:ring-2 focus:ring-stone-900/15 placeholder:text-stone-400"
                       />
                       <button
                         onClick={() => extractPromptFromUrl(active.id)}
                         disabled={extracting || !imageUrl.trim()}
-                        className="px-3 py-2 rounded-lg border border-zinc-700 bg-zinc-900 text-xs text-zinc-300 hover:bg-zinc-800 transition-colors disabled:opacity-40 shrink-0"
+                        className="px-3 py-2 rounded-lg border border-stone-300 bg-white text-xs text-stone-700 hover:bg-stone-100 transition-colors disabled:opacity-40 shrink-0"
                       >
                         Extract
                       </button>
                     </div>
 
                     {/* Overlay texts (hooks) */}
-                    <label className="block text-xs font-medium text-zinc-400 mb-1">
+                    <label className="block text-xs font-medium text-stone-600 mb-1">
                       Hook texts ({active.overlayTexts.length})
                     </label>
                     {active.overlayTexts.length > 0 && (
@@ -675,11 +675,11 @@ export default function ExcerptsPage() {
                                 updateExcerpt(active.id, (ex) => ({ ...ex, overlayTexts: next }));
                               }}
                               placeholder='e.g. Why are you blushing? It&apos;s only a book.'
-                              className="flex-1 rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20 placeholder:text-zinc-600"
+                              className="flex-1 rounded-lg border border-stone-200 bg-white px-3 py-2 text-stone-900 text-sm focus:outline-none focus:ring-2 focus:ring-stone-900/15 placeholder:text-stone-400"
                             />
                             <button
                               onClick={() => updateExcerpt(active.id, (ex) => ({ ...ex, overlayTexts: ex.overlayTexts.filter((_, j) => j !== i) }))}
-                              className="text-xs text-red-500 hover:text-red-400 shrink-0"
+                              className="text-xs text-red-600 hover:text-red-600 shrink-0"
                             >
                               Remove
                             </button>
@@ -689,7 +689,7 @@ export default function ExcerptsPage() {
                     )}
                     <button
                       onClick={() => updateExcerpt(active.id, (ex) => ({ ...ex, overlayTexts: [...ex.overlayTexts, ""] }))}
-                      className="px-3 py-1.5 rounded-lg border border-zinc-700 bg-zinc-900 text-xs text-zinc-300 hover:bg-zinc-800 transition-colors"
+                      className="px-3 py-1.5 rounded-lg border border-stone-300 bg-white text-xs text-stone-700 hover:bg-stone-100 transition-colors"
                     >
                       + Add hook text
                     </button>
@@ -701,19 +701,19 @@ export default function ExcerptsPage() {
                       onClick={() => setExtraHookOpen(!extraHookOpen)}
                       className="flex items-center gap-3 mb-3 w-full text-left"
                     >
-                      <span className="w-6 h-6 rounded-full bg-zinc-800 text-zinc-400 text-xs font-semibold flex items-center justify-center shrink-0">
+                      <span className="w-6 h-6 rounded-full bg-stone-100 text-stone-600 text-xs font-semibold flex items-center justify-center shrink-0">
                         2
                       </span>
                       <div className="flex-1">
                         <div className="text-sm font-medium">Extra hook slide (optional)</div>
-                        <div className="text-xs text-zinc-500">Second hook with its own AI image</div>
+                        <div className="text-xs text-stone-500">Second hook with its own AI image</div>
                       </div>
-                      <span className="text-zinc-500 text-sm">{extraHookOpen ? "▲" : "▼"}</span>
+                      <span className="text-stone-500 text-sm">{extraHookOpen ? "▲" : "▼"}</span>
                     </button>
                     {extraHookOpen && (
                       <div className="ml-9">
                         {/* Extra hook image prompts */}
-                        <label className="block text-xs font-medium text-zinc-400 mb-1">
+                        <label className="block text-xs font-medium text-stone-600 mb-1">
                           Image prompts ({(active.extraImagePrompts || []).length})
                         </label>
                         {(active.extraImagePrompts || []).length > 0 && (
@@ -728,11 +728,11 @@ export default function ExcerptsPage() {
                                     updateExcerpt(active.id, (ex) => ({ ...ex, extraImagePrompts: next }));
                                   }}
                                   rows={2}
-                                  className="flex-1 rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20 placeholder:text-zinc-600 resize-none"
+                                  className="flex-1 rounded-lg border border-stone-200 bg-white px-3 py-2 text-stone-900 text-sm focus:outline-none focus:ring-2 focus:ring-stone-900/15 placeholder:text-stone-400 resize-none"
                                 />
                                 <button
                                   onClick={() => updateExcerpt(active.id, (ex) => ({ ...ex, extraImagePrompts: (ex.extraImagePrompts || []).filter((_, j) => j !== i) }))}
-                                  className="text-xs text-red-500 hover:text-red-400 shrink-0"
+                                  className="text-xs text-red-600 hover:text-red-600 shrink-0"
                                 >
                                   Remove
                                 </button>
@@ -743,14 +743,14 @@ export default function ExcerptsPage() {
                         <div className="flex gap-2 mb-2">
                           <button
                             onClick={() => updateExcerpt(active.id, (ex) => ({ ...ex, extraImagePrompts: [...(ex.extraImagePrompts || []), ""] }))}
-                            className="px-3 py-1.5 rounded-lg border border-zinc-700 bg-zinc-900 text-xs text-zinc-300 hover:bg-zinc-800 transition-colors"
+                            className="px-3 py-1.5 rounded-lg border border-stone-300 bg-white text-xs text-stone-700 hover:bg-stone-100 transition-colors"
                           >
                             + Add prompt
                           </button>
                           <button
                             onClick={() => uploadAndExtractPrompt(active.id, "extra")}
                             disabled={extracting}
-                            className="px-3 py-1.5 rounded-lg border border-zinc-700 bg-zinc-900 text-xs text-zinc-300 hover:bg-zinc-800 transition-colors disabled:opacity-40"
+                            className="px-3 py-1.5 rounded-lg border border-stone-300 bg-white text-xs text-stone-700 hover:bg-stone-100 transition-colors disabled:opacity-40"
                           >
                             Upload &amp; extract
                           </button>
@@ -761,19 +761,19 @@ export default function ExcerptsPage() {
                             value={extraImageUrl}
                             onChange={(e) => setExtraImageUrl(e.target.value)}
                             placeholder="Paste image URL to extract prompt..."
-                            className="flex-1 rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20 placeholder:text-zinc-600"
+                            className="flex-1 rounded-lg border border-stone-200 bg-white px-3 py-2 text-stone-900 text-sm focus:outline-none focus:ring-2 focus:ring-stone-900/15 placeholder:text-stone-400"
                           />
                           <button
                             onClick={() => extractPromptFromUrl(active.id, "extra")}
                             disabled={extracting || !extraImageUrl.trim()}
-                            className="px-3 py-2 rounded-lg border border-zinc-700 bg-zinc-900 text-xs text-zinc-300 hover:bg-zinc-800 transition-colors disabled:opacity-40 shrink-0"
+                            className="px-3 py-2 rounded-lg border border-stone-300 bg-white text-xs text-stone-700 hover:bg-stone-100 transition-colors disabled:opacity-40 shrink-0"
                           >
                             Extract
                           </button>
                         </div>
 
                         {/* Extra hook overlay texts */}
-                        <label className="block text-xs font-medium text-zinc-400 mb-1">
+                        <label className="block text-xs font-medium text-stone-600 mb-1">
                           Hook texts ({(active.extraOverlayTexts || []).length})
                         </label>
                         {(active.extraOverlayTexts || []).length > 0 && (
@@ -789,11 +789,11 @@ export default function ExcerptsPage() {
                                     updateExcerpt(active.id, (ex) => ({ ...ex, extraOverlayTexts: next }));
                                   }}
                                   placeholder='e.g. He pinned her against the wall...'
-                                  className="flex-1 rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20 placeholder:text-zinc-600"
+                                  className="flex-1 rounded-lg border border-stone-200 bg-white px-3 py-2 text-stone-900 text-sm focus:outline-none focus:ring-2 focus:ring-stone-900/15 placeholder:text-stone-400"
                                 />
                                 <button
                                   onClick={() => updateExcerpt(active.id, (ex) => ({ ...ex, extraOverlayTexts: (ex.extraOverlayTexts || []).filter((_, j) => j !== i) }))}
-                                  className="text-xs text-red-500 hover:text-red-400 shrink-0"
+                                  className="text-xs text-red-600 hover:text-red-600 shrink-0"
                                 >
                                   Remove
                                 </button>
@@ -803,7 +803,7 @@ export default function ExcerptsPage() {
                         )}
                         <button
                           onClick={() => updateExcerpt(active.id, (ex) => ({ ...ex, extraOverlayTexts: [...(ex.extraOverlayTexts || []), ""] }))}
-                          className="px-3 py-1.5 rounded-lg border border-zinc-700 bg-zinc-900 text-xs text-zinc-300 hover:bg-zinc-800 transition-colors"
+                          className="px-3 py-1.5 rounded-lg border border-stone-300 bg-white text-xs text-stone-700 hover:bg-stone-100 transition-colors"
                         >
                           + Add hook text
                         </button>
@@ -822,18 +822,18 @@ export default function ExcerptsPage() {
                         {active.excerptImages.map((img, i) => (
                           <div
                             key={img.id}
-                            className="flex items-start gap-3 rounded-xl border border-zinc-800 bg-zinc-950 p-3"
+                            className="flex items-start gap-3 rounded-xl border border-stone-200 bg-stone-100 p-3"
                           >
                             <img
                               src={img.imageData}
                               alt=""
-                              className="w-16 h-20 rounded-lg object-cover border border-zinc-700 shrink-0"
+                              className="w-16 h-20 rounded-lg object-cover border border-stone-300 shrink-0"
                             />
                             <div className="flex-1 min-w-0">
-                              <div className="text-sm text-zinc-300 truncate">
+                              <div className="text-sm text-stone-700 truncate">
                                 {img.label || `Image ${i + 1}`}
                               </div>
-                              <div className="text-xs text-zinc-600 mt-0.5">
+                              <div className="text-xs text-stone-400 mt-0.5">
                                 Slide {i + ((active.extraOverlayTexts || []).filter(Boolean).length > 0 ? 3 : 2)}
                               </div>
                             </div>
@@ -844,7 +844,7 @@ export default function ExcerptsPage() {
                                     moveExcerptImage(active.id, i, -1)
                                   }
                                   disabled={i === 0}
-                                  className="text-xs text-zinc-500 hover:text-white disabled:text-zinc-800 disabled:cursor-not-allowed transition-colors"
+                                  className="text-xs text-stone-500 hover:text-stone-900 disabled:text-stone-300 disabled:cursor-not-allowed transition-colors"
                                 >
                                   ↑
                                 </button>
@@ -855,7 +855,7 @@ export default function ExcerptsPage() {
                                   disabled={
                                     i === active.excerptImages.length - 1
                                   }
-                                  className="text-xs text-zinc-500 hover:text-white disabled:text-zinc-800 disabled:cursor-not-allowed transition-colors"
+                                  className="text-xs text-stone-500 hover:text-stone-900 disabled:text-stone-300 disabled:cursor-not-allowed transition-colors"
                                 >
                                   ↓
                                 </button>
@@ -864,7 +864,7 @@ export default function ExcerptsPage() {
                                 onClick={() =>
                                   removeExcerptImage(active.id, img.id)
                                 }
-                                className="text-xs text-red-500 hover:text-red-400 transition-colors"
+                                className="text-xs text-red-600 hover:text-red-600 transition-colors"
                               >
                                 Remove
                               </button>
@@ -875,7 +875,7 @@ export default function ExcerptsPage() {
                     )}
                     <button
                       onClick={() => addExcerptImage(active.id)}
-                      className="w-full px-4 py-3 rounded-lg border border-dashed border-zinc-700 text-zinc-400 hover:text-white hover:border-zinc-500 transition-colors text-sm"
+                      className="w-full px-4 py-3 rounded-lg border border-dashed border-stone-300 text-stone-600 hover:text-stone-900 hover:border-stone-400 transition-colors text-sm"
                     >
                       + Upload excerpt image{active.excerptImages.length > 0 ? "s" : ""}
                     </button>
@@ -888,7 +888,7 @@ export default function ExcerptsPage() {
                     subtitle="Pulled automatically from the selected book"
                   >
                     {!active.bookId ? (
-                      <p className="text-xs text-zinc-600">
+                      <p className="text-xs text-stone-400">
                         Select a book above to use its cover as the final slide.
                       </p>
                     ) : activeBook?.coverImage ? (
@@ -896,14 +896,14 @@ export default function ExcerptsPage() {
                         <img
                           src={activeBook.coverImage}
                           alt="Book cover"
-                          className="w-12 h-[72px] rounded-lg object-cover border border-zinc-700"
+                          className="w-12 h-[72px] rounded-lg object-cover border border-stone-300"
                         />
-                        <span className="text-sm text-zinc-400">
+                        <span className="text-sm text-stone-600">
                           {activeBook.name} cover
                         </span>
                       </div>
                     ) : (
-                      <p className="text-xs text-zinc-600">
+                      <p className="text-xs text-stone-400">
                         No cover image set for {activeBook?.name || "this book"}.
                         Upload one on the Books page.
                       </p>
@@ -911,13 +911,13 @@ export default function ExcerptsPage() {
                   </Section>
 
                   {/* Generate & Post */}
-                  <div className="mt-8 pt-6 border-t border-zinc-800">
+                  <div className="mt-8 pt-6 border-t border-stone-200">
                     <h3 className="text-sm font-semibold mb-3">Generate & Post</h3>
 
                     <button
                       onClick={generateSlideshow}
                       disabled={generating || active.imagePrompts.length === 0}
-                      className="px-5 py-2.5 rounded-lg bg-white text-black font-semibold hover:bg-zinc-200 transition-colors text-sm disabled:opacity-40"
+                      className="px-5 py-2.5 rounded-lg bg-stone-900 text-white font-semibold hover:bg-stone-700 transition-colors text-sm disabled:opacity-40"
                     >
                       {generating ? "Generating..." : "Generate Slideshow"}
                     </button>
@@ -925,23 +925,23 @@ export default function ExcerptsPage() {
                     {generatedSlides && (
                       <div className="mt-5 space-y-4">
                         {/* Preview carousel */}
-                        <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4">
+                        <div className="rounded-xl border border-stone-200 bg-stone-100 p-4">
                           <div className="flex items-center justify-between mb-2">
-                            <span className="text-xs text-zinc-400">
+                            <span className="text-xs text-stone-600">
                               Slide {previewIndex + 1} of {generatedSlides.length} — {generatedSlides[previewIndex].label}
                             </span>
                             <div className="flex gap-2">
                               <button
                                 onClick={() => setPreviewIndex((i) => Math.max(0, i - 1))}
                                 disabled={previewIndex === 0}
-                                className="text-xs text-zinc-500 hover:text-white disabled:text-zinc-800 transition-colors"
+                                className="text-xs text-stone-500 hover:text-stone-900 disabled:text-stone-300 transition-colors"
                               >
                                 ← Prev
                               </button>
                               <button
                                 onClick={() => setPreviewIndex((i) => Math.min(generatedSlides!.length - 1, i + 1))}
                                 disabled={previewIndex === generatedSlides.length - 1}
-                                className="text-xs text-zinc-500 hover:text-white disabled:text-zinc-800 transition-colors"
+                                className="text-xs text-stone-500 hover:text-stone-900 disabled:text-stone-300 transition-colors"
                               >
                                 Next →
                               </button>
@@ -950,17 +950,17 @@ export default function ExcerptsPage() {
                           <img
                             src={generatedSlides[previewIndex].imageData}
                             alt={generatedSlides[previewIndex].label}
-                            className="w-full max-w-[280px] mx-auto rounded-lg border border-zinc-700"
+                            className="w-full max-w-[280px] mx-auto rounded-lg border border-stone-300"
                           />
                         </div>
 
                         {/* Post controls */}
                         <div className="space-y-3">
-                          <label className="text-xs text-zinc-400 block">Post to account</label>
+                          <label className="text-xs text-stone-600 block">Post to account</label>
                           <select
                             id="post-account"
                             defaultValue=""
-                            className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+                            className="w-full rounded-lg border border-stone-200 bg-stone-100 px-3 py-2 text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-stone-900/15"
                           >
                             <option value="" disabled>Select account...</option>
                             {accounts.length > 0 && (
@@ -980,11 +980,11 @@ export default function ExcerptsPage() {
                           </select>
 
                           <div>
-                            <label className="text-xs text-zinc-500 block mb-1">Schedule (optional)</label>
+                            <label className="text-xs text-stone-500 block mb-1">Schedule (optional)</label>
                             <input
                               id="post-schedule"
                               type="datetime-local"
-                              className="rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+                              className="rounded-lg border border-stone-200 bg-stone-100 px-3 py-2 text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-stone-900/15"
                             />
                           </div>
 
@@ -997,14 +997,14 @@ export default function ExcerptsPage() {
                               postSlideshow(Number(idStr), platform as "tiktok" | "instagram", schedule || undefined);
                             }}
                             disabled={posting}
-                            className="px-5 py-2.5 rounded-lg bg-white text-black font-semibold hover:bg-zinc-200 transition-colors text-sm disabled:opacity-40"
+                            className="px-5 py-2.5 rounded-lg bg-stone-900 text-white font-semibold hover:bg-stone-700 transition-colors text-sm disabled:opacity-40"
                           >
                             {posting ? "Posting..." : "Post"}
                           </button>
                         </div>
 
                         {postResult && (
-                          <div className={`text-sm p-3 rounded-lg ${postResult.startsWith("Error") ? "bg-red-900/30 text-red-400" : "bg-green-900/30 text-green-400"}`}>
+                          <div className={`text-sm p-3 rounded-lg ${postResult.startsWith("Error") ? "bg-red-100 text-red-600" : "bg-green-100 text-green-600"}`}>
                             {postResult}
                           </div>
                         )}
@@ -1019,27 +1019,27 @@ export default function ExcerptsPage() {
 
         {/* Automation */}
         {!loading && excerpts.length > 0 && (
-          <div className="mt-10 rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6">
+          <div className="mt-10 rounded-2xl border border-stone-200 bg-white/70 p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold">Automation</h2>
-              {savingAuto && <span className="text-xs text-zinc-500">Saving…</span>}
+              {savingAuto && <span className="text-xs text-stone-500">Saving…</span>}
             </div>
 
             {/* Overview of all enabled accounts */}
             {Object.entries(autoConfig.accounts).filter(([, c]) => c.enabled).length > 0 && (
               <div className="mb-6 space-y-2">
-                <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">All enabled accounts</h3>
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-stone-500">All enabled accounts</h3>
                 {Object.entries(autoConfig.accounts).filter(([, c]) => c.enabled).map(([accId, cfg]) => {
                   const acc = allAutoAccounts.find((a) => String(a.id) === accId);
                   const excCount = cfg.excerptIds.length > 0 ? cfg.excerptIds.length : excerpts.filter((e) => e.imagePrompts.length > 0).length;
                   return (
-                    <div key={accId} className="rounded-lg border border-zinc-700/50 bg-zinc-800/50 px-4 py-3">
+                    <div key={accId} className="rounded-lg border border-stone-300/60 bg-stone-100/70 px-4 py-3">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="text-sm font-medium text-white">@{acc?.username || accId}</span>
-                        <span className="text-[10px] uppercase tracking-wide text-zinc-500">{cfg.platform}</span>
-                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-500/20 text-green-400 font-medium">ON</span>
+                        <span className="text-sm font-medium text-stone-900">@{acc?.username || accId}</span>
+                        <span className="text-[10px] uppercase tracking-wide text-stone-500">{cfg.platform}</span>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-500/20 text-green-600 font-medium">ON</span>
                       </div>
-                      <div className="text-xs text-zinc-400">
+                      <div className="text-xs text-stone-600">
                         {cfg.intervals.map((w) => `${w.start}–${w.end}`).join(", ") || "no windows"} · {excCount} excerpt{excCount !== 1 ? "s" : ""} · ptr {cfg.pointer}
                       </div>
                     </div>
@@ -1049,15 +1049,15 @@ export default function ExcerptsPage() {
             )}
 
             {allAutoAccounts.length === 0 ? (
-              <p className="text-sm text-zinc-500">No accounts connected.</p>
+              <p className="text-sm text-stone-500">No accounts connected.</p>
             ) : (
               <>
                 <div className="mb-4">
-                  <label className="block text-xs text-zinc-400 mb-1">Account</label>
+                  <label className="block text-xs text-stone-600 mb-1">Account</label>
                   <select
                     value={selectedAutoAccount}
                     onChange={(e) => setSelectedAutoAccount(e.target.value)}
-                    className="rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+                    className="rounded-lg border border-stone-200 bg-stone-100 px-3 py-2 text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-stone-900/15"
                   >
                     <option value="">Select account...</option>
                     {accounts.length > 0 && (
@@ -1096,20 +1096,20 @@ export default function ExcerptsPage() {
                           type="checkbox"
                           checked={cfg.enabled}
                           onChange={(e) => updateAutoAccount(selectedAutoAccount, { enabled: e.target.checked })}
-                          className="accent-white w-4 h-4"
+                          className="accent-stone-900 w-4 h-4"
                         />
                         <span className="text-sm">Enabled</span>
                       </label>
 
                       {/* Platform */}
                       <div>
-                        <label className="block text-xs text-zinc-400 mb-1">Platform</label>
+                        <label className="block text-xs text-stone-600 mb-1">Platform</label>
                         <div className="flex gap-2">
                           {(["tiktok", "instagram"] as const).map((p) => (
                             <button
                               key={p}
                               onClick={() => updateAutoAccount(selectedAutoAccount, { platform: p })}
-                              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${cfg.platform === p ? "bg-white text-black" : "bg-zinc-800 text-zinc-400 hover:text-white"}`}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${cfg.platform === p ? "bg-stone-900 text-white" : "bg-stone-100 text-stone-600 hover:text-stone-900"}`}
                             >
                               {p === "tiktok" ? "TikTok" : "Instagram"}
                             </button>
@@ -1119,7 +1119,7 @@ export default function ExcerptsPage() {
 
                       {/* Time windows */}
                       <div>
-                        <label className="block text-xs text-zinc-400 mb-1">
+                        <label className="block text-xs text-stone-600 mb-1">
                           Time windows (UTC) — one post per window per day
                         </label>
                         <div className="space-y-2">
@@ -1133,9 +1133,9 @@ export default function ExcerptsPage() {
                                   next[i] = { ...next[i], start: e.target.value };
                                   updateAutoAccount(selectedAutoAccount, { intervals: next });
                                 }}
-                                className="rounded-lg border border-zinc-800 bg-zinc-950 px-2 py-1.5 text-sm text-white focus:outline-none"
+                                className="rounded-lg border border-stone-200 bg-stone-100 px-2 py-1.5 text-sm text-stone-900 focus:outline-none"
                               />
-                              <span className="text-zinc-500 text-xs">to</span>
+                              <span className="text-stone-500 text-xs">to</span>
                               <input
                                 type="time"
                                 value={w.end}
@@ -1144,7 +1144,7 @@ export default function ExcerptsPage() {
                                   next[i] = { ...next[i], end: e.target.value };
                                   updateAutoAccount(selectedAutoAccount, { intervals: next });
                                 }}
-                                className="rounded-lg border border-zinc-800 bg-zinc-950 px-2 py-1.5 text-sm text-white focus:outline-none"
+                                className="rounded-lg border border-stone-200 bg-stone-100 px-2 py-1.5 text-sm text-stone-900 focus:outline-none"
                               />
                               {cfg.intervals.length > 1 && (
                                 <button
@@ -1152,7 +1152,7 @@ export default function ExcerptsPage() {
                                     const next = cfg.intervals.filter((_, j) => j !== i);
                                     updateAutoAccount(selectedAutoAccount, { intervals: next });
                                   }}
-                                  className="text-xs text-red-500 hover:text-red-400"
+                                  className="text-xs text-red-600 hover:text-red-600"
                                 >
                                   Remove
                                 </button>
@@ -1161,7 +1161,7 @@ export default function ExcerptsPage() {
                           ))}
                           <button
                             onClick={() => updateAutoAccount(selectedAutoAccount, { intervals: [...cfg.intervals, { start: "12:00", end: "14:00" }] })}
-                            className="text-xs text-zinc-400 hover:text-white transition-colors"
+                            className="text-xs text-stone-600 hover:text-stone-900 transition-colors"
                           >
                             + Add window
                           </button>
@@ -1170,15 +1170,15 @@ export default function ExcerptsPage() {
 
                       {/* Excerpt selection */}
                       <div>
-                        <label className="block text-xs text-zinc-400 mb-1">
+                        <label className="block text-xs text-stone-600 mb-1">
                           Excerpts to post (empty = all ready excerpts, round-robin)
                         </label>
                         {readyExcerpts.length === 0 ? (
-                          <p className="text-xs text-zinc-600">No excerpts ready (need at least 1 image prompt).</p>
+                          <p className="text-xs text-stone-400">No excerpts ready (need at least 1 image prompt).</p>
                         ) : (
                           <div className="space-y-1.5 max-h-48 overflow-y-auto">
                             {readyExcerpts.map((e) => (
-                              <label key={e.id} className="flex items-center gap-2 text-sm text-zinc-300 cursor-pointer">
+                              <label key={e.id} className="flex items-center gap-2 text-sm text-stone-700 cursor-pointer">
                                 <input
                                   type="checkbox"
                                   checked={cfg.excerptIds.includes(e.id)}
@@ -1188,7 +1188,7 @@ export default function ExcerptsPage() {
                                       : [...cfg.excerptIds, e.id];
                                     updateAutoAccount(selectedAutoAccount, { excerptIds: next });
                                   }}
-                                  className="accent-white w-3.5 h-3.5"
+                                  className="accent-stone-900 w-3.5 h-3.5"
                                 />
                                 {e.name}
                               </label>
@@ -1222,12 +1222,12 @@ function Section({
   return (
     <div className="mb-6">
       <div className="flex items-center gap-3 mb-3">
-        <span className="w-6 h-6 rounded-full bg-zinc-800 text-zinc-400 text-xs font-semibold flex items-center justify-center shrink-0">
+        <span className="w-6 h-6 rounded-full bg-stone-100 text-stone-600 text-xs font-semibold flex items-center justify-center shrink-0">
           {number}
         </span>
         <div>
           <div className="text-sm font-medium">{title}</div>
-          <div className="text-xs text-zinc-500">{subtitle}</div>
+          <div className="text-xs text-stone-500">{subtitle}</div>
         </div>
       </div>
       <div className="ml-9">{children}</div>

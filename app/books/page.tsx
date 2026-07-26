@@ -327,7 +327,7 @@ export default function BooksPage() {
   if (!password) return null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-zinc-900 to-black text-white">
+    <div className="min-h-screen bg-gradient-to-br from-stone-50 via-white to-stone-100 text-stone-900">
       <div className="mx-auto w-full max-w-5xl px-6 sm:px-10 py-10">
         <AppHeader />
         <HowItWorks>
@@ -339,16 +339,16 @@ export default function BooksPage() {
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold">Books</h1>
           <div className="flex items-center gap-3">
-            {saving && <span className="text-xs text-zinc-500">Saving…</span>}
+            {saving && <span className="text-xs text-stone-500">Saving…</span>}
             <button
               onClick={downloadText}
-              className="px-3 py-2 rounded-lg border border-zinc-700 text-zinc-400 hover:text-white hover:border-zinc-500 transition-colors text-xs"
+              className="px-3 py-2 rounded-lg border border-stone-300 text-stone-600 hover:text-stone-900 hover:border-stone-400 transition-colors text-xs"
             >
               Export Text
             </button>
             <button
               onClick={createBook}
-              className="px-4 py-2 rounded-lg bg-white text-black font-semibold hover:bg-zinc-200 transition-colors text-sm"
+              className="px-4 py-2 rounded-lg bg-stone-900 text-white font-semibold hover:bg-stone-700 transition-colors text-sm"
             >
               + New book
             </button>
@@ -356,13 +356,13 @@ export default function BooksPage() {
         </div>
 
         {loading ? (
-          <p className="text-zinc-500">Loading…</p>
+          <p className="text-stone-500">Loading…</p>
         ) : books.length === 0 ? (
-          <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-10 text-center">
-            <p className="text-zinc-400 mb-4">No books yet.</p>
+          <div className="rounded-2xl border border-stone-200 bg-white/70 p-10 text-center">
+            <p className="text-stone-600 mb-4">No books yet.</p>
             <button
               onClick={createBook}
-              className="px-5 py-2 rounded-lg bg-white text-black font-semibold text-sm"
+              className="px-5 py-2 rounded-lg bg-stone-900 text-white font-semibold text-sm"
             >
               Create your first book
             </button>
@@ -376,7 +376,7 @@ export default function BooksPage() {
                 value={bookSearch}
                 onChange={(e) => setBookSearch(e.target.value)}
                 placeholder="Search books..."
-                className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-white text-sm mb-1 focus:outline-none focus:ring-2 focus:ring-white/20 placeholder:text-zinc-600"
+                className="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-stone-900 text-sm mb-1 focus:outline-none focus:ring-2 focus:ring-stone-900/15 placeholder:text-stone-400"
               />
               {books.filter((b) => b.name.toLowerCase().includes(bookSearch.toLowerCase())).map((b) => (
                 <button
@@ -384,12 +384,12 @@ export default function BooksPage() {
                   onClick={() => setActiveBookId(b.id)}
                   className={`w-full text-left px-4 py-3 rounded-lg border transition-colors ${
                     activeBookId === b.id
-                      ? "border-white bg-zinc-900 text-white"
-                      : "border-zinc-800 bg-zinc-900/40 text-zinc-300 hover:border-zinc-700"
+                      ? "border-stone-900 bg-white text-stone-900"
+                      : "border-stone-200 bg-white/60 text-stone-700 hover:border-stone-400"
                   }`}
                 >
                   <div className="font-medium text-sm truncate">{b.name}</div>
-                  <div className="text-xs text-zinc-500 mt-0.5">
+                  <div className="text-xs text-stone-500 mt-0.5">
                     {b.slideshows.length} slideshow
                     {b.slideshows.length === 1 ? "" : "s"} ·{" "}
                     {b.imagePrompts.length} prompts · {b.captions.length}{" "}
@@ -400,9 +400,9 @@ export default function BooksPage() {
             </aside>
 
             {/* Main panel */}
-            <main className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6">
+            <main className="rounded-2xl border border-stone-200 bg-white/70 p-6">
               {!activeBook ? (
-                <p className="text-zinc-500 text-sm">
+                <p className="text-stone-500 text-sm">
                   Select a book to manage its contents.
                 </p>
               ) : (
@@ -416,13 +416,13 @@ export default function BooksPage() {
                     <div className="flex gap-2">
                       <button
                         onClick={() => renameBook(activeBook.id)}
-                        className="text-xs text-zinc-500 hover:text-white transition-colors"
+                        className="text-xs text-stone-500 hover:text-stone-900 transition-colors"
                       >
                         Rename
                       </button>
                       <button
                         onClick={() => deleteBook(activeBook.id)}
-                        className="text-xs text-red-500 hover:text-red-400 transition-colors"
+                        className="text-xs text-red-600 hover:text-red-600 transition-colors"
                       >
                         Delete book
                       </button>
@@ -433,12 +433,12 @@ export default function BooksPage() {
                   <div className="mb-5 flex items-center gap-4">
                     {covers[activeBook.id] ? (
                       <>
-                        <img src={covers[activeBook.id]} alt="Cover" className="w-12 h-[72px] rounded-lg object-cover border border-zinc-700" />
+                        <img src={covers[activeBook.id]} alt="Cover" className="w-12 h-[72px] rounded-lg object-cover border border-stone-300" />
                         <div className="flex flex-col gap-1">
-                          <span className="text-xs text-zinc-500">Book cover</span>
+                          <span className="text-xs text-stone-500">Book cover</span>
                           <button
                             onClick={() => removeCover(activeBook.id)}
-                            className="text-xs text-red-500 hover:text-red-400"
+                            className="text-xs text-red-600 hover:text-red-600"
                           >
                             Remove
                           </button>
@@ -446,11 +446,11 @@ export default function BooksPage() {
                       </>
                     ) : (
                       <div className="flex items-center gap-3">
-                        <div className="w-12 h-[72px] rounded-lg border border-dashed border-zinc-700 flex items-center justify-center">
-                          <span className="text-zinc-600 text-lg">+</span>
+                        <div className="w-12 h-[72px] rounded-lg border border-dashed border-stone-300 flex items-center justify-center">
+                          <span className="text-stone-400 text-lg">+</span>
                         </div>
                         <div className="flex flex-col gap-1.5">
-                          <label className="text-xs text-blue-400 hover:text-blue-300 cursor-pointer">
+                          <label className="text-xs text-blue-600 hover:text-blue-700 cursor-pointer">
                             Upload cover
                             <input
                               type="file"
@@ -470,7 +470,7 @@ export default function BooksPage() {
                           </label>
                           <input
                             placeholder="Or paste URL + Enter"
-                            className="rounded border border-zinc-800 bg-zinc-900 px-2 py-0.5 text-[11px] text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-white/20 w-40"
+                            className="rounded border border-stone-200 bg-white px-2 py-0.5 text-[11px] text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-1 focus:ring-stone-900/15 w-40"
                             onKeyDown={async (e) => {
                               if (e.key !== "Enter") return;
                               const url = (e.target as HTMLInputElement).value.trim();
@@ -495,7 +495,7 @@ export default function BooksPage() {
                   </div>
 
                   {/* Tabs */}
-                  <div className="flex gap-1 mb-5 border-b border-zinc-800">
+                  <div className="flex gap-1 mb-5 border-b border-stone-200">
                     {(
                       [
                         ["slideshows", "Slideshows"],
@@ -509,8 +509,8 @@ export default function BooksPage() {
                         onClick={() => setTab(key)}
                         className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
                           tab === key
-                            ? "border-white text-white"
-                            : "border-transparent text-zinc-500 hover:text-white"
+                            ? "border-stone-900 text-stone-900"
+                            : "border-transparent text-stone-500 hover:text-stone-900"
                         }`}
                       >
                         {label}
@@ -521,7 +521,7 @@ export default function BooksPage() {
                   {tab === "prompts" && (
                     <>
                       {analyzingSlide && (
-                        <div className="text-sm text-blue-400 mb-3">Analyzing slide…</div>
+                        <div className="text-sm text-blue-600 mb-3">Analyzing slide…</div>
                       )}
                       <PoolTab
                         kind="prompts"
@@ -589,14 +589,14 @@ export default function BooksPage() {
                         {activeBook.slideshows.map((s) => (
                           <div
                             key={s.id}
-                            className="rounded-xl border border-zinc-800 bg-zinc-950 p-4"
+                            className="rounded-xl border border-stone-200 bg-stone-100 p-4"
                           >
                             <div className="flex items-start justify-between gap-3">
                               <div className="flex-1 min-w-0">
                                 <div className="font-medium text-sm mb-1">
                                   {s.name || "(unnamed)"}
                                 </div>
-                                <p className="text-xs text-zinc-600">
+                                <p className="text-xs text-stone-400">
                                   {
                                     s.slideTexts
                                       .split("\n")
@@ -609,7 +609,7 @@ export default function BooksPage() {
                               <div className="flex gap-2 shrink-0">
                                 <button
                                   onClick={() => setEditingSlideshow(s)}
-                                  className="text-xs text-zinc-400 hover:text-white transition-colors"
+                                  className="text-xs text-stone-600 hover:text-stone-900 transition-colors"
                                 >
                                   Edit
                                 </button>
@@ -624,7 +624,7 @@ export default function BooksPage() {
                                       ),
                                     }));
                                   }}
-                                  className="text-xs text-red-500 hover:text-red-400 transition-colors"
+                                  className="text-xs text-red-600 hover:text-red-600 transition-colors"
                                 >
                                   Delete
                                 </button>
@@ -644,7 +644,7 @@ export default function BooksPage() {
                               captionIds: [],
                             })
                           }
-                          className="flex-1 px-5 py-3 rounded-lg border border-dashed border-zinc-700 text-zinc-400 hover:text-white hover:border-zinc-500 transition-colors text-sm font-medium"
+                          className="flex-1 px-5 py-3 rounded-lg border border-dashed border-stone-300 text-stone-600 hover:text-stone-900 hover:border-stone-400 transition-colors text-sm font-medium"
                         >
                           + Add slideshow
                         </button>
@@ -654,7 +654,7 @@ export default function BooksPage() {
                             setImportText("");
                             setShowImport(true);
                           }}
-                          className="flex-1 px-5 py-3 rounded-lg border border-dashed border-zinc-700 text-zinc-400 hover:text-white hover:border-zinc-500 transition-colors text-sm font-medium"
+                          className="flex-1 px-5 py-3 rounded-lg border border-dashed border-stone-300 text-stone-600 hover:text-stone-900 hover:border-stone-400 transition-colors text-sm font-medium"
                         >
                           Import slide texts
                         </button>
@@ -665,14 +665,14 @@ export default function BooksPage() {
                   {tab === "music" && (
                     <div>
                       {musicTracks.length === 0 ? (
-                        <p className="text-zinc-500 text-sm">No music tracks uploaded yet. Add tracks on the Instagram/Video page first.</p>
+                        <p className="text-stone-500 text-sm">No music tracks uploaded yet. Add tracks on the Instagram/Video page first.</p>
                       ) : (
                         <div className="space-y-2">
-                          <p className="text-xs text-zinc-500 mb-3">Select tracks for this book. During automation, book-level tracks take priority over account-level tracks.</p>
+                          <p className="text-xs text-stone-500 mb-3">Select tracks for this book. During automation, book-level tracks take priority over account-level tracks.</p>
                           {musicTracks.map((t) => {
                             const checked = activeBook.musicTrackIds?.includes(t.id) || false;
                             return (
-                              <label key={t.id} className="flex items-center gap-3 p-3 rounded-lg border border-zinc-800 hover:border-zinc-600 transition-colors cursor-pointer">
+                              <label key={t.id} className="flex items-center gap-3 p-3 rounded-lg border border-stone-200 hover:border-stone-400 transition-colors cursor-pointer">
                                 <input
                                   type="checkbox"
                                   checked={checked}
@@ -683,7 +683,7 @@ export default function BooksPage() {
                                       : [...current, t.id];
                                     updateBook(activeBook.id, (b) => ({ ...b, musicTrackIds: next }));
                                   }}
-                                  className="accent-white w-4 h-4"
+                                  className="accent-stone-900 w-4 h-4"
                                 />
                                 <span className="text-sm">{t.name}</span>
                               </label>
@@ -711,7 +711,7 @@ export default function BooksPage() {
               : "New"}{" "}
             {editingItem.kind === "prompts" ? "image prompt" : "caption"}
           </h3>
-          <label className="block text-xs font-medium text-zinc-400 mb-1">
+          <label className="block text-xs font-medium text-stone-600 mb-1">
             Name
           </label>
           <input
@@ -723,9 +723,9 @@ export default function BooksPage() {
               })
             }
             placeholder="Short label"
-            className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-white text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-white/20"
+            className="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-stone-900 text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-stone-900/15"
           />
-          <label className="block text-xs font-medium text-zinc-400 mb-1">
+          <label className="block text-xs font-medium text-stone-600 mb-1">
             {editingItem.kind === "prompts" ? "Image prompt" : "Caption"}
           </label>
           <textarea
@@ -737,7 +737,7 @@ export default function BooksPage() {
               })
             }
             rows={editingItem.kind === "prompts" ? 4 : 5}
-            className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-white text-sm mb-5 focus:outline-none focus:ring-2 focus:ring-white/20"
+            className="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-stone-900 text-sm mb-5 focus:outline-none focus:ring-2 focus:ring-stone-900/15"
           />
           <ModalButtons
             onCancel={() => setEditingItem(null)}
@@ -774,7 +774,7 @@ export default function BooksPage() {
               ? "Edit slideshow"
               : "New slideshow"}
           </h3>
-          <label className="block text-xs font-medium text-zinc-400 mb-1">
+          <label className="block text-xs font-medium text-stone-600 mb-1">
             Name
           </label>
           <input
@@ -783,9 +783,9 @@ export default function BooksPage() {
               setEditingSlideshow({ ...editingSlideshow, name: e.target.value })
             }
             placeholder="e.g. Chapter 1 teaser"
-            className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-white text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-white/20"
+            className="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-stone-900 text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-stone-900/15"
           />
-          <label className="block text-xs font-medium text-zinc-400 mb-1">
+          <label className="block text-xs font-medium text-stone-600 mb-1">
             Slide texts (one per line)
           </label>
           <textarea
@@ -797,7 +797,7 @@ export default function BooksPage() {
               })
             }
             rows={6}
-            className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-white text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-white/20"
+            className="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-stone-900 text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-stone-900/15"
           />
 
           <PickerList
@@ -850,19 +850,19 @@ export default function BooksPage() {
       {showAnalyzeModal && activeBook && (
         <Modal onClose={() => setShowAnalyzeModal(false)}>
           <h3 className="text-lg font-semibold mb-2">Analyze a slide</h3>
-          <p className="text-xs text-zinc-500 mb-5">
+          <p className="text-xs text-stone-500 mb-5">
             Upload an image or paste a URL. The visual style will be extracted as an image prompt, ignoring any text.
           </p>
           <button
             onClick={analyzeSlideUpload}
-            className="w-full px-5 py-3 rounded-lg bg-white text-black font-medium hover:bg-zinc-200 transition-colors text-sm mb-3"
+            className="w-full px-5 py-3 rounded-lg bg-stone-900 text-white font-medium hover:bg-stone-700 transition-colors text-sm mb-3"
           >
             Upload image
           </button>
           <div className="flex items-center gap-3 mb-3">
-            <div className="flex-1 h-px bg-zinc-800" />
-            <span className="text-xs text-zinc-600">or</span>
-            <div className="flex-1 h-px bg-zinc-800" />
+            <div className="flex-1 h-px bg-stone-100" />
+            <span className="text-xs text-stone-400">or</span>
+            <div className="flex-1 h-px bg-stone-100" />
           </div>
           <div className="flex gap-2">
             <input
@@ -870,13 +870,13 @@ export default function BooksPage() {
               value={analyzeUrl}
               onChange={(e) => setAnalyzeUrl(e.target.value)}
               placeholder="Paste image URL"
-              className="flex-1 rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20 placeholder:text-zinc-600"
+              className="flex-1 rounded-lg border border-stone-200 bg-white px-3 py-2 text-stone-900 text-sm focus:outline-none focus:ring-2 focus:ring-stone-900/15 placeholder:text-stone-400"
               onKeyDown={(e) => { if (e.key === "Enter") analyzeSlideUrl(); }}
             />
             <button
               onClick={analyzeSlideUrl}
               disabled={!analyzeUrl.trim()}
-              className="px-4 py-2 rounded-lg bg-white text-black text-sm font-medium hover:bg-zinc-200 transition-colors disabled:opacity-40"
+              className="px-4 py-2 rounded-lg bg-stone-900 text-white text-sm font-medium hover:bg-stone-700 transition-colors disabled:opacity-40"
             >
               Analyze
             </button>
@@ -888,20 +888,20 @@ export default function BooksPage() {
       {showImport && activeBook && (
         <Modal onClose={() => setShowImport(false)}>
           <h3 className="text-lg font-semibold mb-4">Import slide texts</h3>
-          <p className="text-xs text-zinc-500 mb-4">
+          <p className="text-xs text-stone-500 mb-4">
             Paste your slide texts below. Each slideshow is separated by a blank
             line. The first line of each group becomes the slideshow name.
           </p>
-          <label className="block text-xs font-medium text-zinc-400 mb-1">
+          <label className="block text-xs font-medium text-stone-600 mb-1">
             Slideshow name (optional, for single import)
           </label>
           <input
             value={importName}
             onChange={(e) => setImportName(e.target.value)}
             placeholder="Leave blank to use first line of each group"
-            className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-white text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-white/20"
+            className="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-stone-900 text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-stone-900/15"
           />
-          <label className="block text-xs font-medium text-zinc-400 mb-1">
+          <label className="block text-xs font-medium text-stone-600 mb-1">
             Slide texts
           </label>
           <textarea
@@ -909,7 +909,7 @@ export default function BooksPage() {
             onChange={(e) => setImportText(e.target.value)}
             rows={12}
             placeholder={`Slide 1 text\nSlide 2 text\nSlide 3 text\n\nAnother slideshow name\nSlide 1 text\nSlide 2 text`}
-            className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-white text-sm mb-5 font-mono focus:outline-none focus:ring-2 focus:ring-white/20"
+            className="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-stone-900 text-sm mb-5 font-mono focus:outline-none focus:ring-2 focus:ring-stone-900/15"
           />
           <ModalButtons
             onCancel={() => setShowImport(false)}
@@ -981,23 +981,23 @@ function PoolTab({
         {items.map((item) => (
           <div
             key={item.id}
-            className="rounded-lg border border-zinc-800 bg-zinc-950 p-3"
+            className="rounded-lg border border-stone-200 bg-stone-100 p-3"
           >
             <div className="flex items-start justify-between gap-3">
               <div className="flex-1 min-w-0">
                 <div className="font-medium text-sm mb-0.5">{item.name}</div>
-                <p className="text-xs text-zinc-500 whitespace-pre-wrap break-words line-clamp-3">{item.value}</p>
+                <p className="text-xs text-stone-500 whitespace-pre-wrap break-words line-clamp-3">{item.value}</p>
               </div>
               <div className="flex gap-2 shrink-0">
                 <button
                   onClick={() => onEdit(item)}
-                  className="text-xs text-zinc-400 hover:text-white transition-colors"
+                  className="text-xs text-stone-600 hover:text-stone-900 transition-colors"
                 >
                   Edit
                 </button>
                 <button
                   onClick={() => onDelete(item.id)}
-                  className="text-xs text-red-500 hover:text-red-400 transition-colors"
+                  className="text-xs text-red-600 hover:text-red-600 transition-colors"
                 >
                   Delete
                 </button>
@@ -1009,14 +1009,14 @@ function PoolTab({
       <div className="flex gap-3">
         <button
           onClick={onAdd}
-          className="flex-1 px-5 py-3 rounded-lg border border-dashed border-zinc-700 text-zinc-400 hover:text-white hover:border-zinc-500 transition-colors text-sm font-medium"
+          className="flex-1 px-5 py-3 rounded-lg border border-dashed border-stone-300 text-stone-600 hover:text-stone-900 hover:border-stone-400 transition-colors text-sm font-medium"
         >
           + Add {kind === "prompts" ? "image prompt" : "caption"}
         </button>
         {onAnalyzeSlide && (
           <button
             onClick={onAnalyzeSlide}
-            className="flex-1 px-5 py-3 rounded-lg border border-dashed border-blue-700 text-blue-400 hover:text-blue-300 hover:border-blue-500 transition-colors text-sm font-medium"
+            className="flex-1 px-5 py-3 rounded-lg border border-dashed border-blue-300 text-blue-600 hover:text-blue-700 hover:border-blue-500 transition-colors text-sm font-medium"
           >
             Analyze a slide
           </button>
@@ -1042,18 +1042,18 @@ function PickerList({
   return (
     <div className="mb-5">
       <div className="flex items-center justify-between mb-2">
-        <label className="text-xs font-medium text-zinc-400">{label}</label>
+        <label className="text-xs font-medium text-stone-600">{label}</label>
         {items.length > 0 && (
           <div className="flex gap-3 text-xs">
             <button
               onClick={() => onChange(items.map((i) => i.id))}
-              className="text-zinc-500 hover:text-white transition-colors"
+              className="text-stone-500 hover:text-stone-900 transition-colors"
             >
               All
             </button>
             <button
               onClick={() => onChange([])}
-              className="text-zinc-500 hover:text-white transition-colors"
+              className="text-stone-500 hover:text-stone-900 transition-colors"
             >
               None
             </button>
@@ -1061,15 +1061,15 @@ function PickerList({
         )}
       </div>
       {items.length === 0 ? (
-        <p className="text-xs text-zinc-600">{emptyHint}</p>
+        <p className="text-xs text-stone-400">{emptyHint}</p>
       ) : (
-        <div className="space-y-1 max-h-40 overflow-y-auto rounded-lg border border-zinc-800 bg-zinc-900 p-2">
+        <div className="space-y-1 max-h-40 overflow-y-auto rounded-lg border border-stone-200 bg-white p-2">
           {items.map((item) => {
             const checked = selected.includes(item.id);
             return (
               <label
                 key={item.id}
-                className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-zinc-800 cursor-pointer"
+                className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-stone-100 cursor-pointer"
               >
                 <input
                   type="checkbox"
@@ -1081,9 +1081,9 @@ function PickerList({
                         : [...selected, item.id]
                     )
                   }
-                  className="accent-white"
+                  className="accent-stone-900"
                 />
-                <span className="text-sm text-zinc-300 truncate">
+                <span className="text-sm text-stone-700 truncate">
                   {item.name}
                 </span>
               </label>
@@ -1104,11 +1104,11 @@ function Modal({
 }) {
   return (
     <div
-      className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50"
+      className="fixed inset-0 bg-stone-900/45 flex items-center justify-center p-4 z-50"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-lg rounded-2xl border border-zinc-800 bg-zinc-950 p-6 max-h-[90vh] overflow-y-auto"
+        className="w-full max-w-lg rounded-2xl border border-stone-200 bg-stone-100 p-6 max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         {children}
@@ -1128,13 +1128,13 @@ function ModalButtons({
     <div className="flex gap-3 justify-end">
       <button
         onClick={onCancel}
-        className="px-4 py-2 rounded-lg border border-zinc-700 text-zinc-300 hover:bg-zinc-800 transition-colors text-sm"
+        className="px-4 py-2 rounded-lg border border-stone-300 text-stone-700 hover:bg-stone-100 transition-colors text-sm"
       >
         Cancel
       </button>
       <button
         onClick={onSave}
-        className="px-4 py-2 rounded-lg bg-white text-black font-semibold hover:bg-zinc-200 transition-colors text-sm"
+        className="px-4 py-2 rounded-lg bg-stone-900 text-white font-semibold hover:bg-stone-700 transition-colors text-sm"
       >
         Save
       </button>

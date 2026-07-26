@@ -4,8 +4,8 @@
   "description": "AI-powered TikTok slideshow generator",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0a0a0a",
-  "theme_color": "#18181b",
+  "background_color": "#faf9f7",
+  "theme_color": "#faf9f7",
   "icons": [
     {
       "src": "/icon-192.png",

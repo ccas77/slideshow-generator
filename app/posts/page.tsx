@@ -168,7 +168,7 @@ export default function PostsPage() {
   if (!password) return null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-zinc-900 to-black text-white">
+    <div className="min-h-screen bg-gradient-to-br from-stone-50 via-white to-stone-100 text-stone-900">
       <div className="mx-auto w-full max-w-4xl px-6 sm:px-10 py-10">
         <AppHeader />
         <HowItWorks>
@@ -180,7 +180,7 @@ export default function PostsPage() {
           <h1 className="text-2xl font-bold">Posts</h1>
           <button
             onClick={load}
-            className="text-sm text-zinc-500 hover:text-white transition-colors"
+            className="text-sm text-stone-500 hover:text-stone-900 transition-colors"
           >
             {loading ? "Loading..." : "Refresh"}
           </button>
@@ -194,7 +194,7 @@ export default function PostsPage() {
                 e.target.value === "all" ? "all" : Number(e.target.value)
               )
             }
-            className="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20"
+            className="rounded-lg border border-stone-200 bg-white px-3 py-2 text-stone-900 text-sm focus:outline-none focus:ring-2 focus:ring-stone-900/15"
           >
             <option value="all">All accounts</option>
             {(["tiktok", "instagram", "facebook"] as const).map((plat) => {
@@ -218,7 +218,7 @@ export default function PostsPage() {
             onChange={(e) =>
               setFilterStatus(e.target.value as "all" | "scheduled" | "posted")
             }
-            className="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20"
+            className="rounded-lg border border-stone-200 bg-white px-3 py-2 text-stone-900 text-sm focus:outline-none focus:ring-2 focus:ring-stone-900/15"
           >
             <option value="all">All statuses</option>
             <option value="scheduled">Scheduled</option>
@@ -227,7 +227,7 @@ export default function PostsPage() {
         </div>
 
         {filtered.length === 0 ? (
-          <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-10 text-center text-zinc-500">
+          <div className="rounded-2xl border border-stone-200 bg-white/70 p-10 text-center text-stone-500">
             No posts match your filters.
           </div>
         ) : (
@@ -258,7 +258,7 @@ export default function PostsPage() {
               return (
                 <li
                   key={p.id}
-                  className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-4"
+                  className="rounded-xl border border-stone-200 bg-white/70 p-4"
                 >
                   <div className="flex gap-3">
                     {/* Cover thumbnail */}
@@ -267,7 +267,7 @@ export default function PostsPage() {
                         <img
                           src={coverUrl}
                           alt=""
-                          className="w-16 h-24 rounded-lg object-cover bg-zinc-800"
+                          className="w-16 h-24 rounded-lg object-cover bg-stone-100"
                         />
                       </div>
                     )}
@@ -278,31 +278,31 @@ export default function PostsPage() {
                         <span
                           className={`text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded ${
                             isScheduled
-                              ? "bg-blue-500/20 text-blue-300"
+                              ? "bg-blue-500/20 text-blue-600"
                               : isPosted
-                              ? "bg-green-500/20 text-green-300"
-                              : "bg-zinc-700 text-zinc-300"
+                              ? "bg-green-500/20 text-green-600"
+                              : "bg-stone-200 text-stone-700"
                           }`}
                         >
                           {p.status}
                         </span>
-                        <span className="text-xs text-zinc-500">
+                        <span className="text-xs text-stone-500">
                           {p.slide_count} slides
                         </span>
                         {isPosted && p.posted_at && (
-                          <span className="text-xs text-zinc-500">
+                          <span className="text-xs text-stone-500">
                             {new Date(p.posted_at).toLocaleString()}
                           </span>
                         )}
                         {isScheduled && p.scheduled_at && (
-                          <span className="text-xs text-zinc-500">
+                          <span className="text-xs text-stone-500">
                             {new Date(p.scheduled_at).toLocaleString()}
                           </span>
                         )}
                         {isScheduled && (
                           <button
                             onClick={() => cancelPost(p.id)}
-                            className="text-[10px] text-red-400 hover:text-red-300 transition-colors ml-auto"
+                            className="text-[10px] text-red-600 hover:text-red-700 transition-colors ml-auto"
                           >
                             Cancel
                           </button>
@@ -321,19 +321,19 @@ export default function PostsPage() {
                                 href={href}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
+                                className="text-xs text-blue-600 hover:text-blue-700 transition-colors"
                               >
                                 @{name}
                               </a>
                             ) : (
-                              <span key={idx} className="text-xs text-zinc-400">
+                              <span key={idx} className="text-xs text-stone-600">
                                 @{name}
                               </span>
                             );
                           })
                         ) : (
                           p.social_accounts.map((id) => (
-                            <span key={id} className="text-xs text-zinc-400">
+                            <span key={id} className="text-xs text-stone-600">
                               @{accountUsername(id)}
                             </span>
                           ))
@@ -343,7 +343,7 @@ export default function PostsPage() {
                       {/* Caption — first line only, expandable */}
                       {p.caption && (
                         <div className="mb-1.5">
-                          <p className="text-sm text-zinc-300">
+                          <p className="text-sm text-stone-700">
                             {captionExpanded ? p.caption : shortCaption}
                           </p>
                           {hasMoreCaption && (
@@ -354,7 +354,7 @@ export default function PostsPage() {
                                 else next.add(p.id);
                                 return next;
                               })}
-                              className="text-[11px] text-zinc-500 hover:text-zinc-300 mt-0.5"
+                              className="text-[11px] text-stone-500 hover:text-stone-700 mt-0.5"
                             >
                               {captionExpanded ? "Show less" : "Show full caption"}
                             </button>
@@ -364,7 +364,7 @@ export default function PostsPage() {
 
                       {/* Engagement stats */}
                       {hasAnalytics && (
-                        <div className="flex gap-4 text-xs text-zinc-400">
+                        <div className="flex gap-4 text-xs text-stone-600">
                           <span>{formatCount(totals.views)} views</span>
                           <span>{formatCount(totals.likes)} likes</span>
                           {totals.comments > 0 && (
@@ -380,7 +380,7 @@ export default function PostsPage() {
                       {errors.length > 0 && (
                         <div className="mt-1.5">
                           {errors.map((r, idx) => (
-                            <p key={idx} className="text-xs text-red-400">
+                            <p key={idx} className="text-xs text-red-600">
                               @{r.username || accountUsername(r.accountId)}: {r.error}
                             </p>
                           ))}

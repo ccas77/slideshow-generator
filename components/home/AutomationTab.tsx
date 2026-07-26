@@ -32,17 +32,17 @@ export default function AutomationTab({
 }: AutomationTabProps) {
   return (
     <section className="space-y-6">
-      <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-8">
+      <div className="rounded-2xl border border-stone-200 bg-white/70 p-8">
         <h2 className="text-lg font-semibold mb-1">Automation</h2>
-        <p className="text-sm text-zinc-500 mb-6">
+        <p className="text-sm text-stone-500 mb-6">
           Set up scheduled daily posting for your TikTok accounts.
         </p>
 
         {accounts.length === 0 ? (
-          <p className="text-sm text-zinc-500">Loading accounts…</p>
+          <p className="text-sm text-stone-500">Loading accounts…</p>
         ) : (
           <>
-            <label className="block text-sm font-medium text-zinc-400 mb-2">
+            <label className="block text-sm font-medium text-stone-600 mb-2">
               Account
             </label>
             <select
@@ -50,7 +50,7 @@ export default function AutomationTab({
               onChange={(e) =>
                 setAccountId(e.target.value ? Number(e.target.value) : null)
               }
-              className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-white/20 mb-6"
+              className="w-full rounded-lg border border-stone-200 bg-stone-100 px-4 py-3 text-stone-900 focus:outline-none focus:ring-2 focus:ring-stone-900/15 mb-6"
             >
               <option value="">Select an account…</option>
               {(["tiktok", "instagram", "facebook"] as const).map((plat) => {
@@ -70,13 +70,13 @@ export default function AutomationTab({
             </select>
 
             {accountId != null && !loadingAccount && (
-              <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-5">
+              <div className="rounded-xl border border-stone-200 bg-stone-100 p-5">
                 <div className="flex items-center justify-between mb-4">
                   <div>
-                    <div className="text-sm font-medium text-white">
+                    <div className="text-sm font-medium text-stone-900">
                       Automate daily posts
                     </div>
-                    <div className="text-xs text-zinc-500 mt-0.5">
+                    <div className="text-xs text-stone-500 mt-0.5">
                       Picks a random slideshow from your selected books and
                       generates a fresh image each time.
                     </div>
@@ -86,12 +86,12 @@ export default function AutomationTab({
                       setConfig({ ...config, enabled: !config.enabled })
                     }
                     className={`relative w-11 h-6 rounded-full transition-colors ${
-                      config.enabled ? "bg-green-500" : "bg-zinc-700"
+                      config.enabled ? "bg-green-500" : "bg-stone-200"
                     }`}
                     aria-label="Toggle automation"
                   >
                     <span
-                      className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
+                      className={`absolute top-0.5 left-0.5 w-5 h-5 bg-stone-900 rounded-full transition-transform ${
                         config.enabled ? "translate-x-5" : ""
                       }`}
                     />
@@ -102,7 +102,7 @@ export default function AutomationTab({
                   <>
                     <div className="mb-1">
                       <div className="flex items-center justify-between mb-2">
-                        <label className="text-xs text-zinc-500">
+                        <label className="text-xs text-stone-500">
                           Posting intervals (1 post per interval)
                         </label>
                         <button
@@ -113,7 +113,7 @@ export default function AutomationTab({
                             ];
                             setConfig({ ...config, intervals });
                           }}
-                          className="text-xs text-zinc-400 hover:text-white transition-colors"
+                          className="text-xs text-stone-600 hover:text-stone-900 transition-colors"
                         >
                           + Add interval
                         </button>
@@ -124,7 +124,7 @@ export default function AutomationTab({
                           className="grid grid-cols-[1fr_1fr_auto] gap-2 mb-2 items-end"
                         >
                           <div>
-                            <label className="block text-xs text-zinc-500 mb-1">
+                            <label className="block text-xs text-stone-500 mb-1">
                               From
                             </label>
                             <input
@@ -138,11 +138,11 @@ export default function AutomationTab({
                                 };
                                 setConfig({ ...config, intervals });
                               }}
-                              className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20"
+                              className="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-stone-900 text-sm focus:outline-none focus:ring-2 focus:ring-stone-900/15"
                             />
                           </div>
                           <div>
-                            <label className="block text-xs text-zinc-500 mb-1">
+                            <label className="block text-xs text-stone-500 mb-1">
                               To
                             </label>
                             <input
@@ -156,7 +156,7 @@ export default function AutomationTab({
                                 };
                                 setConfig({ ...config, intervals });
                               }}
-                              className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20"
+                              className="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-stone-900 text-sm focus:outline-none focus:ring-2 focus:ring-stone-900/15"
                             />
                           </div>
                           <button
@@ -166,19 +166,19 @@ export default function AutomationTab({
                               intervals.splice(idx, 1);
                               setConfig({ ...config, intervals });
                             }}
-                            className="pb-2 text-zinc-600 hover:text-red-400 transition-colors text-sm"
+                            className="pb-2 text-stone-400 hover:text-red-600 transition-colors text-sm"
                             title="Remove interval"
                           >
                             ✕
                           </button>
                         </div>
                       ))}
-                      <p className="text-xs text-zinc-600 mt-1">
+                      <p className="text-xs text-stone-400 mt-1">
                         Each interval schedules 1 post at a random time within it.
                       </p>
                     </div>
                     {lastRun && (
-                      <p className="text-xs text-zinc-600 mt-2">
+                      <p className="text-xs text-stone-400 mt-2">
                         Last run: {new Date(lastRun).toLocaleString()} —{" "}
                         {lastStatus}
                       </p>
@@ -189,14 +189,14 @@ export default function AutomationTab({
             )}
 
             {accountId != null && config.enabled && (
-              <div className="mt-6 rounded-xl border border-zinc-800 bg-zinc-950 p-5">
-                <div className="text-sm font-medium text-white mb-3">
+              <div className="mt-6 rounded-xl border border-stone-200 bg-stone-100 p-5">
+                <div className="text-sm font-medium text-stone-900 mb-3">
                   Source book & slideshows
                 </div>
                 {books.length === 0 ? (
-                  <p className="text-xs text-zinc-500">
+                  <p className="text-xs text-stone-500">
                     No books yet. Create one on the{" "}
-                    <a href="/books" className="underline hover:text-white">
+                    <a href="/books" className="underline hover:text-stone-900">
                       Books
                     </a>{" "}
                     page first.
@@ -208,7 +208,7 @@ export default function AutomationTab({
                   );
                   return (
                     <>
-                      <label className="text-xs text-zinc-500 mb-1 block">
+                      <label className="text-xs text-stone-500 mb-1 block">
                         Books
                       </label>
                       <div className="space-y-1 max-h-40 overflow-y-auto mb-4">
@@ -217,7 +217,7 @@ export default function AutomationTab({
                           return (
                             <label
                               key={b.id}
-                              className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-zinc-900 cursor-pointer"
+                              className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-stone-50 cursor-pointer"
                             >
                               <input
                                 type="checkbox"
@@ -249,12 +249,12 @@ export default function AutomationTab({
                                     setExpandedBooks((prev) => [...prev, b.id]);
                                   }
                                 }}
-                                className="accent-white"
+                                className="accent-stone-900"
                               />
-                              <span className="text-sm text-zinc-300">
+                              <span className="text-sm text-stone-700">
                                 {b.name}
                               </span>
-                              <span className="text-xs text-zinc-600 ml-auto">
+                              <span className="text-xs text-stone-400 ml-auto">
                                 {b.slideshows.length} slideshows
                               </span>
                             </label>
@@ -265,7 +265,7 @@ export default function AutomationTab({
                       {selectedBooks.length > 0 && (
                         <>
                           <div className="flex items-center justify-between mb-1">
-                            <label className="text-xs text-zinc-500">
+                            <label className="text-xs text-stone-500">
                               Slideshows
                             </label>
                             <div className="flex gap-3 text-xs">
@@ -288,7 +288,7 @@ export default function AutomationTab({
                                     selections: all,
                                   });
                                 }}
-                                className="text-zinc-500 hover:text-white transition-colors"
+                                className="text-stone-500 hover:text-stone-900 transition-colors"
                               >
                                 All
                               </button>
@@ -299,7 +299,7 @@ export default function AutomationTab({
                                     selections: [],
                                   });
                                 }}
-                                className="text-zinc-500 hover:text-white transition-colors"
+                                className="text-stone-500 hover:text-stone-900 transition-colors"
                               >
                                 None
                               </button>
@@ -308,7 +308,7 @@ export default function AutomationTab({
                           <div className="space-y-1 max-h-48 overflow-y-auto">
                             {selectedBooks.map((b) => (
                               <div key={b.id}>
-                                <div className="text-xs font-medium text-zinc-400 px-2 pt-2 pb-1">
+                                <div className="text-xs font-medium text-stone-600 px-2 pt-2 pb-1">
                                   {b.name}
                                 </div>
                                 {b.slideshows.map((s) => {
@@ -320,7 +320,7 @@ export default function AutomationTab({
                                   return (
                                     <label
                                       key={s.id}
-                                      className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-zinc-900 cursor-pointer"
+                                      className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-stone-50 cursor-pointer"
                                     >
                                       <input
                                         type="checkbox"
@@ -346,12 +346,12 @@ export default function AutomationTab({
                                                 ],
                                           });
                                         }}
-                                        className="accent-white"
+                                        className="accent-stone-900"
                                       />
-                                      <span className="text-sm text-zinc-300">
+                                      <span className="text-sm text-stone-700">
                                         {s.name}
                                       </span>
-                                      <span className="text-xs text-zinc-600 ml-auto">
+                                      <span className="text-xs text-stone-400 ml-auto">
                                         {
                                           s.slideTexts
                                             .split("\n")
@@ -367,7 +367,7 @@ export default function AutomationTab({
                           </div>
                         </>
                       )}
-                      <p className="text-xs text-zinc-600 mt-2">
+                      <p className="text-xs text-stone-400 mt-2">
                         Pick books first, then choose which slideshows to
                         include. Cron picks randomly across all selected.
                       </p>
