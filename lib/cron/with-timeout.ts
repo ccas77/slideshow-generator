@@ -28,12 +28,19 @@ export async function withJobTimeout<T>(
   }
 }
 
-// Defaults tuned to cover the observed 30-90s happy path with headroom.
-// Anything longer gets aborted so the surrounding catch can fire, unmark
-// the schedule key, and emit a digest entry via notifyPostFailure.
-export const JOB_TIMEOUT_MS = 120_000;
+// Must cover the observed 30-90s happy path PLUS the retry sleeps one job can
+// legitimately incur. A job issues two retryable calls per slide
+// (create-upload-url, then the presigned S3 PUT), and each can sleep through
+// its backoff schedule — see RETRY_DELAYS_MS in lib/post-bridge.ts. At 120s a
+// single transient 5xx in a 6-slide carousel pushed the job past the cap, so
+// our own timeout aborted work that was about to succeed; the window was then
+// re-run from scratch (fresh image gen, fresh uploads) on the next cron and
+// often timed out the same way, turning brief PostBridge flakiness into a wall
+// of "post failed" alerts. Total run time is now bounded by the shared budget
+// in ./deadline.ts, so a per-job cap this size cannot run the function over.
+export const JOB_TIMEOUT_MS = 180_000;
 
 // Video jobs run ffmpeg encoding plus the same upload+PB path as the
 // carousel phases. Encoding alone can take 60-120s on the Vercel Node
 // runtime, so give video a bigger budget before we consider it hung.
-export const VIDEO_JOB_TIMEOUT_MS = 240_000;
+export const VIDEO_JOB_TIMEOUT_MS = 300_000;

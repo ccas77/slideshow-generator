@@ -11,10 +11,11 @@ import { renderTextOverlay } from "@/lib/render-slide";
 import { renderVideo } from "@/lib/render-video";
 import { pbFetch, uploadVideo } from "@/lib/post-bridge";
 import { shouldProcessWindow, randomTimeInWindow } from "./window";
-import { markScheduled } from "./scheduled-today";
+import { markScheduled, unmarkScheduled } from "./scheduled-today";
 import { notify } from "@/lib/notify";
 import { notifyPostFailure } from "@/lib/post-failure";
 import { withJobTimeout, VIDEO_JOB_TIMEOUT_MS } from "./with-timeout";
+import { unlimitedDeadline, type RunDeadline } from "./deadline";
 import type { VideoAutoResult } from "./types";
 
 function pickRandom<T>(arr: T[]): T | null {
@@ -23,9 +24,11 @@ function pickRandom<T>(arr: T[]): T | null {
 }
 
 export async function runVideoPhase(
-  scheduledToday: Set<string>
+  scheduledToday: Set<string>,
+  deadline: RunDeadline = unlimitedDeadline()
 ): Promise<VideoAutoResult[]> {
   const results: VideoAutoResult[] = [];
+  let outOfBudget = false;
   try {
     const videoAuto = await getVideoAutomation();
     if (Object.keys(videoAuto.accounts).length === 0) return results;
@@ -45,10 +48,10 @@ export async function runVideoPhase(
       }
     }
 
-    let updated = false;
     const updatedAccounts = { ...videoAuto.accounts };
 
     for (const [accIdStr, accConfig] of Object.entries(videoAuto.accounts)) {
+      if (outOfBudget) break;
       if (!accConfig.enabled || accConfig.intervals.length === 0) continue;
 
       // Build pool: filter by books, then by specific slideshows
@@ -85,14 +88,48 @@ export async function runVideoPhase(
       let pointer = accConfig.pointer;
 
       // Mark schedule keys upfront
-      const schedKeys = accConfig.intervals
-        .filter((w) => shouldProcessWindow(w.start) && !scheduledToday.has(`video:${accIdStr}:${w.start}`))
-        .map((w) => `video:${accIdStr}:${w.start}`);
+      const windowsToProcess = accConfig.intervals.filter(
+        (w) => shouldProcessWindow(w.start) && !scheduledToday.has(`video:${accIdStr}:${w.start}`)
+      );
+      const schedKeys = windowsToProcess.map((w) => `video:${accIdStr}:${w.start}`);
       if (schedKeys.length > 0) await markScheduled(schedKeys);
+      const failedVideoKeys: string[] = [];
+
+      // EARLY pointer save, before any heavy work — same fix as the TikTok
+      // (2026-05-07) and TopN (2026-06-02 / 2026-06-15) phases, which this one
+      // never received. ffmpeg encoding makes a kill mid-loop more likely here
+      // than anywhere else, and a kill left the pointer pinned so the account
+      // replayed the same video the next day. The +1 bump shifts the daily
+      // start position (2026-05-07 incident class).
+      if (windowsToProcess.length > 0) {
+        updatedAccounts[accIdStr] = {
+          ...accConfig,
+          pointer: accConfig.pointer + windowsToProcess.length + 1,
+        };
+        try {
+          await setVideoAutomation({ accounts: updatedAccounts });
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          await notify({
+            subject: "Slideshow Generator: video early pointer save failed",
+            body: `setVideoAutomation threw during the early save for account ${accIdStr}. The pointer may not advance today, so tomorrow could repeat today's video.\n\n${msg}`,
+            dedupeKey: `video-early-save-fail:${accIdStr}`,
+            cooldownSec: 3600,
+          });
+        }
+      }
 
       for (const win of accConfig.intervals) {
         if (!shouldProcessWindow(win.start)) continue;
         if (scheduledToday.has(`video:${accIdStr}:${win.start}`)) continue;
+        // Release anything we cannot start in the remaining budget rather than
+        // being killed with the key still marked.
+        if (!deadline.hasTimeFor(VIDEO_JOB_TIMEOUT_MS)) {
+          outOfBudget = true;
+          failedVideoKeys.push(`video:${accIdStr}:${win.start}`);
+          results.push({ status: `deferred (${accIdStr}) ${win.start}: out of cron budget` });
+          continue;
+        }
 
         const ss = pool[pointer % pool.length];
         const prompt = pickRandom(ss.imagePrompts);
@@ -103,6 +140,7 @@ export async function runVideoPhase(
         if (texts.length < 2) continue;
 
         let scheduledAt: Date | undefined;
+        let postIssued = false;
         try {
           const skipReason = await withJobTimeout((async (): Promise<string | null> => {
           const image = await generateImage(prompt.value);
@@ -154,6 +192,7 @@ export async function runVideoPhase(
           const mediaId = await uploadVideo(videoBuf, `video-auto-${accIdStr}.mp4`);
 
           scheduledAt = randomTimeInWindow(win.start, win.end);
+          postIssued = true;
           const postResp = await pbFetch("/v1/posts", {
             method: "POST",
             body: JSON.stringify({
@@ -198,6 +237,10 @@ export async function runVideoPhase(
           })(), VIDEO_JOB_TIMEOUT_MS, `video ${accIdStr} ss=${ss.id}`);
           if (skipReason) {
             results.push({ status: skipReason });
+            if (skipReason.startsWith("skip:")) {
+              failedVideoKeys.push(`video:${accIdStr}:${win.start}`);
+            }
+            pointer++;
             continue;
           }
         } catch (err) {
@@ -216,19 +259,26 @@ export async function runVideoPhase(
             results.push({ status: `${ss.name} -> ${accIdStr} video verified-after-error` });
           } else {
             results.push({ status: `error (${accIdStr}): ${msg}` });
+            // Release the key so the next run retries this window. Without this
+            // a single failure burned the window for the whole day.
+            if (!postIssued) {
+              // Aborted before the create request went out, so a retry is
+              // safe. If it went out, keep the key marked rather than risk a
+              // duplicate post.
+              failedVideoKeys.push(`video:${accIdStr}:${win.start}`);
+            }
           }
         }
 
         pointer++;
       }
 
-      updatedAccounts[accIdStr] = { ...accConfig, pointer };
-      updated = true;
+      if (failedVideoKeys.length > 0) {
+        await unmarkScheduled(failedVideoKeys);
+      }
     }
-
-    if (updated) {
-      await setVideoAutomation({ accounts: updatedAccounts });
-    }
+    // Pointer is persisted per account before its heavy work (see above), so
+    // there is deliberately no post-loop save here.
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     results.push({ status: `Video automation error: ${msg}` });

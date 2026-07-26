@@ -30,6 +30,9 @@ interface NotifyOptionsWithRecheck extends NotifyOptions {
 }
 
 const DIGEST_KEY_PREFIX = "daily-digest:";
+// Set of dedupeKeys already recorded for a given day. Separate from the digest
+// list so dedupe stays atomic and outlives the list's ltrim.
+const DIGEST_DEDUPE_PREFIX = "daily-digest-keys:";
 const DIGEST_TTL_SEC = 30 * 86400; // 30 days
 const DIGEST_MAX_ENTRIES = 500;
 
@@ -52,15 +55,18 @@ export async function notify(opts: NotifyOptionsWithRecheck): Promise<boolean> {
     accountId: opts.recheck?.accountId,
   };
   try {
-    // dedupe: if dedupeKey provided and we've already got an entry for the
-    // same key within DIGEST_MAX_ENTRIES, skip. Avoids flooding when a phase
-    // fails repeatedly.
+    // Dedupe on an atomic SADD rather than read-the-list-then-append. Phases
+    // run their jobs concurrently, so two jobs failing in the same batch both
+    // read the list before either appended and both wrote an entry — visible
+    // in the 2026-07-25 digest as the same account listed twice at the same
+    // second. Same non-atomic get-then-set class as the 2026-05-08
+    // duplicate-post root cause. SADD returns 0 when the key was already
+    // present, which is the dedupe signal. It also survives the ltrim below,
+    // so a trimmed list can no longer re-flood with alerts already reported.
     if (opts.dedupeKey) {
-      const existing = await redis.lrange<string | DigestEntry>(key, 0, -1);
-      for (const raw of existing) {
-        const e = typeof raw === "string" ? safeParse(raw) : (raw as DigestEntry);
-        if (e && e.dedupeKey === opts.dedupeKey) return false;
-      }
+      const added = await redis.sadd(DIGEST_DEDUPE_PREFIX + date, opts.dedupeKey);
+      if (added === 0) return false;
+      await redis.expire(DIGEST_DEDUPE_PREFIX + date, DIGEST_TTL_SEC);
     }
     await redis.rpush(key, JSON.stringify(entry));
     // Cap the list so a runaway alert loop can't blow up Redis.

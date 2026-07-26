@@ -12,7 +12,13 @@ import { markScheduled, unmarkScheduled, getScheduledToday } from "./scheduled-t
 import { notify } from "@/lib/notify";
 import { notifyPostFailure } from "@/lib/post-failure";
 import { withJobTimeout, JOB_TIMEOUT_MS } from "./with-timeout";
+import { unlimitedDeadline, type RunDeadline } from "./deadline";
 import type { Job, CronAccountResult } from "./types";
+
+// Status prefix for a job we abandoned after the create request was already
+// sent. Treated as "do not retry" (no duplicate) but also "do not claim as a
+// confirmed post" in the account's recent-post history.
+const POSSIBLY_POSTED = "possibly-posted";
 
 function pickRandom<T>(arr: T[]): T | null {
   if (!arr.length) return null;
@@ -20,7 +26,8 @@ function pickRandom<T>(arr: T[]): T | null {
 }
 
 export async function runTikTokPhase(
-  scheduledToday: Set<string>
+  scheduledToday: Set<string>,
+  deadline: RunDeadline = unlimitedDeadline()
 ): Promise<{ results: CronAccountResult[]; accounts: { id: number; username: string }[]; debugLog: string[] }> {
   const results: CronAccountResult[] = [];
   const debugLog: string[] = [];
@@ -206,6 +213,11 @@ export async function runTikTokPhase(
 
   async function processJob(job: Job): Promise<{ job: Job; status: string }> {
     let scheduledAt: Date | undefined;
+    // Set the instant before POST /v1/posts goes out. If the job is aborted
+    // after that point (job timeout, network drop on the response) PostBridge
+    // may already have accepted the post, so the window must NOT be released
+    // for retry — that is how the 2026-05-08 duplicate-post class happens.
+    let postIssued = false;
     try {
       return await withJobTimeout((async () => {
         const imgResult = await generateImageWithInfo(job.imagePrompt);
@@ -234,6 +246,7 @@ export async function runTikTokPhase(
 
         scheduledAt = randomTimeInWindow(job.win.start, job.win.end);
 
+        postIssued = true;
         const postResp = await pbFetch("/v1/posts", {
           method: "POST",
           body: JSON.stringify({
@@ -292,17 +305,43 @@ export async function runTikTokPhase(
         debugLog.push(`${job.acc.username} (${job.acc.id}) verified at PostBridge despite ${msg}`);
         return { job, status: `verified-after-error (${msg.slice(0, 80)})` };
       }
+      if (postIssued) {
+        // Verification could not confirm the post, but the create request was
+        // already in flight when we gave up. Retrying risks a duplicate, which
+        // is worse than missing one window, so keep the schedule key marked.
+        debugLog.push(`${job.acc.username} (${job.acc.id}) aborted after POST was issued — not retrying`);
+        return { job, status: `${POSSIBLY_POSTED}: ${msg.slice(0, 80)}` };
+      }
       return { job, status: `error: ${msg}` };
     }
   }
 
   for (let i = 0; i < jobs.length; i += BATCH_SIZE) {
     const batch = jobs.slice(i, i + BATCH_SIZE);
+    // Stop starting batches while there is still time to unmark the rest and
+    // return cleanly. Being killed here would leave every remaining schedule
+    // key marked, silently burning those windows for the day.
+    if (!deadline.hasTimeFor(JOB_TIMEOUT_MS)) {
+      const deferred = jobs.slice(i);
+      debugLog.push(`Out of cron budget — deferring ${deferred.length} TikTok jobs to the next run`);
+      await unmarkScheduled(deferred.map((j) => j.schedKey));
+      await notify({
+        subject: `Slideshow Generator: TikTok phase ran out of cron budget`,
+        body: `${deferred.length} TikTok job(s) were not started because the cron run was close to its ${Math.round(JOB_TIMEOUT_MS / 1000)}s-per-job limit within the shared run budget. Their schedule keys were released, so the next run will retry them.\n\nDeferred: ${deferred.map((j) => `${j.acc.username} ${j.win.start}`).join(", ")}`,
+        dedupeKey: `budget-exhausted:tiktok:${new Date().toISOString().slice(0, 13)}`,
+        cooldownSec: 3600,
+      });
+      break;
+    }
     debugLog.push(`Processing batch ${Math.floor(i / BATCH_SIZE) + 1}: ${batch.length} jobs`);
     const batchResults = await Promise.allSettled(batch.map(processJob));
-    for (const r of batchResults) {
-      postResults.push(r.status === "fulfilled" ? r.value : { job: batch[0], status: `error: ${r.reason}` });
-    }
+    batchResults.forEach((r, idx) => {
+      // Index-matched: attributing a rejection to batch[0] unmarked the wrong
+      // window (duplicate risk) and left the real failure marked (silent loss).
+      postResults.push(
+        r.status === "fulfilled" ? r.value : { job: batch[idx], status: `error: ${r.reason}` }
+      );
+    });
   }
 
   // Un-mark schedule keys for failed jobs so they can retry next invocation
@@ -321,7 +360,11 @@ export async function runTikTokPhase(
     const id = r.job.acc.id;
     if (!accountStatuses.has(id)) accountStatuses.set(id, []);
     accountStatuses.get(id)!.push(r.status);
-    if (!r.status.startsWith("skipped:") && !r.status.startsWith("error:")) {
+    if (
+      !r.status.startsWith("skipped:") &&
+      !r.status.startsWith("error:") &&
+      !r.status.startsWith(POSSIBLY_POSTED)
+    ) {
       if (!accountNewPosts.has(id)) accountNewPosts.set(id, []);
       accountNewPosts.get(id)!.push({
         slideshowName: r.job.slideshowName || "unknown",
@@ -373,6 +416,11 @@ export async function runTikTokPhase(
     if (data.config.intervals.length === 0) continue;
     // Skip if this account already posted successfully this invocation
     if (successfulAccounts.has(acc.id)) continue;
+    // Skip if the fallback already ran for this account today. Without this the
+    // fallback fired again on EVERY later cron run — it marks `<id>:fallback`
+    // but nothing ever read that key, so an account with no successful window
+    // got a fresh duplicate post every 30 minutes until midnight UTC.
+    if (currentScheduled.has(`${acc.id}:fallback`)) continue;
     // Skip if any window is still upcoming (normal retry will handle it)
     const anyWindowLeft = data.config.intervals.some((w) => shouldProcessWindow(w.start));
     if (anyWindowLeft) continue;
@@ -381,6 +429,12 @@ export async function runTikTokPhase(
       currentScheduled.has(`${acc.id}:${w.start}`)
     );
     if (hasSuccessKey) continue;
+    // No budget left to run a fallback publish; the next run will pick it up
+    // (the `<id>:fallback` key is only set on success, so nothing is lost).
+    if (!deadline.hasTimeFor(JOB_TIMEOUT_MS)) {
+      debugLog.push(`${acc.username} (${acc.id}): fallback skipped — out of cron budget`);
+      continue;
+    }
 
     // All windows passed, no successful post today — fallback attempt
     debugLog.push(`${acc.username} (${acc.id}): fallback — all windows passed with no successful post`);

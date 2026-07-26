@@ -8,10 +8,11 @@ import { generateImage } from "@/lib/gemini";
 import { renderSlide } from "@/lib/render-slide";
 import { pbFetch, uploadPng } from "@/lib/post-bridge";
 import { shouldProcessWindow, randomTimeInWindow } from "./window";
-import { markScheduled } from "./scheduled-today";
+import { markScheduled, unmarkScheduled } from "./scheduled-today";
 import { notify } from "@/lib/notify";
 import { notifyPostFailure } from "@/lib/post-failure";
 import { withJobTimeout, JOB_TIMEOUT_MS } from "./with-timeout";
+import { unlimitedDeadline, type RunDeadline } from "./deadline";
 import type { IgAutoResult } from "./types";
 
 function pickRandom<T>(arr: T[]): T | null {
@@ -20,18 +21,20 @@ function pickRandom<T>(arr: T[]): T | null {
 }
 
 export async function runInstagramPhase(
-  scheduledToday: Set<string>
+  scheduledToday: Set<string>,
+  deadline: RunDeadline = unlimitedDeadline()
 ): Promise<IgAutoResult[]> {
   const igAutoResults: IgAutoResult[] = [];
+  let outOfBudget = false;
   try {
     const igAuto = await getIgAutomation();
     if (igAuto.accounts && Object.keys(igAuto.accounts).length > 0) {
       const igSlideshows = await getIgSlideshows();
       if (igSlideshows.length > 0) {
-        let updated = false;
         const updatedAccounts = { ...igAuto.accounts };
 
         for (const [accIdStr, accConfig] of Object.entries(igAuto.accounts)) {
+          if (outOfBudget) break;
           if (!accConfig.enabled || accConfig.intervals.length === 0) continue;
 
           // Build pool: filter by books, then by specific slideshows
@@ -71,14 +74,49 @@ export async function runInstagramPhase(
           let pointer = accConfig.pointer;
 
           // Mark IG schedule keys upfront
-          const igSchedKeys = accConfig.intervals
-            .filter((w) => shouldProcessWindow(w.start) && !scheduledToday.has(`ig:${accIdStr}:${w.start}`))
-            .map((w) => `ig:${accIdStr}:${w.start}`);
+          const windowsToProcess = accConfig.intervals.filter(
+            (w) => shouldProcessWindow(w.start) && !scheduledToday.has(`ig:${accIdStr}:${w.start}`)
+          );
+          const igSchedKeys = windowsToProcess.map((w) => `ig:${accIdStr}:${w.start}`);
           if (igSchedKeys.length > 0) await markScheduled(igSchedKeys);
+          const failedIgKeys: string[] = [];
+
+          // EARLY pointer save, before any heavy work — same fix as the TikTok
+          // (2026-05-07) and TopN (2026-06-02 / 2026-06-15) phases. This phase
+          // still saved the pointer after its publish loop, so a Vercel kill
+          // mid-loop left the pointer pinned and the account replayed the same
+          // slideshow the next day. The +1 bump shifts the daily start so a
+          // windows-per-day count that divides the pool size cannot cycle back
+          // to the same position every day (2026-05-07 incident class).
+          if (windowsToProcess.length > 0) {
+            updatedAccounts[accIdStr] = {
+              ...accConfig,
+              pointer: accConfig.pointer + windowsToProcess.length + 1,
+            };
+            try {
+              await setIgAutomation({ ...igAuto, accounts: updatedAccounts });
+            } catch (err) {
+              const msg = err instanceof Error ? err.message : String(err);
+              await notify({
+                subject: "Slideshow Generator: IG early pointer save failed",
+                body: `setIgAutomation threw during the early save for account ${accIdStr}. The pointer may not advance today, so tomorrow could repeat today's slideshow.\n\n${msg}`,
+                dedupeKey: `ig-early-save-fail:${accIdStr}`,
+                cooldownSec: 3600,
+              });
+            }
+          }
 
           for (const win of accConfig.intervals) {
             if (!shouldProcessWindow(win.start)) continue;
             if (scheduledToday.has(`ig:${accIdStr}:${win.start}`)) continue;
+            // Release anything we cannot start in the remaining budget rather
+            // than being killed with the key still marked.
+            if (!deadline.hasTimeFor(JOB_TIMEOUT_MS)) {
+              outOfBudget = true;
+              failedIgKeys.push(`ig:${accIdStr}:${win.start}`);
+              igAutoResults.push({ status: `deferred (${accIdStr}) ${win.start}: out of cron budget` });
+              continue;
+            }
             const ss = pool[pointer % pool.length];
             const prompt = pickRandom(ss.imagePrompts);
             const caption = pickRandom(ss.captions);
@@ -88,6 +126,7 @@ export async function runInstagramPhase(
             if (texts.length < 2) continue;
 
             let scheduledAt: Date | undefined;
+            let postIssued = false;
             try {
               const skipReason = await withJobTimeout((async (): Promise<string | null> => {
                 const image = await generateImage(prompt.value);
@@ -112,6 +151,7 @@ export async function runInstagramPhase(
                   : { tiktok: { draft: false, is_aigc: false } };
 
                 scheduledAt = randomTimeInWindow(win.start, win.end);
+                postIssued = true;
                 const postResp = await pbFetch("/v1/posts", {
                   method: "POST",
                   body: JSON.stringify({
@@ -150,6 +190,10 @@ export async function runInstagramPhase(
               })(), JOB_TIMEOUT_MS, `ig ${accIdStr} ss=${ss.id}`);
               if (skipReason) {
                 igAutoResults.push({ status: skipReason });
+                if (skipReason.startsWith("skip:")) {
+                  failedIgKeys.push(`ig:${accIdStr}:${win.start}`);
+                }
+                pointer++;
                 continue;
               }
             } catch (err) {
@@ -168,19 +212,27 @@ export async function runInstagramPhase(
                 igAutoResults.push({ status: `${ss.name} → ${accIdStr} verified-after-error` });
               } else {
                 igAutoResults.push({ status: `error (${accIdStr}): ${msg}` });
+                // Release the key so the next run can retry this window. Without
+                // this a single failure burned the window for the whole day —
+                // the TikTok, TopN and excerpt phases all released theirs.
+                if (!postIssued) {
+                  // Aborted before the create request went out, so a retry is
+                  // safe. If it went out, keep the key marked rather than risk
+                  // a duplicate post.
+                  failedIgKeys.push(`ig:${accIdStr}:${win.start}`);
+                }
               }
             }
 
             pointer++;
           }
 
-          updatedAccounts[accIdStr] = { ...accConfig, pointer };
-          updated = true;
+          if (failedIgKeys.length > 0) {
+            await unmarkScheduled(failedIgKeys);
+          }
         }
-
-        if (updated) {
-          await setIgAutomation({ ...igAuto, accounts: updatedAccounts });
-        }
+        // Pointer is persisted per account before its heavy work (see above),
+        // so there is deliberately no post-loop save here.
       }
     }
   } catch (err) {

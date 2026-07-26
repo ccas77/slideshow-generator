@@ -10,6 +10,7 @@ import { markScheduled, unmarkScheduled } from "./scheduled-today";
 import { notify } from "@/lib/notify";
 import { notifyPostFailure } from "@/lib/post-failure";
 import { withJobTimeout, JOB_TIMEOUT_MS } from "./with-timeout";
+import { unlimitedDeadline, type RunDeadline } from "./deadline";
 import type { TopNResult } from "./types";
 
 // Cap how many TopN publishes run at once. Each publishTopN takes 30-90s
@@ -29,7 +30,8 @@ interface TopNJob {
 }
 
 export async function runTopNPhase(
-  scheduledToday: Set<string>
+  scheduledToday: Set<string>,
+  deadline: RunDeadline = unlimitedDeadline()
 ): Promise<TopNResult[]> {
   const topNResults: TopNResult[] = [];
   try {
@@ -206,6 +208,20 @@ export async function runTopNPhase(
     }
 
     for (let i = 0; i < topNJobs.length; i += TOPN_BATCH_SIZE) {
+      // Stop starting batches while there is still time to release the rest.
+      // A Vercel kill here is the 2026-07-05 failure mode: keys stay marked,
+      // nothing throws, and the accounts go silent for the day.
+      if (!deadline.hasTimeFor(JOB_TIMEOUT_MS)) {
+        const deferred = topNJobs.slice(i);
+        await unmarkScheduled(deferred.map((j) => j.schedKey));
+        await notify({
+          subject: "Slideshow Generator: TopN phase ran out of cron budget",
+          body: `${deferred.length} TopN job(s) were not started because the run was near its budget. Their schedule keys were released so the next run retries them.\n\nDeferred accounts: ${deferred.map((j) => j.accIdStr).join(", ")}`,
+          dedupeKey: `budget-exhausted:topn:${new Date().toISOString().slice(0, 13)}`,
+          cooldownSec: 3600,
+        });
+        break;
+      }
       const batch = topNJobs.slice(i, i + TOPN_BATCH_SIZE);
       await Promise.allSettled(batch.map(runJob));
     }

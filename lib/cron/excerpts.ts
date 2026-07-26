@@ -13,6 +13,7 @@ import { markScheduled, unmarkScheduled } from "./scheduled-today";
 import { notify } from "@/lib/notify";
 import { notifyPostFailure } from "@/lib/post-failure";
 import { withJobTimeout, JOB_TIMEOUT_MS } from "./with-timeout";
+import { unlimitedDeadline, type RunDeadline } from "./deadline";
 import type { ExcerptAutoResult } from "./types";
 
 function pickRandom<T>(arr: T[]): T | undefined {
@@ -21,9 +22,11 @@ function pickRandom<T>(arr: T[]): T | undefined {
 }
 
 export async function runExcerptPhase(
-  scheduledToday: Set<string>
+  scheduledToday: Set<string>,
+  deadline: RunDeadline = unlimitedDeadline()
 ): Promise<ExcerptAutoResult[]> {
   const results: ExcerptAutoResult[] = [];
+  let outOfBudget = false;
   try {
     const auto = await getExcerptAutomation();
     if (!auto.accounts || Object.keys(auto.accounts).length === 0) return results;
@@ -32,10 +35,10 @@ export async function runExcerptPhase(
     const books = await getBooksWithCovers();
     if (excerpts.length === 0) return results;
 
-    let updated = false;
     const updatedAccounts = { ...auto.accounts };
 
     for (const [accIdStr, accConfig] of Object.entries(auto.accounts)) {
+      if (outOfBudget) break;
       if (!accConfig.enabled || accConfig.intervals.length === 0) continue;
 
       // Build excerpt pool
@@ -50,25 +53,56 @@ export async function runExcerptPhase(
       let pointer = accConfig.pointer;
 
       // Mark schedule keys upfront
-      const schedKeys = accConfig.intervals
-        .filter(
-          (w) =>
-            shouldProcessWindow(w.start) &&
-            !scheduledToday.has(`excerpt:${accIdStr}:${w.start}`)
-        )
-        .map((w) => `excerpt:${accIdStr}:${w.start}`);
+      const windowsToProcess = accConfig.intervals.filter(
+        (w) =>
+          shouldProcessWindow(w.start) &&
+          !scheduledToday.has(`excerpt:${accIdStr}:${w.start}`)
+      );
+      const schedKeys = windowsToProcess.map((w) => `excerpt:${accIdStr}:${w.start}`);
       if (schedKeys.length > 0) await markScheduled(schedKeys);
       const failedExcerptKeys: string[] = [];
+
+      // EARLY pointer save, before any heavy work — same fix as the TikTok
+      // (2026-05-07) and TopN (2026-06-02 / 2026-06-15) phases, which this one
+      // never received: a kill mid-loop left the pointer pinned and the account
+      // replayed the same excerpt the next day. The +1 bump shifts the daily
+      // start position (2026-05-07 incident class).
+      if (windowsToProcess.length > 0) {
+        updatedAccounts[accIdStr] = {
+          ...accConfig,
+          pointer: accConfig.pointer + windowsToProcess.length + 1,
+        };
+        try {
+          await setExcerptAutomation({ accounts: updatedAccounts });
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          await notify({
+            subject: "Slideshow Generator: excerpt early pointer save failed",
+            body: `setExcerptAutomation threw during the early save for account ${accIdStr}. The pointer may not advance today, so tomorrow could repeat today's excerpt.\n\n${msg}`,
+            dedupeKey: `excerpt-early-save-fail:${accIdStr}`,
+            cooldownSec: 3600,
+          });
+        }
+      }
 
       for (const win of accConfig.intervals) {
         if (!shouldProcessWindow(win.start)) continue;
         if (scheduledToday.has(`excerpt:${accIdStr}:${win.start}`)) continue;
+        // Release anything we cannot start in the remaining budget rather than
+        // being killed with the key still marked.
+        if (!deadline.hasTimeFor(JOB_TIMEOUT_MS)) {
+          outOfBudget = true;
+          failedExcerptKeys.push(`excerpt:${accIdStr}:${win.start}`);
+          results.push({ status: `deferred (${accIdStr}) ${win.start}: out of cron budget` });
+          continue;
+        }
 
         const excerpt = pool[pointer % pool.length];
         const prompt = pickRandom(excerpt.imagePrompts);
         const hookText = pickRandom(excerpt.overlayTexts);
 
         let scheduledAt: Date | undefined;
+        let postIssued = false;
         try {
           const skipReason = await withJobTimeout((async (): Promise<string | null> => {
           // Build slides
@@ -163,6 +197,7 @@ export async function runExcerptPhase(
               : { tiktok: { draft: false, is_aigc: false } };
 
           scheduledAt = randomTimeInWindow(win.start, win.end);
+          postIssued = true;
           const postResp = await pbFetch("/v1/posts", {
             method: "POST",
             body: JSON.stringify({
@@ -222,7 +257,12 @@ export async function runExcerptPhase(
             results.push({ status: `${excerpt.name} → ${accIdStr} verified-after-error` });
           } else {
             results.push({ status: `error (${accIdStr}): ${msg}` });
-            failedExcerptKeys.push(`excerpt:${accIdStr}:${win.start}`);
+            if (!postIssued) {
+              // Aborted before the create request went out, so a retry is
+              // safe. If it went out, keep the key marked rather than risk a
+              // duplicate post.
+              failedExcerptKeys.push(`excerpt:${accIdStr}:${win.start}`);
+            }
           }
         }
 
@@ -233,13 +273,9 @@ export async function runExcerptPhase(
         await unmarkScheduled(failedExcerptKeys);
       }
 
-      updatedAccounts[accIdStr] = { ...accConfig, pointer };
-      updated = true;
     }
-
-    if (updated) {
-      await setExcerptAutomation({ accounts: updatedAccounts });
-    }
+    // Pointer is persisted per account before its heavy work (see above), so
+    // there is deliberately no post-loop save here.
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     results.push({ status: `Excerpt automation error: ${msg}` });
