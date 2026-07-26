@@ -1,7 +1,7 @@
 import { TopBook, getTopBooks, getTopNLists, getMusicTrack } from "@/lib/kv";
 import { generateImage } from "@/lib/gemini";
 import { renderTitleSlide, renderBookSlide } from "@/lib/render-topn-slide";
-import { uploadPng, uploadVideo, pbFetch } from "@/lib/post-bridge";
+import { uploadPng, uploadVideo, pbFetch, defaultScheduledAt } from "@/lib/post-bridge";
 import { renderVideo } from "@/lib/render-video";
 
 function shuffle<T>(arr: T[]): T[] {
@@ -180,7 +180,8 @@ export async function publishTopN(
     social_accounts: accountIds,
     platform_configurations: platformConfigurations,
   };
-  if (scheduledAt) postBody.scheduled_at = scheduledAt;
+  // Always schedule: an omitted scheduled_at produces a post that never fires.
+  postBody.scheduled_at = scheduledAt || defaultScheduledAt();
 
   phase = "createPost";
   console.log(`[topn] phase=createPost elapsedMs=${Date.now() - startMs}`);

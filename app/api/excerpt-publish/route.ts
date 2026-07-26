@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { redis } from "@/lib/kv";
-import { uploadPng, pbFetch } from "@/lib/post-bridge";
+import { uploadPng, pbFetch, defaultScheduledAt } from "@/lib/post-bridge";
 
 export const maxDuration = 300;
 
@@ -59,7 +59,8 @@ export async function POST(req: NextRequest) {
       social_accounts: accountIds,
       platform_configurations: platformConfig,
     };
-    if (scheduledAt) postBody.scheduled_at = scheduledAt;
+    // Always schedule: an omitted scheduled_at produces a post that never fires.
+    postBody.scheduled_at = scheduledAt || defaultScheduledAt();
 
     const postResp = await pbFetch("/v1/posts", {
       method: "POST",
