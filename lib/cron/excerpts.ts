@@ -102,6 +102,7 @@ export async function runExcerptPhase(
         const hookText = pickRandom(excerpt.overlayTexts);
 
         let scheduledAt: Date | undefined;
+        let postIssued = false;
         try {
           const skipReason = await withJobTimeout((async (): Promise<string | null> => {
           // Build slides
@@ -196,6 +197,7 @@ export async function runExcerptPhase(
               : { tiktok: { draft: false, is_aigc: false } };
 
           scheduledAt = randomTimeInWindow(win.start, win.end);
+          postIssued = true;
           const postResp = await pbFetch("/v1/posts", {
             method: "POST",
             body: JSON.stringify({
@@ -255,7 +257,12 @@ export async function runExcerptPhase(
             results.push({ status: `${excerpt.name} → ${accIdStr} verified-after-error` });
           } else {
             results.push({ status: `error (${accIdStr}): ${msg}` });
-            failedExcerptKeys.push(`excerpt:${accIdStr}:${win.start}`);
+            if (!postIssued) {
+              // Aborted before the create request went out, so a retry is
+              // safe. If it went out, keep the key marked rather than risk a
+              // duplicate post.
+              failedExcerptKeys.push(`excerpt:${accIdStr}:${win.start}`);
+            }
           }
         }
 

@@ -15,6 +15,11 @@ import { withJobTimeout, JOB_TIMEOUT_MS } from "./with-timeout";
 import { unlimitedDeadline, type RunDeadline } from "./deadline";
 import type { Job, CronAccountResult } from "./types";
 
+// Status prefix for a job we abandoned after the create request was already
+// sent. Treated as "do not retry" (no duplicate) but also "do not claim as a
+// confirmed post" in the account's recent-post history.
+const POSSIBLY_POSTED = "possibly-posted";
+
 function pickRandom<T>(arr: T[]): T | null {
   if (!arr.length) return null;
   return arr[Math.floor(Math.random() * arr.length)];
@@ -208,6 +213,11 @@ export async function runTikTokPhase(
 
   async function processJob(job: Job): Promise<{ job: Job; status: string }> {
     let scheduledAt: Date | undefined;
+    // Set the instant before POST /v1/posts goes out. If the job is aborted
+    // after that point (job timeout, network drop on the response) PostBridge
+    // may already have accepted the post, so the window must NOT be released
+    // for retry — that is how the 2026-05-08 duplicate-post class happens.
+    let postIssued = false;
     try {
       return await withJobTimeout((async () => {
         const imgResult = await generateImageWithInfo(job.imagePrompt);
@@ -236,6 +246,7 @@ export async function runTikTokPhase(
 
         scheduledAt = randomTimeInWindow(job.win.start, job.win.end);
 
+        postIssued = true;
         const postResp = await pbFetch("/v1/posts", {
           method: "POST",
           body: JSON.stringify({
@@ -294,6 +305,13 @@ export async function runTikTokPhase(
         debugLog.push(`${job.acc.username} (${job.acc.id}) verified at PostBridge despite ${msg}`);
         return { job, status: `verified-after-error (${msg.slice(0, 80)})` };
       }
+      if (postIssued) {
+        // Verification could not confirm the post, but the create request was
+        // already in flight when we gave up. Retrying risks a duplicate, which
+        // is worse than missing one window, so keep the schedule key marked.
+        debugLog.push(`${job.acc.username} (${job.acc.id}) aborted after POST was issued — not retrying`);
+        return { job, status: `${POSSIBLY_POSTED}: ${msg.slice(0, 80)}` };
+      }
       return { job, status: `error: ${msg}` };
     }
   }
@@ -342,7 +360,11 @@ export async function runTikTokPhase(
     const id = r.job.acc.id;
     if (!accountStatuses.has(id)) accountStatuses.set(id, []);
     accountStatuses.get(id)!.push(r.status);
-    if (!r.status.startsWith("skipped:") && !r.status.startsWith("error:")) {
+    if (
+      !r.status.startsWith("skipped:") &&
+      !r.status.startsWith("error:") &&
+      !r.status.startsWith(POSSIBLY_POSTED)
+    ) {
       if (!accountNewPosts.has(id)) accountNewPosts.set(id, []);
       accountNewPosts.get(id)!.push({
         slideshowName: r.job.slideshowName || "unknown",

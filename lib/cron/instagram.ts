@@ -126,6 +126,7 @@ export async function runInstagramPhase(
             if (texts.length < 2) continue;
 
             let scheduledAt: Date | undefined;
+            let postIssued = false;
             try {
               const skipReason = await withJobTimeout((async (): Promise<string | null> => {
                 const image = await generateImage(prompt.value);
@@ -150,6 +151,7 @@ export async function runInstagramPhase(
                   : { tiktok: { draft: false, is_aigc: false } };
 
                 scheduledAt = randomTimeInWindow(win.start, win.end);
+                postIssued = true;
                 const postResp = await pbFetch("/v1/posts", {
                   method: "POST",
                   body: JSON.stringify({
@@ -213,7 +215,12 @@ export async function runInstagramPhase(
                 // Release the key so the next run can retry this window. Without
                 // this a single failure burned the window for the whole day —
                 // the TikTok, TopN and excerpt phases all released theirs.
-                failedIgKeys.push(`ig:${accIdStr}:${win.start}`);
+                if (!postIssued) {
+                  // Aborted before the create request went out, so a retry is
+                  // safe. If it went out, keep the key marked rather than risk
+                  // a duplicate post.
+                  failedIgKeys.push(`ig:${accIdStr}:${win.start}`);
+                }
               }
             }
 

@@ -140,6 +140,7 @@ export async function runVideoPhase(
         if (texts.length < 2) continue;
 
         let scheduledAt: Date | undefined;
+        let postIssued = false;
         try {
           const skipReason = await withJobTimeout((async (): Promise<string | null> => {
           const image = await generateImage(prompt.value);
@@ -191,6 +192,7 @@ export async function runVideoPhase(
           const mediaId = await uploadVideo(videoBuf, `video-auto-${accIdStr}.mp4`);
 
           scheduledAt = randomTimeInWindow(win.start, win.end);
+          postIssued = true;
           const postResp = await pbFetch("/v1/posts", {
             method: "POST",
             body: JSON.stringify({
@@ -259,7 +261,12 @@ export async function runVideoPhase(
             results.push({ status: `error (${accIdStr}): ${msg}` });
             // Release the key so the next run retries this window. Without this
             // a single failure burned the window for the whole day.
-            failedVideoKeys.push(`video:${accIdStr}:${win.start}`);
+            if (!postIssued) {
+              // Aborted before the create request went out, so a retry is
+              // safe. If it went out, keep the key marked rather than risk a
+              // duplicate post.
+              failedVideoKeys.push(`video:${accIdStr}:${win.start}`);
+            }
           }
         }
 
