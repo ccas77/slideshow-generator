@@ -67,6 +67,86 @@ interface TikTokAccount {
   username: string;
 }
 
+interface WhySilentResult {
+  verdict: string;
+  silentSkipReasons: string[];
+  config: {
+    enabled: boolean;
+    intervals: Array<{ start: string; end: string }>;
+    frequencyDays: number;
+    lastPostDate: string | null;
+  };
+  daysSinceLastPost: number | null;
+  activeWindowsNow: string[];
+  resolvedPool: { size: number; reason?: string };
+  lastPostLogEntries: Array<{ timestamp: string; slideshowName: string; source: string }>;
+  lastRetryLogEntries: unknown[];
+}
+
+// Turn the raw diagnostic into something readable at a glance. Each entry is
+// [headline, what to do about it].
+function explainWhySilent(r: WhySilentResult): { tone: "ok" | "warn" | "bad"; lines: string[] } {
+  const lines: string[] = [];
+  const raw = r.silentSkipReasons.join(" ");
+
+  if (!r.config.enabled) {
+    lines.push("Auto-posting is switched off for this account. Tick “Enable auto-posting” above.");
+  }
+  if (raw.includes("intervals=[]")) {
+    lines.push("No time windows are configured, so there is never a slot to post in. Add one below.");
+  }
+  if (raw.includes("frequency-gated")) {
+    lines.push(
+      `Waiting on the every-${r.config.frequencyDays}-day setting: it last posted on ${r.config.lastPostDate}` +
+        (r.daysSinceLastPost !== null ? ` (${r.daysSinceLastPost} day${r.daysSinceLastPost === 1 ? "" : "s"} ago)` : "") +
+        ". It will post again once enough days have passed, or you can lower the frequency.",
+    );
+  }
+  if (raw.includes("pool empty")) {
+    lines.push(
+      "None of the selected lists can be used. A list only counts if it has books added or genres set — a list with only title texts and captions is skipped. " +
+        (r.resolvedPool.reason || ""),
+    );
+  }
+  if (raw.includes("no active windows")) {
+    lines.push(
+      `All of today's windows (${r.config.intervals.map((w) => `${w.start}–${w.end}`).join(", ")}) have already passed. Times are UTC, so a 9am UK slot is 08:00 here. It will try again after midnight UTC.`,
+    );
+  }
+
+  if (lines.length > 0) return { tone: "bad", lines };
+
+  // Nothing in the config explains it. Distinguish "posting fine" from
+  // "should be posting but isn't" using the post log.
+  const lastPost = r.lastPostLogEntries[0];
+  const daysSinceLogged = lastPost
+    ? Math.floor((Date.now() - Date.parse(lastPost.timestamp)) / 86400000)
+    : null;
+
+  if (daysSinceLogged !== null && daysSinceLogged <= 1) {
+    return {
+      tone: "ok",
+      lines: [`Healthy — nothing is blocking it, and it last posted ${lastPost.slideshowName} on ${lastPost.timestamp.slice(0, 10)}.`],
+    };
+  }
+
+  const stale = lastPost
+    ? `The last recorded post was ${lastPost.slideshowName} on ${lastPost.timestamp.slice(0, 10)}` +
+      (daysSinceLogged !== null ? ` (${daysSinceLogged} days ago)` : "") + "."
+    : "There are no posts recorded for this account in the last 14 days.";
+
+  return {
+    tone: "warn",
+    lines: [
+      "Nothing in this account's settings is blocking it — the cron should be attempting it.",
+      stale,
+      r.lastRetryLogEntries.length === 0
+        ? "There are also no PostBridge attempts logged, which means the posting step never started rather than failing. That usually means the cron ran out of time before reaching Top-N. Check the morning digest for “ran out of cron budget”."
+        : `There are ${r.lastRetryLogEntries.length} PostBridge attempt(s) logged, so the failure is in the posting step itself — check the morning digest.`,
+    ],
+  };
+}
+
 export default function TopBooksPage() {
   const router = useRouter();
   const [password, setPassword] = useState<string | null>(null);
@@ -126,6 +206,8 @@ export default function TopBooksPage() {
   // Automation (per-account)
   const [topnAutoConfig, setTopnAutoConfig] = useState<TopNGlobalAutomation>({ accounts: {} });
   const [selectedTopnAccount, setSelectedTopnAccount] = useState<string | null>(null);
+  // "Why isn't this posting?" diagnostic, per account.
+  const [whySilent, setWhySilent] = useState<Record<string, WhySilentResult | "loading" | { error: string }>>({});
   const [savingAuto, setSavingAuto] = useState(false);
   const [accountSearch, setAccountSearch] = useState("");
   const [describingImage, setDescribingImage] = useState(false);
@@ -765,6 +847,26 @@ export default function TopBooksPage() {
     setSelectedTopnAccount(accountKey);
   }
 
+  async function checkWhySilent(accId: string) {
+    setWhySilent((prev) => ({ ...prev, [accId]: "loading" }));
+    try {
+      const res = await fetch(`/api/admin/why-silent?accountId=${encodeURIComponent(accId)}`, {
+        headers: headers(),
+      });
+      if (!res.ok) {
+        setWhySilent((prev) => ({ ...prev, [accId]: { error: `Diagnostic failed (HTTP ${res.status})` } }));
+        return;
+      }
+      const data = (await res.json()) as WhySilentResult;
+      setWhySilent((prev) => ({ ...prev, [accId]: data }));
+    } catch (e) {
+      setWhySilent((prev) => ({
+        ...prev,
+        [accId]: { error: e instanceof Error ? e.message : "Diagnostic failed" },
+      }));
+    }
+  }
+
   async function saveTopnAutomation() {
     setSavingAuto(true);
     try {
@@ -1151,6 +1253,45 @@ export default function TopBooksPage() {
                               <div className="text-xs text-stone-600">
                                 {cfg.intervals.map((w) => `${w.start}–${w.end}`).join(", ") || "no windows"} · every {cfg.frequencyDays}d · {listCount} list{listCount !== 1 ? "s" : ""} · ptr {cfg.pointer}{cfg.lastPostDate ? ` · last ${cfg.lastPostDate}` : ""}
                               </div>
+                              {(() => {
+                                const state = whySilent[accId];
+                                return (
+                                  <div className="mt-2">
+                                    <button
+                                      onClick={() => checkWhySilent(accId)}
+                                      disabled={state === "loading"}
+                                      className="text-[11px] px-2 py-1 rounded border border-stone-300 bg-white text-stone-700 hover:bg-stone-100 transition-colors disabled:opacity-50"
+                                    >
+                                      {state === "loading" ? "Checking…" : "Why isn't this posting?"}
+                                    </button>
+                                    {state && state !== "loading" && (
+                                      "error" in state ? (
+                                        <div className="mt-2 text-xs text-red-600">{state.error}</div>
+                                      ) : (() => {
+                                        const { tone, lines } = explainWhySilent(state);
+                                        const toneCls =
+                                          tone === "ok"
+                                            ? "border-green-500/40 bg-green-500/10 text-stone-700"
+                                            : tone === "warn"
+                                            ? "border-amber-500/40 bg-amber-500/10 text-stone-700"
+                                            : "border-red-500/40 bg-red-500/10 text-stone-700";
+                                        return (
+                                          <div className={`mt-2 rounded-lg border px-3 py-2 text-xs space-y-1 ${toneCls}`}>
+                                            {lines.map((l, i) => (
+                                              <p key={i}>{l}</p>
+                                            ))}
+                                            <p className="text-stone-500">
+                                              {state.activeWindowsNow.length > 0
+                                                ? `Windows still open today: ${state.activeWindowsNow.join(", ")} (UTC).`
+                                                : "No windows left open today (UTC)."}
+                                            </p>
+                                          </div>
+                                        );
+                                      })()
+                                    )}
+                                  </div>
+                                );
+                              })()}
                             </div>
                           );
                         })}
