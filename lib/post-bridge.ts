@@ -25,6 +25,17 @@ function retryDelayMs(attempt: number): number {
   return RETRY_DELAYS_MS[attempt - 1] ?? RETRY_DELAYS_MS[RETRY_DELAYS_MS.length - 1];
 }
 
+// PostBridge's POST /v1/posts creates a *scheduled* post (see the runbook's
+// postbridge.md). A body with no scheduled_at leaves the post with no time to
+// fire, so it is created but never goes out — which is what "Publish Now" in
+// the UI was doing. Manual publishes now get an explicit near-future time,
+// the same approach the cron fallback already takes (lib/cron/tiktok.ts).
+export const MANUAL_POST_LEAD_MS = 2 * 60 * 1000;
+
+export function defaultScheduledAt(): string {
+  return new Date(Date.now() + MANUAL_POST_LEAD_MS).toISOString();
+}
+
 export class PostBridgeError extends Error {
   constructor(
     public path: string,

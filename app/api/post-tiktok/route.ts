@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { redis } from "@/lib/kv";
+import { defaultScheduledAt } from "@/lib/post-bridge";
+
+// Uploading a full carousel means one round trip per slide plus the S3 PUT,
+// and this route had no explicit cap, so it inherited the platform default.
+export const maxDuration = 60;
 
 const PB_BASE = "https://api.post-bridge.com";
 const ACCOUNTS_CACHE_TTL_SECONDS = 120;
@@ -258,10 +263,11 @@ export async function POST(req: NextRequest) {
 
     // Publish the post to selected accounts
     if (action === "publish") {
-      const { caption, mediaIds, accountIds } = body as {
+      const { caption, mediaIds, accountIds, scheduledAt } = body as {
         caption: string;
         mediaIds: string[];
         accountIds: number[];
+        scheduledAt?: string;
       };
 
       if (!accountIds || accountIds.length === 0) {
@@ -283,6 +289,11 @@ export async function POST(req: NextRequest) {
           caption: caption || "",
           media: mediaIds,
           social_accounts: accountIds,
+          // Always send a time. POST /v1/posts creates a *scheduled* post, so
+          // omitting this produced a post with nothing to fire it — the reason
+          // "Post now" appeared to do nothing. Defaults to a couple of minutes
+          // out, matching the cron fallback's behaviour.
+          scheduled_at: scheduledAt || defaultScheduledAt(),
           platform_configurations: {
             tiktok: { draft: false, is_aigc: false },
           },
