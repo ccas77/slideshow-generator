@@ -12,6 +12,7 @@ import { markScheduled, unmarkScheduled, getScheduledToday } from "./scheduled-t
 import { notify } from "@/lib/notify";
 import { notifyPostFailure } from "@/lib/post-failure";
 import { withJobTimeout, JOB_TIMEOUT_MS } from "./with-timeout";
+import { unlimitedDeadline, type RunDeadline } from "./deadline";
 import type { Job, CronAccountResult } from "./types";
 
 function pickRandom<T>(arr: T[]): T | null {
@@ -20,7 +21,8 @@ function pickRandom<T>(arr: T[]): T | null {
 }
 
 export async function runTikTokPhase(
-  scheduledToday: Set<string>
+  scheduledToday: Set<string>,
+  deadline: RunDeadline = unlimitedDeadline()
 ): Promise<{ results: CronAccountResult[]; accounts: { id: number; username: string }[]; debugLog: string[] }> {
   const results: CronAccountResult[] = [];
   const debugLog: string[] = [];
@@ -298,11 +300,30 @@ export async function runTikTokPhase(
 
   for (let i = 0; i < jobs.length; i += BATCH_SIZE) {
     const batch = jobs.slice(i, i + BATCH_SIZE);
+    // Stop starting batches while there is still time to unmark the rest and
+    // return cleanly. Being killed here would leave every remaining schedule
+    // key marked, silently burning those windows for the day.
+    if (!deadline.hasTimeFor(JOB_TIMEOUT_MS)) {
+      const deferred = jobs.slice(i);
+      debugLog.push(`Out of cron budget — deferring ${deferred.length} TikTok jobs to the next run`);
+      await unmarkScheduled(deferred.map((j) => j.schedKey));
+      await notify({
+        subject: `Slideshow Generator: TikTok phase ran out of cron budget`,
+        body: `${deferred.length} TikTok job(s) were not started because the cron run was close to its ${Math.round(JOB_TIMEOUT_MS / 1000)}s-per-job limit within the shared run budget. Their schedule keys were released, so the next run will retry them.\n\nDeferred: ${deferred.map((j) => `${j.acc.username} ${j.win.start}`).join(", ")}`,
+        dedupeKey: `budget-exhausted:tiktok:${new Date().toISOString().slice(0, 13)}`,
+        cooldownSec: 3600,
+      });
+      break;
+    }
     debugLog.push(`Processing batch ${Math.floor(i / BATCH_SIZE) + 1}: ${batch.length} jobs`);
     const batchResults = await Promise.allSettled(batch.map(processJob));
-    for (const r of batchResults) {
-      postResults.push(r.status === "fulfilled" ? r.value : { job: batch[0], status: `error: ${r.reason}` });
-    }
+    batchResults.forEach((r, idx) => {
+      // Index-matched: attributing a rejection to batch[0] unmarked the wrong
+      // window (duplicate risk) and left the real failure marked (silent loss).
+      postResults.push(
+        r.status === "fulfilled" ? r.value : { job: batch[idx], status: `error: ${r.reason}` }
+      );
+    });
   }
 
   // Un-mark schedule keys for failed jobs so they can retry next invocation
@@ -373,6 +394,11 @@ export async function runTikTokPhase(
     if (data.config.intervals.length === 0) continue;
     // Skip if this account already posted successfully this invocation
     if (successfulAccounts.has(acc.id)) continue;
+    // Skip if the fallback already ran for this account today. Without this the
+    // fallback fired again on EVERY later cron run — it marks `<id>:fallback`
+    // but nothing ever read that key, so an account with no successful window
+    // got a fresh duplicate post every 30 minutes until midnight UTC.
+    if (currentScheduled.has(`${acc.id}:fallback`)) continue;
     // Skip if any window is still upcoming (normal retry will handle it)
     const anyWindowLeft = data.config.intervals.some((w) => shouldProcessWindow(w.start));
     if (anyWindowLeft) continue;
@@ -381,6 +407,12 @@ export async function runTikTokPhase(
       currentScheduled.has(`${acc.id}:${w.start}`)
     );
     if (hasSuccessKey) continue;
+    // No budget left to run a fallback publish; the next run will pick it up
+    // (the `<id>:fallback` key is only set on success, so nothing is lost).
+    if (!deadline.hasTimeFor(JOB_TIMEOUT_MS)) {
+      debugLog.push(`${acc.username} (${acc.id}): fallback skipped — out of cron budget`);
+      continue;
+    }
 
     // All windows passed, no successful post today — fallback attempt
     debugLog.push(`${acc.username} (${acc.id}): fallback — all windows passed with no successful post`);

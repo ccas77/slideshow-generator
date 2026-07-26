@@ -7,6 +7,7 @@ import { runInstagramPhase } from "@/lib/cron/instagram";
 import { runVideoPhase } from "@/lib/cron/video";
 import { runExcerptPhase } from "@/lib/cron/excerpts";
 import { checkStuckRotations } from "@/lib/cron/stuck-detector";
+import { createRunDeadline, CRON_BUDGET_MS } from "@/lib/cron/deadline";
 import { notify, processPendingAlerts } from "@/lib/notify";
 
 export const maxDuration = 800; // Pro max
@@ -63,13 +64,20 @@ export async function GET(req: NextRequest) {
 
       const scheduledToday = await getScheduledToday();
 
+      // One budget shared by all five phases. Phases run sequentially, so
+      // without this the later ones (video, excerpts) were the first to be
+      // starved and killed — silently, because a Vercel kill is not a throw.
+      // Each phase stops starting new jobs near the limit and releases the
+      // schedule keys it did not get to, so the next run retries them.
+      const deadline = createRunDeadline(CRON_BUDGET_MS);
+
       // Each phase is wrapped so one phase crashing doesn't silently lose the
       // others and triggers its own alert.
-      const tikTok = await runPhase("tiktok", () => runTikTokPhase(scheduledToday));
-      const topNResults = await runPhase("topn", () => runTopNPhase(scheduledToday));
-      const igAutoResults = await runPhase("instagram", () => runInstagramPhase(scheduledToday));
-      const videoResults = await runPhase("video", () => runVideoPhase(scheduledToday));
-      const excerptResults = await runPhase("excerpts", () => runExcerptPhase(scheduledToday));
+      const tikTok = await runPhase("tiktok", () => runTikTokPhase(scheduledToday, deadline));
+      const topNResults = await runPhase("topn", () => runTopNPhase(scheduledToday, deadline));
+      const igAutoResults = await runPhase("instagram", () => runInstagramPhase(scheduledToday, deadline));
+      const videoResults = await runPhase("video", () => runVideoPhase(scheduledToday, deadline));
+      const excerptResults = await runPhase("excerpts", () => runExcerptPhase(scheduledToday, deadline));
 
       const tikTokResults = "error" in tikTok ? [] : tikTok.results;
       const debugLog = "error" in tikTok ? [`tiktok phase crashed: ${tikTok.error}`] : tikTok.debugLog;

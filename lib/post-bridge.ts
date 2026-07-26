@@ -10,7 +10,20 @@ const PB_BASE = "https://api.post-bridge.com";
 // the response failed (root cause of the 2026-05-08 duplicate-post incident).
 
 const MAX_ATTEMPTS = 3;
-const RETRY_DELAY_MS = 30_000;
+// Backoff schedule between attempts, one entry per gap (so 3 attempts = 2
+// gaps). The original policy was a flat 30s, which meant a single retrying
+// call could sleep 60s. A job makes two retryable calls per slide, so on a
+// 6-slide carousel that flat delay could add minutes of pure sleep and blow
+// the per-job timeout in ./cron/with-timeout.ts — the job then got aborted and
+// re-run from scratch. 5s/15s keeps three attempts across a short PostBridge
+// blip (the observed 2026-06-24 outage was ~2 min, which no in-request retry
+// budget can ride out anyway — that is what the next cron run is for) while
+// keeping the worst case inside the job cap.
+const RETRY_DELAYS_MS = [5_000, 15_000];
+
+function retryDelayMs(attempt: number): number {
+  return RETRY_DELAYS_MS[attempt - 1] ?? RETRY_DELAYS_MS[RETRY_DELAYS_MS.length - 1];
+}
 
 export class PostBridgeError extends Error {
   constructor(
@@ -85,10 +98,11 @@ async function retryFetch(
         lastStatus = res.status;
         lastBody = body;
         if (!willRetry) throw lastErr;
+        const delay = retryDelayMs(attempt);
         console.log(
-          `[post-bridge] retry ${attempt}/${max} on ${method} ${label} (${res.status}), waiting ${RETRY_DELAY_MS}ms`,
+          `[post-bridge] retry ${attempt}/${max} on ${method} ${label} (${res.status}), waiting ${delay}ms`,
         );
-        await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
+        await new Promise((r) => setTimeout(r, delay));
         continue;
       }
 
@@ -131,10 +145,11 @@ async function retryFetch(
         throw new NetworkError(label, method, err, attempt);
       }
       lastErr = err;
+      const delay = retryDelayMs(attempt);
       console.log(
-        `[post-bridge] retry ${attempt}/${max} on ${method} ${label} (network: ${msg}), waiting ${RETRY_DELAY_MS}ms`,
+        `[post-bridge] retry ${attempt}/${max} on ${method} ${label} (network: ${msg}), waiting ${delay}ms`,
       );
-      await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
+      await new Promise((r) => setTimeout(r, delay));
     }
   }
 
@@ -295,10 +310,15 @@ export interface VerifyParams {
 export async function verifyPostScheduled(p: VerifyParams): Promise<boolean> {
   await new Promise((r) => setTimeout(r, p.waitMs ?? 8000));
   try {
+    // Deliberately NOT retryable. This runs inside the post-failure path, which
+    // sits outside the per-job timeout; a retrying read here could sleep for
+    // tens of seconds per failed job and eat the whole cron budget (see
+    // lib/post-failure.ts and lib/cron/deadline.ts). Verification is
+    // best-effort: if the read fails we simply fall through and alert.
     const resp = await pbFetch(
       "/v1/posts?limit=100",
       {},
-      { retryable: true },
+      { retryable: false },
     );
     const posts: Array<{
       scheduled_at?: string;
@@ -351,10 +371,11 @@ export async function verifyAccountHasPostsToday(
   // noelledarkromance for the incident.
   for (const offset of [0, 100, 200, 300]) {
     try {
+      // Not retryable, for the same budget reason as verifyPostScheduled.
       const resp = await pbFetch(
         `/v1/posts?limit=100&offset=${offset}`,
         {},
-        { retryable: true },
+        { retryable: false },
       );
       const posts: Array<{
         scheduled_at?: string;
