@@ -581,7 +581,7 @@ export default function InstagramPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-zinc-900 to-black text-white">
+    <div className="min-h-screen bg-gradient-to-br from-stone-50 via-white to-stone-100 text-stone-900">
       <div className="mx-auto w-full max-w-4xl px-6 sm:px-10 py-10">
         <AppHeader />
         <HowItWorks>
@@ -593,51 +593,51 @@ export default function InstagramPage() {
 
         <div className="mb-6">
           <h1 className="text-2xl font-bold">Instagram</h1>
-          <p className="text-sm text-zinc-500">
+          <p className="text-sm text-stone-500">
             Short carousels for Instagram + video for TikTok
           </p>
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 mb-6 border-b border-zinc-800">
+        <div className="flex gap-1 mb-6 border-b border-stone-200">
           {tabs.map((t) => (
             <button
               key={t.key}
               onClick={() => setTab(t.key)}
               className={`px-4 py-2.5 text-sm font-medium transition-colors relative ${
                 tab === t.key
-                  ? "text-white"
-                  : "text-zinc-500 hover:text-zinc-300"
+                  ? "text-stone-900"
+                  : "text-stone-500 hover:text-stone-700"
               }`}
             >
               {t.label}
               {tab === t.key && (
-                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-white rounded-full" />
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-stone-900 rounded-full" />
               )}
             </button>
           ))}
           {saving && (
-            <span className="ml-auto text-xs text-zinc-500 self-center">Saving…</span>
+            <span className="ml-auto text-xs text-stone-500 self-center">Saving…</span>
           )}
         </div>
 
 
         {loading ? (
-          <p className="text-zinc-500">Loading…</p>
+          <p className="text-stone-500">Loading…</p>
         ) : (
           <>
             {/* ═══ Slideshows Tab ═══ */}
             {tab === "slideshows" && (
               <div className="space-y-6">
                 {igSlideshows.length === 0 ? (
-                  <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-10 text-center">
-                    <p className="text-zinc-400 mb-2">No Instagram slideshows yet.</p>
-                    <p className="text-xs text-zinc-500 mb-4">
+                  <div className="rounded-2xl border border-stone-200 bg-white/70 p-10 text-center">
+                    <p className="text-stone-600 mb-2">No Instagram slideshows yet.</p>
+                    <p className="text-xs text-stone-500 mb-4">
                       Import slideshows from your books to get started.
                     </p>
                     <button
                       onClick={() => setTab("import")}
-                      className="px-4 py-2 rounded-lg bg-white text-black font-semibold hover:bg-zinc-200 transition-colors text-sm"
+                      className="px-4 py-2 rounded-lg bg-stone-900 text-white font-semibold hover:bg-stone-700 transition-colors text-sm"
                     >
                       Go to Import
                     </button>
@@ -662,7 +662,7 @@ export default function InstagramPage() {
                       const sourceBook = bookId !== "__none__" ? books.find((b) => b.id === bookId) : null;
                       const isExpanded = expandedBooks.has(bookId);
                       return (
-                        <div key={bookId} className="rounded-2xl border border-zinc-800 bg-zinc-900/60 overflow-hidden">
+                        <div key={bookId} className="rounded-2xl border border-stone-200 bg-white/70 overflow-hidden">
                           <button
                             onClick={() => {
                               setExpandedBooks((prev) => {
@@ -672,13 +672,13 @@ export default function InstagramPage() {
                                 return next;
                               });
                             }}
-                            className="w-full flex items-center gap-2 px-5 py-3.5 text-left hover:bg-zinc-800/50 transition-colors"
+                            className="w-full flex items-center gap-2 px-5 py-3.5 text-left hover:bg-stone-100/70 transition-colors"
                           >
-                            <span className="text-xs text-zinc-500 transition-transform" style={{ transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)" }}>&#9654;</span>
-                            <h3 className="text-sm font-semibold text-zinc-200 flex-1">
+                            <span className="text-xs text-stone-500 transition-transform" style={{ transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)" }}>&#9654;</span>
+                            <h3 className="text-sm font-semibold text-stone-800 flex-1">
                               {sourceBook ? sourceBook.name : "Other"}
                             </h3>
-                            <span className="text-xs text-zinc-500">{group.length} slideshow{group.length !== 1 ? "s" : ""}</span>
+                            <span className="text-xs text-stone-500">{group.length} slideshow{group.length !== 1 ? "s" : ""}</span>
                           </button>
                           {isExpanded && <div className="space-y-3 px-5 pb-5">
                   {group.map((s) => {
@@ -687,43 +687,43 @@ export default function InstagramPage() {
 
                     if (isEditing && editDraft) {
                       return (
-                        <div key={s.id} className="rounded-2xl border border-zinc-700 bg-zinc-900/80 p-6">
+                        <div key={s.id} className="rounded-2xl border border-stone-300 bg-white/80 p-6">
                           <div className="flex items-center justify-between mb-4">
                             <h3 className="text-sm font-semibold">Editing slideshow</h3>
                             <div className="flex gap-2">
-                              <button onClick={cancelEditing} className="text-xs text-zinc-400 hover:text-white">Cancel</button>
-                              <button onClick={saveEditing} className="text-xs bg-white text-black px-3 py-1 rounded-lg font-semibold hover:bg-zinc-200">Save</button>
+                              <button onClick={cancelEditing} className="text-xs text-stone-600 hover:text-stone-900">Cancel</button>
+                              <button onClick={saveEditing} className="text-xs bg-stone-900 text-white px-3 py-1 rounded-lg font-semibold hover:bg-stone-700">Save</button>
                             </div>
                           </div>
 
-                          <label className="block text-xs font-medium text-zinc-400 mb-1">Name</label>
+                          <label className="block text-xs font-medium text-stone-600 mb-1">Name</label>
                           <input
                             value={editDraft.name}
                             onChange={(e) => setEditDraft({ ...editDraft, name: e.target.value })}
-                            className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-white text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-white/20"
+                            className="w-full rounded-lg border border-stone-200 bg-stone-100 px-3 py-2 text-stone-900 text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-stone-900/15"
                           />
 
-                          <label className="block text-xs font-medium text-zinc-400 mb-1">
+                          <label className="block text-xs font-medium text-stone-600 mb-1">
                             Slides (one per line, max 10)
                           </label>
                           <textarea
                             value={editDraft.slideTexts}
                             onChange={(e) => setEditDraft({ ...editDraft, slideTexts: e.target.value })}
                             rows={10}
-                            className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-white text-sm mb-1 font-mono focus:outline-none focus:ring-2 focus:ring-white/20"
+                            className="w-full rounded-lg border border-stone-200 bg-stone-100 px-3 py-2 text-stone-900 text-sm mb-1 font-mono focus:outline-none focus:ring-2 focus:ring-stone-900/15"
                           />
-                          <p className="text-[11px] text-zinc-500 mb-5">
+                          <p className="text-[11px] text-stone-500 mb-5">
                             {editDraft.slideTexts.split("\n").filter((l) => l.trim()).length} / 10 slides
                           </p>
 
                           {/* Image prompts */}
-                          <label className="block text-xs font-medium text-zinc-400 mb-1">
+                          <label className="block text-xs font-medium text-stone-600 mb-1">
                             Image prompts ({editDraft.imagePrompts.length})
                           </label>
                           <div className="space-y-2 mb-2">
                             {editDraft.imagePrompts.map((p) => (
-                              <div key={p.id} className="rounded-lg border border-zinc-800 bg-zinc-950/50 px-3 py-2">
-                                <div className="flex items-center gap-2 text-sm text-zinc-300 mb-1">
+                              <div key={p.id} className="rounded-lg border border-stone-200 bg-stone-100/50 px-3 py-2">
+                                <div className="flex items-center gap-2 text-sm text-stone-700 mb-1">
                                   <span className="truncate font-medium">{p.name}</span>
                                   <button
                                     onClick={() => setEditDraft({
@@ -731,7 +731,7 @@ export default function InstagramPage() {
                                       imagePrompts: editDraft.imagePrompts.filter((x) => x.id !== p.id),
                                       imagePromptIds: editDraft.imagePromptIds.filter((x) => x !== p.id),
                                     })}
-                                    className="text-xs text-red-500 hover:text-red-400 ml-auto shrink-0"
+                                    className="text-xs text-red-600 hover:text-red-600 ml-auto shrink-0"
                                   >
                                     Remove
                                   </button>
@@ -745,12 +745,12 @@ export default function InstagramPage() {
                                     ),
                                   })}
                                   rows={3}
-                                  className="w-full rounded bg-zinc-900 border border-zinc-800 px-2 py-1.5 text-xs text-zinc-400 focus:outline-none focus:ring-1 focus:ring-white/20 resize-none"
+                                  className="w-full rounded bg-white border border-stone-200 px-2 py-1.5 text-xs text-stone-600 focus:outline-none focus:ring-1 focus:ring-stone-900/15 resize-none"
                                 />
                               </div>
                             ))}
                             {editDraft.imagePrompts.length === 0 && (
-                              <p className="text-xs text-zinc-600">No image prompts.</p>
+                              <p className="text-xs text-stone-400">No image prompts.</p>
                             )}
                           </div>
                           <div className="flex flex-wrap gap-2 mb-2">
@@ -770,7 +770,7 @@ export default function InstagramPage() {
                                         imagePromptIds: [...editDraft.imagePromptIds, item.id],
                                       });
                                     }}
-                                    className="rounded-lg border border-zinc-800 bg-zinc-900 px-2 py-1 text-xs text-zinc-400 focus:outline-none"
+                                    className="rounded-lg border border-stone-200 bg-white px-2 py-1 text-xs text-stone-600 focus:outline-none"
                                   >
                                     <option value="">+ Add from book pool…</option>
                                     {available.map((p) => (
@@ -790,14 +790,14 @@ export default function InstagramPage() {
                                   imagePromptIds: [...editDraft.imagePromptIds, newItem.id],
                                 });
                               }}
-                              className="text-xs text-blue-400 hover:text-blue-300"
+                              className="text-xs text-blue-600 hover:text-blue-700"
                             >
                               + New prompt
                             </button>
                             <button
                               onClick={analyzeUpload}
                               disabled={analyzing}
-                              className="text-xs text-purple-400 hover:text-purple-300 disabled:opacity-40"
+                              className="text-xs text-purple-600 hover:text-purple-700 disabled:opacity-40"
                             >
                               {analyzing ? "Analyzing…" : "Analyze image"}
                             </button>
@@ -808,25 +808,25 @@ export default function InstagramPage() {
                               onChange={(e) => setAnalyzeUrl(e.target.value)}
                               onKeyDown={(e) => { if (e.key === "Enter") analyzeFromUrl(); }}
                               placeholder="Paste image URL and press Enter…"
-                              className="flex-1 rounded-lg border border-zinc-800 bg-zinc-900 px-2 py-1 text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-white/20"
+                              className="flex-1 rounded-lg border border-stone-200 bg-white px-2 py-1 text-xs text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-1 focus:ring-stone-900/15"
                             />
                             <button
                               onClick={analyzeFromUrl}
                               disabled={!analyzeUrl.trim() || analyzing}
-                              className="text-xs text-purple-400 hover:text-purple-300 disabled:opacity-40 shrink-0"
+                              className="text-xs text-purple-600 hover:text-purple-700 disabled:opacity-40 shrink-0"
                             >
                               Extract
                             </button>
                           </div>
 
                           {/* Captions */}
-                          <label className="block text-xs font-medium text-zinc-400 mb-1">
+                          <label className="block text-xs font-medium text-stone-600 mb-1">
                             Captions ({editDraft.captions.length})
                           </label>
                           <div className="space-y-2 mb-2">
                             {editDraft.captions.map((c) => (
-                              <div key={c.id} className="rounded-lg border border-zinc-800 bg-zinc-950/50 px-3 py-2">
-                                <div className="flex items-center gap-2 text-sm text-zinc-300 mb-1">
+                              <div key={c.id} className="rounded-lg border border-stone-200 bg-stone-100/50 px-3 py-2">
+                                <div className="flex items-center gap-2 text-sm text-stone-700 mb-1">
                                   <span className="truncate font-medium">{c.name}</span>
                                   <button
                                     onClick={() => setEditDraft({
@@ -834,7 +834,7 @@ export default function InstagramPage() {
                                       captions: editDraft.captions.filter((x) => x.id !== c.id),
                                       captionIds: editDraft.captionIds.filter((x) => x !== c.id),
                                     })}
-                                    className="text-xs text-red-500 hover:text-red-400 ml-auto shrink-0"
+                                    className="text-xs text-red-600 hover:text-red-600 ml-auto shrink-0"
                                   >
                                     Remove
                                   </button>
@@ -848,12 +848,12 @@ export default function InstagramPage() {
                                     ),
                                   })}
                                   rows={3}
-                                  className="w-full rounded bg-zinc-900 border border-zinc-800 px-2 py-1.5 text-xs text-zinc-400 focus:outline-none focus:ring-1 focus:ring-white/20 resize-none"
+                                  className="w-full rounded bg-white border border-stone-200 px-2 py-1.5 text-xs text-stone-600 focus:outline-none focus:ring-1 focus:ring-stone-900/15 resize-none"
                                 />
                               </div>
                             ))}
                             {editDraft.captions.length === 0 && (
-                              <p className="text-xs text-zinc-600">No captions.</p>
+                              <p className="text-xs text-stone-400">No captions.</p>
                             )}
                           </div>
                           <div className="flex flex-wrap gap-2">
@@ -873,7 +873,7 @@ export default function InstagramPage() {
                                         captionIds: [...editDraft.captionIds, item.id],
                                       });
                                     }}
-                                    className="rounded-lg border border-zinc-800 bg-zinc-900 px-2 py-1 text-xs text-zinc-400 focus:outline-none"
+                                    className="rounded-lg border border-stone-200 bg-white px-2 py-1 text-xs text-stone-600 focus:outline-none"
                                   >
                                     <option value="">+ Add from book pool…</option>
                                     {available.map((c) => (
@@ -893,7 +893,7 @@ export default function InstagramPage() {
                                   captionIds: [...editDraft.captionIds, newItem.id],
                                 });
                               }}
-                              className="text-xs text-blue-400 hover:text-blue-300"
+                              className="text-xs text-blue-600 hover:text-blue-700"
                             >
                               + New caption
                             </button>
@@ -904,30 +904,30 @@ export default function InstagramPage() {
                     }
 
                     return (
-                      <div key={s.id} className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-5">
+                      <div key={s.id} className="rounded-xl border border-stone-200 bg-white/70 p-5">
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex-1 min-w-0">
                             <div className="font-medium text-sm">{s.name}</div>
-                            <div className="text-xs text-zinc-500 mt-0.5">
+                            <div className="text-xs text-stone-500 mt-0.5">
                               {slideCount} slides · {s.imagePrompts.length} prompts · {s.captions.length} captions
                             </div>
                           </div>
                           <div className="flex gap-2 shrink-0">
                             <button
                               onClick={() => setPreviewSlideshow(s)}
-                              className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
+                              className="text-xs text-blue-600 hover:text-blue-700 transition-colors"
                             >
                               Preview
                             </button>
                             <button
                               onClick={() => startEditing(s)}
-                              className="text-xs text-zinc-400 hover:text-white transition-colors"
+                              className="text-xs text-stone-600 hover:text-stone-900 transition-colors"
                             >
                               Edit
                             </button>
                             <button
                               onClick={() => deleteSlideshow(s.id)}
-                              className="text-xs text-red-500 hover:text-red-400 transition-colors"
+                              className="text-xs text-red-600 hover:text-red-600 transition-colors"
                             >
                               Delete
                             </button>
@@ -945,36 +945,36 @@ export default function InstagramPage() {
 
                 {/* Show new slideshow being reviewed (from import) */}
                 {editingId && editDraft && !igSlideshows.some((s) => s.id === editingId) && (
-                  <div className="rounded-2xl border border-zinc-700 bg-zinc-900/80 p-6">
+                  <div className="rounded-2xl border border-stone-300 bg-white/80 p-6">
                     <div className="flex items-center justify-between mb-4">
                       <h3 className="text-sm font-semibold">Review imported slideshow</h3>
                       <div className="flex gap-2">
-                        <button onClick={cancelEditing} className="text-xs text-zinc-400 hover:text-white">Discard</button>
-                        <button onClick={saveEditing} className="text-xs bg-white text-black px-3 py-1 rounded-lg font-semibold hover:bg-zinc-200">Save</button>
+                        <button onClick={cancelEditing} className="text-xs text-stone-600 hover:text-stone-900">Discard</button>
+                        <button onClick={saveEditing} className="text-xs bg-stone-900 text-white px-3 py-1 rounded-lg font-semibold hover:bg-stone-700">Save</button>
                       </div>
                     </div>
 
-                    <label className="block text-xs font-medium text-zinc-400 mb-1">Name</label>
+                    <label className="block text-xs font-medium text-stone-600 mb-1">Name</label>
                     <input
                       value={editDraft.name}
                       onChange={(e) => setEditDraft({ ...editDraft, name: e.target.value })}
-                      className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-white text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-white/20"
+                      className="w-full rounded-lg border border-stone-200 bg-stone-100 px-3 py-2 text-stone-900 text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-stone-900/15"
                     />
 
-                    <label className="block text-xs font-medium text-zinc-400 mb-1">
+                    <label className="block text-xs font-medium text-stone-600 mb-1">
                       Slides (one per line, max 10)
                     </label>
                     <textarea
                       value={editDraft.slideTexts}
                       onChange={(e) => setEditDraft({ ...editDraft, slideTexts: e.target.value })}
                       rows={10}
-                      className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-white text-sm mb-1 font-mono focus:outline-none focus:ring-2 focus:ring-white/20"
+                      className="w-full rounded-lg border border-stone-200 bg-stone-100 px-3 py-2 text-stone-900 text-sm mb-1 font-mono focus:outline-none focus:ring-2 focus:ring-stone-900/15"
                     />
-                    <p className="text-[11px] text-zinc-500 mb-4">
+                    <p className="text-[11px] text-stone-500 mb-4">
                       {editDraft.slideTexts.split("\n").filter((l) => l.trim()).length} / 10 slides
                     </p>
 
-                    <p className="text-xs text-zinc-500">
+                    <p className="text-xs text-stone-500">
                       {editDraft.imagePrompts.length} image prompts · {editDraft.captions.length} captions imported from book
                     </p>
                   </div>
@@ -985,18 +985,18 @@ export default function InstagramPage() {
             {/* ═══ Import Tab ═══ */}
             {tab === "import" && (
               <div className="space-y-4">
-                <p className="text-xs text-zinc-500">
+                <p className="text-xs text-stone-500">
                   Import slideshows from your books. Slideshows with more than 10 slides will be truncated by Claude. Already-imported slideshows are grayed out.
                 </p>
 
                 {truncating && (
-                  <div className="rounded-2xl border border-blue-500/30 bg-blue-500/10 p-4 text-sm text-blue-400">
+                  <div className="rounded-2xl border border-blue-500/30 bg-blue-500/10 p-4 text-sm text-blue-600">
                     Claude is selecting the best slides for Instagram…
                   </div>
                 )}
 
                 {books.length === 0 ? (
-                  <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-10 text-center text-zinc-500">
+                  <div className="rounded-2xl border border-stone-200 bg-white/70 p-10 text-center text-stone-500">
                     No books yet. Create a book first.
                   </div>
                 ) : (
@@ -1010,7 +1010,7 @@ export default function InstagramPage() {
                     const importExpanded = expandedBooks.has(`import:${book.id}`);
 
                     return (
-                      <div key={book.id} className="rounded-2xl border border-zinc-800 bg-zinc-900/60 overflow-hidden">
+                      <div key={book.id} className="rounded-2xl border border-stone-200 bg-white/70 overflow-hidden">
                         <div className="flex items-center gap-2 px-5 py-3.5">
                           <button
                             onClick={() => {
@@ -1024,9 +1024,9 @@ export default function InstagramPage() {
                             }}
                             className="flex items-center gap-2 flex-1 text-left"
                           >
-                            <span className="text-xs text-zinc-500 transition-transform" style={{ transform: importExpanded ? "rotate(90deg)" : "rotate(0deg)" }}>&#9654;</span>
+                            <span className="text-xs text-stone-500 transition-transform" style={{ transform: importExpanded ? "rotate(90deg)" : "rotate(0deg)" }}>&#9654;</span>
                             <h3 className="text-sm font-semibold">{book.name}</h3>
-                            <span className="text-xs text-zinc-500">
+                            <span className="text-xs text-stone-500">
                               {book.slideshows.length} slideshow{book.slideshows.length !== 1 ? "s" : ""} · {importedSlideshowIds.size} imported · {newSlideshows.length} new
                             </span>
                           </button>
@@ -1043,7 +1043,7 @@ export default function InstagramPage() {
                                 }
                               }}
                               disabled={truncating}
-                              className="text-xs bg-white text-black px-3 py-1.5 rounded-lg font-medium hover:bg-zinc-200 transition-colors disabled:opacity-40 shrink-0"
+                              className="text-xs bg-stone-900 text-white px-3 py-1.5 rounded-lg font-medium hover:bg-stone-700 transition-colors disabled:opacity-40 shrink-0"
                             >
                               Import all new ({newSlideshows.length})
                             </button>
@@ -1057,15 +1057,15 @@ export default function InstagramPage() {
                               <div
                                 key={ss.id}
                                 className={`flex items-center justify-between px-3 py-2 rounded-lg ${
-                                  alreadyImported ? "bg-zinc-950/50 text-zinc-600" : "bg-zinc-950/50 text-zinc-300"
+                                  alreadyImported ? "bg-stone-100/50 text-stone-400" : "bg-stone-100/50 text-stone-700"
                                 }`}
                               >
                                 <div className="flex items-center gap-2 min-w-0">
                                   {alreadyImported && (
-                                    <span className="text-[10px] bg-green-500/15 text-green-400 px-1.5 py-0.5 rounded shrink-0">imported</span>
+                                    <span className="text-[10px] bg-green-500/15 text-green-600 px-1.5 py-0.5 rounded shrink-0">imported</span>
                                   )}
                                   <span className="text-sm truncate">{ss.name}</span>
-                                  <span className="text-[10px] text-zinc-600 shrink-0">
+                                  <span className="text-[10px] text-stone-400 shrink-0">
                                     {slideCount} slides{slideCount > 10 ? " → truncate" : ""}
                                   </span>
                                 </div>
@@ -1073,7 +1073,7 @@ export default function InstagramPage() {
                                   <button
                                     onClick={() => importSlideshow(book.id, ss.id)}
                                     disabled={truncating}
-                                    className="text-xs text-blue-400 hover:text-blue-300 shrink-0 ml-2 disabled:opacity-40"
+                                    className="text-xs text-blue-600 hover:text-blue-700 shrink-0 ml-2 disabled:opacity-40"
                                   >
                                     Import
                                   </button>
@@ -1110,15 +1110,15 @@ export default function InstagramPage() {
               return (
               <div className="space-y-6">
                 {/* Account selector */}
-                <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6">
+                <div className="rounded-2xl border border-stone-200 bg-white/70 p-6">
                   <h3 className="text-sm font-semibold mb-3">Configure Account</h3>
                   {allAccs.length === 0 ? (
-                    <p className="text-xs text-zinc-500">No accounts connected in PostBridge.</p>
+                    <p className="text-xs text-stone-500">No accounts connected in PostBridge.</p>
                   ) : (
                     <select
                       value={selectedAutoAccount}
                       onChange={(e) => setSelectedAutoAccount(e.target.value)}
-                      className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+                      className="w-full rounded-lg border border-stone-200 bg-stone-100 px-3 py-2.5 text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-stone-900/15"
                     >
                       <option value="">Select an account…</option>
                       {(["tiktok", "instagram", "facebook"] as const).map((plat) => {
@@ -1144,7 +1144,7 @@ export default function InstagramPage() {
                   {/* Summary of all enabled accounts */}
                   {Object.entries(autoConfig.accounts).filter(([, c]) => c.enabled).length > 0 && (
                     <div className="mt-5 space-y-2">
-                      <h4 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">All enabled accounts</h4>
+                      <h4 className="text-xs font-semibold uppercase tracking-wide text-stone-500">All enabled accounts</h4>
                       {Object.entries(autoConfig.accounts).filter(([, c]) => c.enabled).map(([accId, cfg]) => {
                         const acc = allAccs.find((a) => String(a.id) === accId);
                         const bookNames = cfg.bookIds.length > 0
@@ -1152,12 +1152,12 @@ export default function InstagramPage() {
                           : "all books";
                         const ssCount = cfg.slideshowIds.length > 0 ? cfg.slideshowIds.length : igSlideshows.filter((s) => cfg.bookIds.length === 0 || (s.sourceBookId && cfg.bookIds.includes(s.sourceBookId))).length;
                         return (
-                          <div key={accId} className="rounded-lg border border-zinc-700/50 bg-zinc-800/50 px-3 py-2">
+                          <div key={accId} className="rounded-lg border border-stone-300/60 bg-stone-100/70 px-3 py-2">
                             <div className="flex items-center gap-2">
-                              <span className="text-sm font-medium text-white">@{acc?.username || accId}</span>
-                              <span className="text-[10px] uppercase tracking-wide text-zinc-500">{acc?.platform}</span>
+                              <span className="text-sm font-medium text-stone-900">@{acc?.username || accId}</span>
+                              <span className="text-[10px] uppercase tracking-wide text-stone-500">{acc?.platform}</span>
                             </div>
-                            <div className="text-xs text-zinc-400">
+                            <div className="text-xs text-stone-600">
                               {cfg.intervals.map((w) => `${w.start}–${w.end}`).join(", ") || "no windows"} · {bookNames} · {ssCount} slideshow{ssCount !== 1 ? "s" : ""} · ptr {cfg.pointer}
                             </div>
                           </div>
@@ -1169,26 +1169,26 @@ export default function InstagramPage() {
 
                 {/* Per-account config */}
                 {selectedAutoAccount && (
-                  <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6 space-y-5">
+                  <div className="rounded-2xl border border-stone-200 bg-white/70 p-6 space-y-5">
                     <label className="flex items-center gap-3 cursor-pointer">
                       <input
                         type="checkbox"
                         checked={currentConfig.enabled}
                         onChange={(e) => updateAccConfig({ enabled: e.target.checked })}
-                        className="accent-white w-4 h-4"
+                        className="accent-stone-900 w-4 h-4"
                       />
                       <span className="text-sm font-medium">Enable for this account</span>
                     </label>
 
                     {/* Books */}
                     <div>
-                      <h4 className="text-xs font-semibold text-zinc-400 uppercase tracking-wide mb-2">Books</h4>
-                      <p className="text-[11px] text-zinc-500 mb-2">
+                      <h4 className="text-xs font-semibold text-stone-600 uppercase tracking-wide mb-2">Books</h4>
+                      <p className="text-[11px] text-stone-500 mb-2">
                         {currentConfig.bookIds.length === 0 ? "All books (none selected = all)" : `${currentConfig.bookIds.length} selected`}
                       </p>
                       <div className="space-y-1 max-h-40 overflow-y-auto">
                         {books.map((b) => (
-                          <label key={b.id} className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-zinc-800 cursor-pointer">
+                          <label key={b.id} className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-stone-100 cursor-pointer">
                             <input
                               type="checkbox"
                               checked={currentConfig.bookIds.includes(b.id)}
@@ -1206,9 +1206,9 @@ export default function InstagramPage() {
                                   : currentConfig.slideshowIds;
                                 updateAccConfig({ bookIds: next, slideshowIds: nextSlideshows });
                               }}
-                              className="accent-white w-3.5 h-3.5"
+                              className="accent-stone-900 w-3.5 h-3.5"
                             />
-                            <span className="text-sm text-zinc-300">{b.name}</span>
+                            <span className="text-sm text-stone-700">{b.name}</span>
                           </label>
                         ))}
                       </div>
@@ -1217,19 +1217,19 @@ export default function InstagramPage() {
                     {/* Slideshows — only shown after selecting books */}
                     {currentConfig.bookIds.length > 0 && (
                     <div>
-                      <h4 className="text-xs font-semibold text-zinc-400 uppercase tracking-wide mb-2">Slideshows</h4>
+                      <h4 className="text-xs font-semibold text-stone-600 uppercase tracking-wide mb-2">Slideshows</h4>
                       {(() => {
                         const pool = igSlideshows.filter((s) => s.sourceBookId && currentConfig.bookIds.includes(s.sourceBookId));
                         return pool.length === 0 ? (
-                          <p className="text-xs text-zinc-500">No slideshows available for selected books.</p>
+                          <p className="text-xs text-stone-500">No slideshows available for selected books.</p>
                         ) : (
                           <>
-                            <p className="text-[11px] text-zinc-500 mb-2">
+                            <p className="text-[11px] text-stone-500 mb-2">
                               {currentConfig.slideshowIds.length === 0 ? `All ${pool.length} slideshows` : `${currentConfig.slideshowIds.length} of ${pool.length} selected`}
                             </p>
                             <div className="space-y-1 max-h-48 overflow-y-auto">
                               {pool.map((s) => (
-                                <label key={s.id} className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-zinc-800 cursor-pointer">
+                                <label key={s.id} className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-stone-100 cursor-pointer">
                                   <input
                                     type="checkbox"
                                     checked={currentConfig.slideshowIds.includes(s.id)}
@@ -1239,9 +1239,9 @@ export default function InstagramPage() {
                                         : [...currentConfig.slideshowIds, s.id];
                                       updateAccConfig({ slideshowIds: next });
                                     }}
-                                    className="accent-white w-3.5 h-3.5"
+                                    className="accent-stone-900 w-3.5 h-3.5"
                                   />
-                                  <span className="text-sm text-zinc-300 truncate">{s.name}</span>
+                                  <span className="text-sm text-stone-700 truncate">{s.name}</span>
                                 </label>
                               ))}
                             </div>
@@ -1253,7 +1253,7 @@ export default function InstagramPage() {
 
                     {/* Time windows */}
                     <div>
-                      <h4 className="text-xs font-semibold text-zinc-400 uppercase tracking-wide mb-2">Posting Windows (UTC)</h4>
+                      <h4 className="text-xs font-semibold text-stone-600 uppercase tracking-wide mb-2">Posting Windows (UTC)</h4>
                       <div className="space-y-2 mb-3">
                         {currentConfig.intervals.map((w, i) => (
                           <div key={i} className="flex items-center gap-2">
@@ -1261,19 +1261,19 @@ export default function InstagramPage() {
                               type="time"
                               value={w.start}
                               onChange={(e) => updateAccConfig({ intervals: currentConfig.intervals.map((x, j) => j === i ? { ...x, start: e.target.value } : x) })}
-                              className="rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+                              className="rounded-lg border border-stone-200 bg-stone-100 px-3 py-2 text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-stone-900/15"
                             />
-                            <span className="text-xs text-zinc-600">→</span>
+                            <span className="text-xs text-stone-400">→</span>
                             <input
                               type="time"
                               value={w.end}
                               onChange={(e) => updateAccConfig({ intervals: currentConfig.intervals.map((x, j) => j === i ? { ...x, end: e.target.value } : x) })}
-                              className="rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+                              className="rounded-lg border border-stone-200 bg-stone-100 px-3 py-2 text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-stone-900/15"
                             />
                             {currentConfig.intervals.length > 1 && (
                               <button
                                 onClick={() => updateAccConfig({ intervals: currentConfig.intervals.filter((_, j) => j !== i) })}
-                                className="text-xs text-red-500 hover:text-red-400"
+                                className="text-xs text-red-600 hover:text-red-600"
                               >
                                 Remove
                               </button>
@@ -1283,7 +1283,7 @@ export default function InstagramPage() {
                       </div>
                       <button
                         onClick={() => updateAccConfig({ intervals: [...currentConfig.intervals, { start: "12:00", end: "14:00" }] })}
-                        className="text-xs text-blue-400 hover:text-blue-300"
+                        className="text-xs text-blue-600 hover:text-blue-700"
                       >
                         + Add window
                       </button>
@@ -1295,11 +1295,11 @@ export default function InstagramPage() {
                 <div className="flex items-center gap-3">
                   <button
                     onClick={saveAutomation}
-                    className="px-5 py-2.5 rounded-lg bg-white text-black font-semibold hover:bg-zinc-200 transition-colors text-sm"
+                    className="px-5 py-2.5 rounded-lg bg-stone-900 text-white font-semibold hover:bg-stone-700 transition-colors text-sm"
                   >
                     Save Automation
                   </button>
-                  {autoSaved && <span className="text-xs text-green-400">Saved</span>}
+                  {autoSaved && <span className="text-xs text-green-600">Saved</span>}
                 </div>
               </div>
               );
@@ -1308,15 +1308,15 @@ export default function InstagramPage() {
             {tab === "music" && (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-lg font-semibold text-white">Music Tracks</h2>
-                  <label className={`px-4 py-2 rounded-lg text-sm font-medium cursor-pointer transition-colors ${uploadingVideoMusic ? "bg-zinc-700 text-zinc-400" : "bg-white text-black hover:bg-zinc-200"}`}>
+                  <h2 className="text-lg font-semibold text-stone-900">Music Tracks</h2>
+                  <label className={`px-4 py-2 rounded-lg text-sm font-medium cursor-pointer transition-colors ${uploadingVideoMusic ? "bg-stone-200 text-stone-600" : "bg-stone-900 text-white hover:bg-stone-700"}`}>
                     {uploadingVideoMusic ? "Uploading..." : "+ Upload Track"}
                     <input type="file" accept="audio/*" onChange={handleVideoMusicUpload} className="hidden" disabled={uploadingVideoMusic} />
                   </label>
                 </div>
-                <p className="text-xs text-zinc-500">Upload MP3 or M4A files. Assign them to accounts in the Video tab. A random track is picked for each video post.</p>
+                <p className="text-xs text-stone-500">Upload MP3 or M4A files. Assign them to accounts in the Video tab. A random track is picked for each video post.</p>
                 {videoMusicTracks.length === 0 ? (
-                  <p className="text-zinc-500 text-sm text-center py-8">No music tracks yet. Upload one to get started.</p>
+                  <p className="text-stone-500 text-sm text-center py-8">No music tracks yet. Upload one to get started.</p>
                 ) : (
                   <div className="space-y-3">
                     {videoMusicTracks.map((t) => {
@@ -1326,17 +1326,17 @@ export default function InstagramPage() {
                       });
                       const audioUrl = `/api/video-music?id=${t.id}&password=${encodeURIComponent(password || "")}`;
                       return (
-                        <div key={t.id} className="bg-zinc-900 rounded-lg px-4 py-3 border border-zinc-800 space-y-2">
+                        <div key={t.id} className="bg-white rounded-lg px-4 py-3 border border-stone-200 space-y-2">
                           <div className="flex items-center justify-between">
                             <div>
-                              <span className="text-white text-sm">{t.name}</span>
+                              <span className="text-stone-900 text-sm">{t.name}</span>
                               {usedIn.length > 0 && (
-                                <span className="text-xs text-purple-400 ml-2">Used by: {usedIn.join(", ")}</span>
+                                <span className="text-xs text-purple-600 ml-2">Used by: {usedIn.join(", ")}</span>
                               )}
                             </div>
-                            <button onClick={() => deleteVideoMusic(t.id)} className="text-xs text-red-400 hover:text-red-300 transition-colors">Delete</button>
+                            <button onClick={() => deleteVideoMusic(t.id)} className="text-xs text-red-600 hover:text-red-700 transition-colors">Delete</button>
                           </div>
-                          <audio controls preload="none" src={audioUrl} className="w-full h-8 [&::-webkit-media-controls-panel]:bg-zinc-800" />
+                          <audio controls preload="none" src={audioUrl} className="w-full h-8 [&::-webkit-media-controls-panel]:bg-stone-100" />
                         </div>
                       );
                     })}
@@ -1367,12 +1367,12 @@ export default function InstagramPage() {
               return (
               <div className="space-y-6">
                 {/* Manual video generate + post */}
-                <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6 space-y-4">
+                <div className="rounded-2xl border border-stone-200 bg-white/70 p-6 space-y-4">
                   <h3 className="text-sm font-semibold">Generate One Video</h3>
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
-                      <label className="block text-xs text-zinc-400 mb-1">Book</label>
+                      <label className="block text-xs text-stone-600 mb-1">Book</label>
                       <select
                         value={videoGenBookId}
                         onChange={(e) => {
@@ -1383,7 +1383,7 @@ export default function InstagramPage() {
                           const bookTracks = bk?.musicTrackIds || [];
                           setVideoGenMusicId(bookTracks.length > 0 ? bookTracks[Math.floor(Math.random() * bookTracks.length)] : "");
                         }}
-                        className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+                        className="w-full rounded-lg border border-stone-200 bg-stone-100 px-3 py-2 text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-stone-900/15"
                       >
                         <option value="">Select book...</option>
                         {books.filter((b) => igSlideshows.some((s) => s.sourceBookId === b.id)).map((b) => (
@@ -1392,12 +1392,12 @@ export default function InstagramPage() {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-xs text-zinc-400 mb-1">Slideshow</label>
+                      <label className="block text-xs text-stone-600 mb-1">Slideshow</label>
                       <select
                         value={videoGenSlideshowId}
                         onChange={(e) => setVideoGenSlideshowId(e.target.value)}
                         disabled={!videoGenBookId}
-                        className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-white/20 disabled:opacity-40"
+                        className="w-full rounded-lg border border-stone-200 bg-stone-100 px-3 py-2 text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-stone-900/15 disabled:opacity-40"
                       >
                         <option value="">Select slideshow...</option>
                         {igSlideshows.filter((s) => s.sourceBookId === videoGenBookId).map((s) => (
@@ -1406,7 +1406,7 @@ export default function InstagramPage() {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-xs text-zinc-400 mb-1">Music</label>
+                      <label className="block text-xs text-stone-600 mb-1">Music</label>
                       {(() => {
                         const bk = books.find((b) => b.id === videoGenBookId);
                         const bookTrackIds = bk?.musicTrackIds || [];
@@ -1417,7 +1417,7 @@ export default function InstagramPage() {
                           <select
                             value={videoGenMusicId}
                             onChange={(e) => setVideoGenMusicId(e.target.value)}
-                            className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+                            className="w-full rounded-lg border border-stone-200 bg-stone-100 px-3 py-2 text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-stone-900/15"
                           >
                             <option value="">No music</option>
                             {filtered.map((t) => (
@@ -1432,29 +1432,29 @@ export default function InstagramPage() {
                   <button
                     onClick={generateOneVideo}
                     disabled={videoGenerating || !videoGenSlideshowId}
-                    className="px-5 py-2.5 rounded-lg bg-white text-black font-semibold hover:bg-zinc-200 transition-colors text-sm disabled:opacity-40"
+                    className="px-5 py-2.5 rounded-lg bg-stone-900 text-white font-semibold hover:bg-stone-700 transition-colors text-sm disabled:opacity-40"
                   >
                     {videoGenerating ? "Generating..." : "Generate Video"}
                   </button>
 
                   {videoGenResult && (
                     <div className="space-y-4 pt-2">
-                      <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4">
-                        <p className="text-xs text-zinc-400 mb-2">{videoGenResult.name} — {videoGenResult.slideCount} slides</p>
+                      <div className="rounded-xl border border-stone-200 bg-stone-100 p-4">
+                        <p className="text-xs text-stone-600 mb-2">{videoGenResult.name} — {videoGenResult.slideCount} slides</p>
                         <video
                           controls
-                          className="w-full max-w-[320px] mx-auto rounded-lg border border-zinc-700"
+                          className="w-full max-w-[320px] mx-auto rounded-lg border border-stone-300"
                           src={`/api/video-preview?id=${encodeURIComponent(videoGenResult.generationId)}&password=${encodeURIComponent(password || "")}`}
                         />
                       </div>
 
                       <div className="space-y-3">
                         <div>
-                          <label className="block text-xs text-zinc-400 mb-1">Post to account</label>
+                          <label className="block text-xs text-stone-600 mb-1">Post to account</label>
                           <select
                             id="video-post-account"
                             defaultValue=""
-                            className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+                            className="w-full rounded-lg border border-stone-200 bg-stone-100 px-3 py-2 text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-stone-900/15"
                           >
                             <option value="" disabled>Select account...</option>
                             {accounts.length > 0 && (
@@ -1481,21 +1481,21 @@ export default function InstagramPage() {
                           </select>
                         </div>
                         <div>
-                          <label className="block text-xs text-zinc-400 mb-1">Caption</label>
+                          <label className="block text-xs text-stone-600 mb-1">Caption</label>
                           <input
                             id="video-post-caption"
                             type="text"
                             defaultValue={videoGenResult.caption}
-                            className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-white/20 placeholder:text-zinc-600"
+                            className="w-full rounded-lg border border-stone-200 bg-stone-100 px-3 py-2 text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-stone-900/15 placeholder:text-stone-400"
                             placeholder="Caption..."
                           />
                         </div>
                         <div>
-                          <label className="block text-xs text-zinc-500 mb-1">Schedule (optional)</label>
+                          <label className="block text-xs text-stone-500 mb-1">Schedule (optional)</label>
                           <input
                             id="video-post-schedule"
                             type="datetime-local"
-                            className="rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+                            className="rounded-lg border border-stone-200 bg-stone-100 px-3 py-2 text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-stone-900/15"
                           />
                         </div>
                         <button
@@ -1508,14 +1508,14 @@ export default function InstagramPage() {
                             postOneVideo(Number(idStr), plat as "tiktok" | "instagram" | "facebook", caption, schedule || undefined);
                           }}
                           disabled={videoPosting}
-                          className="px-5 py-2.5 rounded-lg bg-white text-black font-semibold hover:bg-zinc-200 transition-colors text-sm disabled:opacity-40"
+                          className="px-5 py-2.5 rounded-lg bg-stone-900 text-white font-semibold hover:bg-stone-700 transition-colors text-sm disabled:opacity-40"
                         >
                           {videoPosting ? "Posting..." : "Post"}
                         </button>
                       </div>
 
                       {videoPostResult && (
-                        <div className={`text-sm p-3 rounded-lg ${videoPostResult.startsWith("Error") ? "bg-red-900/30 text-red-400" : "bg-green-900/30 text-green-400"}`}>
+                        <div className={`text-sm p-3 rounded-lg ${videoPostResult.startsWith("Error") ? "bg-red-100 text-red-600" : "bg-green-100 text-green-600"}`}>
                           {videoPostResult}
                         </div>
                       )}
@@ -1524,15 +1524,15 @@ export default function InstagramPage() {
                 </div>
 
                 {/* Account selector */}
-                <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6">
+                <div className="rounded-2xl border border-stone-200 bg-white/70 p-6">
                   <h3 className="text-sm font-semibold mb-3">Configure Account</h3>
                   {allAccs.length === 0 ? (
-                    <p className="text-xs text-zinc-500">No accounts connected in PostBridge.</p>
+                    <p className="text-xs text-stone-500">No accounts connected in PostBridge.</p>
                   ) : (
                     <select
                       value={selectedVideoAccount}
                       onChange={(e) => setSelectedVideoAccount(e.target.value)}
-                      className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+                      className="w-full rounded-lg border border-stone-200 bg-stone-100 px-3 py-2.5 text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-stone-900/15"
                     >
                       <option value="">Select an account...</option>
                       {(["tiktok", "instagram", "facebook"] as const).map((plat) => {
@@ -1558,7 +1558,7 @@ export default function InstagramPage() {
                   {/* Summary of all enabled video accounts */}
                   {Object.entries(videoConfig.accounts).filter(([, c]) => c.enabled).length > 0 && (
                     <div className="mt-5 space-y-2">
-                      <h4 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">All enabled accounts</h4>
+                      <h4 className="text-xs font-semibold uppercase tracking-wide text-stone-500">All enabled accounts</h4>
                       {Object.entries(videoConfig.accounts).filter(([, c]) => c.enabled).map(([accId, cfg]) => {
                         const acc = allAccs.find((a) => String(a.id) === accId);
                         const bookNames = cfg.bookIds.length > 0
@@ -1567,12 +1567,12 @@ export default function InstagramPage() {
                         const ssCount = cfg.slideshowIds.length > 0 ? cfg.slideshowIds.length : igSlideshows.filter((s) => cfg.bookIds.length === 0 || (s.sourceBookId && cfg.bookIds.includes(s.sourceBookId))).length;
                         const trackCount = cfg.musicTrackIds?.length || 0;
                         return (
-                          <div key={accId} className="rounded-lg border border-zinc-700/50 bg-zinc-800/50 px-3 py-2">
+                          <div key={accId} className="rounded-lg border border-stone-300/60 bg-stone-100/70 px-3 py-2">
                             <div className="flex items-center gap-2">
-                              <span className="text-sm font-medium text-white">@{acc?.username || accId}</span>
-                              <span className="text-[10px] uppercase tracking-wide text-zinc-500">{acc?.platform}</span>
+                              <span className="text-sm font-medium text-stone-900">@{acc?.username || accId}</span>
+                              <span className="text-[10px] uppercase tracking-wide text-stone-500">{acc?.platform}</span>
                             </div>
-                            <div className="text-xs text-zinc-400">
+                            <div className="text-xs text-stone-600">
                               {cfg.intervals.map((w) => `${w.start}–${w.end}`).join(", ") || "no windows"} · {bookNames} · {ssCount} slideshow{ssCount !== 1 ? "s" : ""} · {trackCount} track{trackCount !== 1 ? "s" : ""} · ptr {cfg.pointer}
                             </div>
                           </div>
@@ -1584,26 +1584,26 @@ export default function InstagramPage() {
 
                 {/* Per-account config */}
                 {selectedVideoAccount && (
-                  <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6 space-y-5">
+                  <div className="rounded-2xl border border-stone-200 bg-white/70 p-6 space-y-5">
                     <label className="flex items-center gap-3 cursor-pointer">
                       <input
                         type="checkbox"
                         checked={currentConfig.enabled}
                         onChange={(e) => updateVideoAccConfig({ enabled: e.target.checked })}
-                        className="accent-white w-4 h-4"
+                        className="accent-stone-900 w-4 h-4"
                       />
                       <span className="text-sm font-medium">Enable video posts for this account</span>
                     </label>
 
                     {/* Books */}
                     <div>
-                      <h4 className="text-xs font-semibold text-zinc-400 uppercase tracking-wide mb-2">Books</h4>
-                      <p className="text-[11px] text-zinc-500 mb-2">
+                      <h4 className="text-xs font-semibold text-stone-600 uppercase tracking-wide mb-2">Books</h4>
+                      <p className="text-[11px] text-stone-500 mb-2">
                         {currentConfig.bookIds.length === 0 ? "All books (none selected = all)" : `${currentConfig.bookIds.length} selected`}
                       </p>
                       <div className="space-y-1 max-h-40 overflow-y-auto">
                         {books.map((b) => (
-                          <label key={b.id} className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-zinc-800 cursor-pointer">
+                          <label key={b.id} className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-stone-100 cursor-pointer">
                             <input
                               type="checkbox"
                               checked={currentConfig.bookIds.includes(b.id)}
@@ -1620,9 +1620,9 @@ export default function InstagramPage() {
                                   : currentConfig.slideshowIds;
                                 updateVideoAccConfig({ bookIds: next, slideshowIds: nextSlideshows });
                               }}
-                              className="accent-white w-3.5 h-3.5"
+                              className="accent-stone-900 w-3.5 h-3.5"
                             />
-                            <span className="text-sm text-zinc-300">{b.name}</span>
+                            <span className="text-sm text-stone-700">{b.name}</span>
                           </label>
                         ))}
                       </div>
@@ -1631,19 +1631,19 @@ export default function InstagramPage() {
                     {/* Slideshows */}
                     {currentConfig.bookIds.length > 0 && (
                     <div>
-                      <h4 className="text-xs font-semibold text-zinc-400 uppercase tracking-wide mb-2">Slideshows</h4>
+                      <h4 className="text-xs font-semibold text-stone-600 uppercase tracking-wide mb-2">Slideshows</h4>
                       {(() => {
                         const pool = igSlideshows.filter((s) => s.sourceBookId && currentConfig.bookIds.includes(s.sourceBookId));
                         return pool.length === 0 ? (
-                          <p className="text-xs text-zinc-500">No slideshows available for selected books.</p>
+                          <p className="text-xs text-stone-500">No slideshows available for selected books.</p>
                         ) : (
                           <>
-                            <p className="text-[11px] text-zinc-500 mb-2">
+                            <p className="text-[11px] text-stone-500 mb-2">
                               {currentConfig.slideshowIds.length === 0 ? `All ${pool.length} slideshows` : `${currentConfig.slideshowIds.length} of ${pool.length} selected`}
                             </p>
                             <div className="space-y-1 max-h-48 overflow-y-auto">
                               {pool.map((s) => (
-                                <label key={s.id} className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-zinc-800 cursor-pointer">
+                                <label key={s.id} className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-stone-100 cursor-pointer">
                                   <input
                                     type="checkbox"
                                     checked={currentConfig.slideshowIds.includes(s.id)}
@@ -1653,9 +1653,9 @@ export default function InstagramPage() {
                                         : [...currentConfig.slideshowIds, s.id];
                                       updateVideoAccConfig({ slideshowIds: next });
                                     }}
-                                    className="accent-white w-3.5 h-3.5"
+                                    className="accent-stone-900 w-3.5 h-3.5"
                                   />
-                                  <span className="text-sm text-zinc-300 truncate">{s.name}</span>
+                                  <span className="text-sm text-stone-700 truncate">{s.name}</span>
                                 </label>
                               ))}
                             </div>
@@ -1667,19 +1667,19 @@ export default function InstagramPage() {
 
                     {/* Music */}
                     <div>
-                      <h4 className="text-xs font-semibold text-zinc-400 uppercase tracking-wide mb-2">Music</h4>
+                      <h4 className="text-xs font-semibold text-stone-600 uppercase tracking-wide mb-2">Music</h4>
                       {videoMusicTracks.length === 0 ? (
-                        <p className="text-xs text-zinc-500">No music tracks yet. Upload tracks in the Music tab.</p>
+                        <p className="text-xs text-stone-500">No music tracks yet. Upload tracks in the Music tab.</p>
                       ) : (
                         <>
-                          <p className="text-[11px] text-zinc-500 mb-2">
+                          <p className="text-[11px] text-stone-500 mb-2">
                             {currentConfig.musicTrackIds.length === 0
                               ? "No music (silent video)"
                               : `${currentConfig.musicTrackIds.length} track${currentConfig.musicTrackIds.length !== 1 ? "s" : ""} — random pick per post`}
                           </p>
                           <div className="space-y-1 max-h-40 overflow-y-auto">
                             {videoMusicTracks.map((t) => (
-                              <label key={t.id} className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-zinc-800 cursor-pointer">
+                              <label key={t.id} className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-stone-100 cursor-pointer">
                                 <input
                                   type="checkbox"
                                   checked={currentConfig.musicTrackIds.includes(t.id)}
@@ -1689,9 +1689,9 @@ export default function InstagramPage() {
                                       : [...currentConfig.musicTrackIds, t.id];
                                     updateVideoAccConfig({ musicTrackIds: next });
                                   }}
-                                  className="accent-white w-3.5 h-3.5"
+                                  className="accent-stone-900 w-3.5 h-3.5"
                                 />
-                                <span className="text-sm text-zinc-300">{t.name}</span>
+                                <span className="text-sm text-stone-700">{t.name}</span>
                               </label>
                             ))}
                           </div>
@@ -1701,7 +1701,7 @@ export default function InstagramPage() {
 
                     {/* Time windows */}
                     <div>
-                      <h4 className="text-xs font-semibold text-zinc-400 uppercase tracking-wide mb-2">Posting Windows (UTC)</h4>
+                      <h4 className="text-xs font-semibold text-stone-600 uppercase tracking-wide mb-2">Posting Windows (UTC)</h4>
                       <div className="space-y-2 mb-3">
                         {currentConfig.intervals.map((w, i) => (
                           <div key={i} className="flex items-center gap-2">
@@ -1709,19 +1709,19 @@ export default function InstagramPage() {
                               type="time"
                               value={w.start}
                               onChange={(e) => updateVideoAccConfig({ intervals: currentConfig.intervals.map((x, j) => j === i ? { ...x, start: e.target.value } : x) })}
-                              className="rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+                              className="rounded-lg border border-stone-200 bg-stone-100 px-3 py-2 text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-stone-900/15"
                             />
-                            <span className="text-xs text-zinc-600">&rarr;</span>
+                            <span className="text-xs text-stone-400">&rarr;</span>
                             <input
                               type="time"
                               value={w.end}
                               onChange={(e) => updateVideoAccConfig({ intervals: currentConfig.intervals.map((x, j) => j === i ? { ...x, end: e.target.value } : x) })}
-                              className="rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+                              className="rounded-lg border border-stone-200 bg-stone-100 px-3 py-2 text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-stone-900/15"
                             />
                             {currentConfig.intervals.length > 1 && (
                               <button
                                 onClick={() => updateVideoAccConfig({ intervals: currentConfig.intervals.filter((_, j) => j !== i) })}
-                                className="text-xs text-red-500 hover:text-red-400"
+                                className="text-xs text-red-600 hover:text-red-600"
                               >
                                 Remove
                               </button>
@@ -1731,7 +1731,7 @@ export default function InstagramPage() {
                       </div>
                       <button
                         onClick={() => updateVideoAccConfig({ intervals: [...currentConfig.intervals, { start: "12:00", end: "14:00" }] })}
-                        className="text-xs text-blue-400 hover:text-blue-300"
+                        className="text-xs text-blue-600 hover:text-blue-700"
                       >
                         + Add window
                       </button>
@@ -1743,11 +1743,11 @@ export default function InstagramPage() {
                 <div className="flex items-center gap-3">
                   <button
                     onClick={saveVideoAutomation}
-                    className="px-5 py-2.5 rounded-lg bg-white text-black font-semibold hover:bg-zinc-200 transition-colors text-sm"
+                    className="px-5 py-2.5 rounded-lg bg-stone-900 text-white font-semibold hover:bg-stone-700 transition-colors text-sm"
                   >
                     Save Video Automation
                   </button>
-                  {videoSaved && <span className="text-xs text-green-400">Saved</span>}
+                  {videoSaved && <span className="text-xs text-green-600">Saved</span>}
                 </div>
               </div>
               );
@@ -1766,15 +1766,15 @@ export default function InstagramPage() {
 
               return (
                 <div className="space-y-6">
-                  <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6">
+                  <div className="rounded-2xl border border-stone-200 bg-white/70 p-6">
                     <h2 className="text-lg font-semibold mb-1">Instagram Automation Overview</h2>
-                    <p className="text-sm text-zinc-500 mb-6">
+                    <p className="text-sm text-stone-500 mb-6">
                       {enabledCarousel.length} carousel account{enabledCarousel.length !== 1 ? "s" : ""} · {enabledVideo.length} video account{enabledVideo.length !== 1 ? "s" : ""}
                     </p>
 
                     {enabledCarousel.length > 0 && (
                       <>
-                        <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500 mb-3">Carousel Accounts</h3>
+                        <h3 className="text-xs font-semibold uppercase tracking-wide text-stone-500 mb-3">Carousel Accounts</h3>
                         <div className="space-y-2 mb-6">
                           {enabledCarousel.map(([accId, cfg]) => {
                             const acc = allAccs.find((a) => String(a.id) === accId);
@@ -1783,13 +1783,13 @@ export default function InstagramPage() {
                               : "all books";
                             const ssCount = cfg.slideshowIds.length > 0 ? cfg.slideshowIds.length : igSlideshows.filter((s) => cfg.bookIds.length === 0 || (s.sourceBookId && cfg.bookIds.includes(s.sourceBookId))).length;
                             return (
-                              <div key={accId} className="rounded-lg border border-zinc-700/50 bg-zinc-800/50 px-4 py-3">
+                              <div key={accId} className="rounded-lg border border-stone-300/60 bg-stone-100/70 px-4 py-3">
                                 <div className="flex items-center gap-2 mb-1">
-                                  <span className="text-sm font-medium text-white">@{acc?.username || accId}</span>
-                                  <span className="text-[10px] uppercase tracking-wide text-zinc-500">{acc?.platform}</span>
-                                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-500/20 text-green-400 font-medium">ON</span>
+                                  <span className="text-sm font-medium text-stone-900">@{acc?.username || accId}</span>
+                                  <span className="text-[10px] uppercase tracking-wide text-stone-500">{acc?.platform}</span>
+                                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-500/20 text-green-600 font-medium">ON</span>
                                 </div>
-                                <div className="text-xs text-zinc-400">
+                                <div className="text-xs text-stone-600">
                                   {cfg.intervals.map((w) => `${w.start}–${w.end}`).join(", ") || "no windows"} · {bookNames} · {ssCount} slideshow{ssCount !== 1 ? "s" : ""} · ptr {cfg.pointer}
                                 </div>
                               </div>
@@ -1801,7 +1801,7 @@ export default function InstagramPage() {
 
                     {enabledVideo.length > 0 && (
                       <>
-                        <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500 mb-3">Video Accounts</h3>
+                        <h3 className="text-xs font-semibold uppercase tracking-wide text-stone-500 mb-3">Video Accounts</h3>
                         <div className="space-y-2">
                           {enabledVideo.map(([accId, cfg]) => {
                             const acc = allAccs.find((a) => String(a.id) === accId);
@@ -1811,13 +1811,13 @@ export default function InstagramPage() {
                             const ssCount = cfg.slideshowIds.length > 0 ? cfg.slideshowIds.length : igSlideshows.filter((s) => cfg.bookIds.length === 0 || (s.sourceBookId && cfg.bookIds.includes(s.sourceBookId))).length;
                             const trackCount = cfg.musicTrackIds?.length || 0;
                             return (
-                              <div key={accId} className="rounded-lg border border-zinc-700/50 bg-zinc-800/50 px-4 py-3">
+                              <div key={accId} className="rounded-lg border border-stone-300/60 bg-stone-100/70 px-4 py-3">
                                 <div className="flex items-center gap-2 mb-1">
-                                  <span className="text-sm font-medium text-white">@{acc?.username || accId}</span>
-                                  <span className="text-[10px] uppercase tracking-wide text-zinc-500">{acc?.platform}</span>
-                                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-500/20 text-green-400 font-medium">ON</span>
+                                  <span className="text-sm font-medium text-stone-900">@{acc?.username || accId}</span>
+                                  <span className="text-[10px] uppercase tracking-wide text-stone-500">{acc?.platform}</span>
+                                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-500/20 text-green-600 font-medium">ON</span>
                                 </div>
-                                <div className="text-xs text-zinc-400">
+                                <div className="text-xs text-stone-600">
                                   {cfg.intervals.map((w) => `${w.start}–${w.end}`).join(", ") || "no windows"} · {bookNames} · {ssCount} slideshow{ssCount !== 1 ? "s" : ""} · {trackCount} track{trackCount !== 1 ? "s" : ""} · ptr {cfg.pointer}
                                 </div>
                               </div>
@@ -1828,7 +1828,7 @@ export default function InstagramPage() {
                     )}
 
                     {enabledCarousel.length === 0 && enabledVideo.length === 0 && (
-                      <p className="text-sm text-zinc-500 text-center py-4">No accounts have automation enabled.</p>
+                      <p className="text-sm text-stone-500 text-center py-4">No accounts have automation enabled.</p>
                     )}
                   </div>
                 </div>

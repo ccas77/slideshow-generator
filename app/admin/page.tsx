@@ -40,9 +40,9 @@ interface AutomationData {
 }
 
 function WindowList({ windows }: { windows: TimeWindow[] }) {
-  if (windows.length === 0) return <span className="text-zinc-500">none</span>;
+  if (windows.length === 0) return <span className="text-stone-500">none</span>;
   return (
-    <span className="text-zinc-300">
+    <span className="text-stone-700">
       {windows.map((w, i) => (
         <span key={i}>{w.start}-{w.end}{i < windows.length - 1 ? ", " : ""}</span>
       ))}
@@ -52,7 +52,7 @@ function WindowList({ windows }: { windows: TimeWindow[] }) {
 
 function Badge({ on }: { on: boolean }) {
   return (
-    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${on ? "bg-green-500/20 text-green-400" : "bg-zinc-700 text-zinc-400"}`}>
+    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${on ? "bg-green-500/20 text-green-600" : "bg-stone-200 text-stone-600"}`}>
       {on ? "ON" : "OFF"}
     </span>
   );
@@ -60,8 +60,8 @@ function Badge({ on }: { on: boolean }) {
 
 function AccountCard({ id, children }: { id: string; children: React.ReactNode }) {
   return (
-    <div className="bg-zinc-800/60 border border-zinc-700/50 rounded-xl p-4 space-y-2">
-      <div className="text-sm font-mono text-zinc-400">Account {id}</div>
+    <div className="bg-stone-100/70 border border-stone-300/60 rounded-xl p-4 space-y-2">
+      <div className="text-sm font-mono text-stone-600">Account {id}</div>
       {children}
     </div>
   );
@@ -85,8 +85,8 @@ export default function AdminPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <div className="min-h-screen bg-zinc-950 text-white flex items-center justify-center">Loading...</div>;
-  if (error) return <div className="min-h-screen bg-zinc-950 text-red-400 flex items-center justify-center">{error}</div>;
+  if (loading) return <div className="min-h-screen bg-stone-100 text-stone-900 flex items-center justify-center">Loading...</div>;
+  if (error) return <div className="min-h-screen bg-stone-100 text-red-600 flex items-center justify-center">{error}</div>;
   if (!data) return null;
 
   const igAccounts = Object.entries(data.ig.accounts || {});
@@ -94,34 +94,34 @@ export default function AdminPage() {
   const topnAccounts = Object.entries(data.topn.accounts || {});
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white">
+    <div className="min-h-screen bg-stone-100 text-stone-900">
       <div className="max-w-4xl mx-auto px-6 py-8">
         <h1 className="text-2xl font-bold mb-8">Admin - All Automations</h1>
 
         {/* IG Carousel */}
         <section className="mb-10">
-          <h2 className="text-lg font-semibold mb-4 text-blue-400">IG/TikTok Carousel Automation</h2>
+          <h2 className="text-lg font-semibold mb-4 text-blue-600">IG/TikTok Carousel Automation</h2>
           {igAccounts.length === 0 ? (
-            <p className="text-zinc-500 text-sm">No accounts configured.</p>
+            <p className="text-stone-500 text-sm">No accounts configured.</p>
           ) : (
             <div className="grid gap-3">
               {igAccounts.map(([id, cfg]) => (
                 <AccountCard key={id} id={id}>
                   <div className="flex items-center gap-3">
                     <Badge on={cfg.enabled} />
-                    <span className="text-sm text-zinc-300">Pointer: {cfg.pointer}</span>
+                    <span className="text-sm text-stone-700">Pointer: {cfg.pointer}</span>
                   </div>
                   <div className="text-sm">
-                    <span className="text-zinc-500">Windows: </span>
+                    <span className="text-stone-500">Windows: </span>
                     <WindowList windows={cfg.intervals} />
                   </div>
                   <div className="text-sm">
-                    <span className="text-zinc-500">Books: </span>
-                    <span className="text-zinc-300">{cfg.bookIds.length === 0 ? "all" : cfg.bookIds.join(", ")}</span>
+                    <span className="text-stone-500">Books: </span>
+                    <span className="text-stone-700">{cfg.bookIds.length === 0 ? "all" : cfg.bookIds.join(", ")}</span>
                   </div>
                   <div className="text-sm">
-                    <span className="text-zinc-500">Slideshows: </span>
-                    <span className="text-zinc-300">{cfg.slideshowIds.length === 0 ? "all" : `${cfg.slideshowIds.length} selected`}</span>
+                    <span className="text-stone-500">Slideshows: </span>
+                    <span className="text-stone-700">{cfg.slideshowIds.length === 0 ? "all" : `${cfg.slideshowIds.length} selected`}</span>
                   </div>
                 </AccountCard>
               ))}
@@ -131,28 +131,28 @@ export default function AdminPage() {
 
         {/* Video */}
         <section className="mb-10">
-          <h2 className="text-lg font-semibold mb-4 text-purple-400">Video Automation</h2>
+          <h2 className="text-lg font-semibold mb-4 text-purple-600">Video Automation</h2>
           {videoAccounts.length === 0 ? (
-            <p className="text-zinc-500 text-sm">No accounts configured.</p>
+            <p className="text-stone-500 text-sm">No accounts configured.</p>
           ) : (
             <div className="grid gap-3">
               {videoAccounts.map(([id, cfg]) => (
                 <AccountCard key={id} id={id}>
                   <div className="flex items-center gap-3">
                     <Badge on={cfg.enabled} />
-                    <span className="text-sm text-zinc-300">Pointer: {cfg.pointer}</span>
+                    <span className="text-sm text-stone-700">Pointer: {cfg.pointer}</span>
                   </div>
                   <div className="text-sm">
-                    <span className="text-zinc-500">Windows: </span>
+                    <span className="text-stone-500">Windows: </span>
                     <WindowList windows={cfg.intervals} />
                   </div>
                   <div className="text-sm">
-                    <span className="text-zinc-500">Books: </span>
-                    <span className="text-zinc-300">{cfg.bookIds.length === 0 ? "all" : cfg.bookIds.join(", ")}</span>
+                    <span className="text-stone-500">Books: </span>
+                    <span className="text-stone-700">{cfg.bookIds.length === 0 ? "all" : cfg.bookIds.join(", ")}</span>
                   </div>
                   <div className="text-sm">
-                    <span className="text-zinc-500">Music tracks: </span>
-                    <span className="text-zinc-300">{cfg.musicTrackIds.length === 0 ? "none" : `${cfg.musicTrackIds.length} tracks`}</span>
+                    <span className="text-stone-500">Music tracks: </span>
+                    <span className="text-stone-700">{cfg.musicTrackIds.length === 0 ? "none" : `${cfg.musicTrackIds.length} tracks`}</span>
                   </div>
                 </AccountCard>
               ))}
@@ -162,37 +162,37 @@ export default function AdminPage() {
 
         {/* Top N */}
         <section className="mb-10">
-          <h2 className="text-lg font-semibold mb-4 text-amber-400">Top N Automation</h2>
+          <h2 className="text-lg font-semibold mb-4 text-amber-600">Top N Automation</h2>
           {topnAccounts.length === 0 ? (
-            <p className="text-zinc-500 text-sm">No accounts configured.</p>
+            <p className="text-stone-500 text-sm">No accounts configured.</p>
           ) : (
             <div className="grid gap-3">
               {topnAccounts.map(([id, cfg]) => (
                 <AccountCard key={id} id={id}>
                   <div className="flex items-center gap-3">
                     <Badge on={cfg.enabled} />
-                    <span className="text-sm text-zinc-300">Pointer: {cfg.pointer}</span>
-                    <span className="text-sm text-zinc-300">Platform: {cfg.platform}</span>
+                    <span className="text-sm text-stone-700">Pointer: {cfg.pointer}</span>
+                    <span className="text-sm text-stone-700">Platform: {cfg.platform}</span>
                   </div>
                   <div className="text-sm">
-                    <span className="text-zinc-500">Windows: </span>
+                    <span className="text-stone-500">Windows: </span>
                     <WindowList windows={cfg.intervals} />
                   </div>
                   <div className="text-sm">
-                    <span className="text-zinc-500">Frequency: </span>
-                    <span className="text-zinc-300">every {cfg.frequencyDays} day(s)</span>
+                    <span className="text-stone-500">Frequency: </span>
+                    <span className="text-stone-700">every {cfg.frequencyDays} day(s)</span>
                     {cfg.lastPostDate && (
-                      <span className="text-zinc-500 ml-2">last: {cfg.lastPostDate}</span>
+                      <span className="text-stone-500 ml-2">last: {cfg.lastPostDate}</span>
                     )}
                   </div>
                   <div className="text-sm">
-                    <span className="text-zinc-500">Lists: </span>
-                    <span className="text-zinc-300">{cfg.listIds.length === 0 ? "all" : `${cfg.listIds.length} selected`}</span>
+                    <span className="text-stone-500">Lists: </span>
+                    <span className="text-stone-700">{cfg.listIds.length === 0 ? "all" : `${cfg.listIds.length} selected`}</span>
                   </div>
                   {cfg.backgroundPrompts && cfg.backgroundPrompts.length > 0 && (
                     <div className="text-sm">
-                      <span className="text-zinc-500">BG prompts: </span>
-                      <span className="text-zinc-300">{cfg.backgroundPrompts.length}</span>
+                      <span className="text-stone-500">BG prompts: </span>
+                      <span className="text-stone-700">{cfg.backgroundPrompts.length}</span>
                     </div>
                   )}
                 </AccountCard>

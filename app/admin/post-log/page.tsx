@@ -118,19 +118,19 @@ export default function PostLogPage() {
   }).length;
 
   return (
-    <main className="min-h-screen bg-zinc-950 text-white">
+    <main className="min-h-screen bg-stone-100 text-stone-900">
       <div className="max-w-7xl mx-auto px-6 sm:px-10 py-10">
         <AppHeader />
         <h1 className="text-2xl font-bold mb-6 mt-8">Post Log</h1>
 
         <div className="flex flex-wrap gap-4 mb-6 items-center">
           <div>
-            <label className="text-sm font-medium text-zinc-400 mr-2">Date</label>
+            <label className="text-sm font-medium text-stone-600 mr-2">Date</label>
             <input
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              className="border border-zinc-700 bg-zinc-900 rounded px-3 py-1.5 text-sm text-white"
+              className="border border-stone-300 bg-white rounded px-3 py-1.5 text-sm text-stone-900"
             />
           </div>
           <div>
@@ -139,7 +139,7 @@ export default function PostLogPage() {
               placeholder="Filter by account, book, slideshow..."
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
-              className="border border-zinc-700 bg-zinc-900 rounded px-3 py-1.5 text-sm w-72 text-white placeholder-zinc-500"
+              className="border border-stone-300 bg-white rounded px-3 py-1.5 text-sm w-72 text-stone-900 placeholder-stone-400"
             />
           </div>
           <button
@@ -152,38 +152,38 @@ export default function PostLogPage() {
           <button
             onClick={backfill}
             disabled={syncing}
-            className="px-4 py-1.5 text-sm bg-zinc-700 text-white rounded hover:bg-zinc-600 disabled:opacity-50"
+            className="px-4 py-1.5 text-sm bg-stone-200 text-stone-900 rounded hover:bg-stone-300 disabled:opacity-50"
           >
             {syncing ? "..." : "Backfill History"}
           </button>
-          <div className="text-sm text-zinc-400">
+          <div className="text-sm text-stone-600">
             {filtered.length} posts
             {dupeCount > 0 && (
-              <span className="ml-2 text-red-400 font-medium">
+              <span className="ml-2 text-red-600 font-medium">
                 ({dupeCount} potential duplicates)
               </span>
             )}
-            {syncMsg && <span className="ml-2 text-green-400">{syncMsg}</span>}
+            {syncMsg && <span className="ml-2 text-green-600">{syncMsg}</span>}
           </div>
         </div>
 
         {loading ? (
-          <p className="text-zinc-500">Loading...</p>
+          <p className="text-stone-500">Loading...</p>
         ) : filtered.length === 0 ? (
-          <p className="text-zinc-500">No posts logged for {date}.</p>
+          <p className="text-stone-500">No posts logged for {date}.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm border-collapse">
               <thead>
-                <tr className="bg-zinc-900 text-left">
-                  <th className="px-3 py-2 border-b border-zinc-800 font-medium">Time</th>
-                  <th className="px-3 py-2 border-b border-zinc-800 font-medium">Account</th>
-                  <th className="px-3 py-2 border-b border-zinc-800 font-medium">Book</th>
-                  <th className="px-3 py-2 border-b border-zinc-800 font-medium">Slideshow</th>
-                  <th className="px-3 py-2 border-b border-zinc-800 font-medium">Image Prompt</th>
-                  <th className="px-3 py-2 border-b border-zinc-800 font-medium">Caption</th>
-                  <th className="px-3 py-2 border-b border-zinc-800 font-medium">Source</th>
-                  <th className="px-3 py-2 border-b border-zinc-800 font-medium">PostBridge</th>
+                <tr className="bg-white text-left">
+                  <th className="px-3 py-2 border-b border-stone-200 font-medium">Time</th>
+                  <th className="px-3 py-2 border-b border-stone-200 font-medium">Account</th>
+                  <th className="px-3 py-2 border-b border-stone-200 font-medium">Book</th>
+                  <th className="px-3 py-2 border-b border-stone-200 font-medium">Slideshow</th>
+                  <th className="px-3 py-2 border-b border-stone-200 font-medium">Image Prompt</th>
+                  <th className="px-3 py-2 border-b border-stone-200 font-medium">Caption</th>
+                  <th className="px-3 py-2 border-b border-stone-200 font-medium">Source</th>
+                  <th className="px-3 py-2 border-b border-stone-200 font-medium">PostBridge</th>
                 </tr>
               </thead>
               <tbody>
@@ -193,50 +193,50 @@ export default function PostLogPage() {
                   return (
                     <tr
                       key={i}
-                      className={isDupe ? "bg-red-950" : i % 2 === 0 ? "bg-zinc-950" : "bg-zinc-900/50"}
+                      className={isDupe ? "bg-red-100" : i % 2 === 0 ? "bg-stone-100" : "bg-white/70"}
                     >
-                      <td className="px-3 py-2 border-b border-zinc-800 whitespace-nowrap">
+                      <td className="px-3 py-2 border-b border-stone-200 whitespace-nowrap">
                         {toLocalTime(e.time, e.date)}
                       </td>
-                      <td className="px-3 py-2 border-b border-zinc-800">{e.accountName}</td>
-                      <td className="px-3 py-2 border-b border-zinc-800">{e.bookName || "—"}</td>
-                      <td className="px-3 py-2 border-b border-zinc-800">
+                      <td className="px-3 py-2 border-b border-stone-200">{e.accountName}</td>
+                      <td className="px-3 py-2 border-b border-stone-200">{e.bookName || "—"}</td>
+                      <td className="px-3 py-2 border-b border-stone-200">
                         <span title={e.slideshowId}>{e.slideshowName || "—"}</span>
                       </td>
-                      <td className="px-3 py-2 border-b border-zinc-800 max-w-48 truncate" title={e.imagePromptText}>
+                      <td className="px-3 py-2 border-b border-stone-200 max-w-48 truncate" title={e.imagePromptText}>
                         <span title={`ID: ${e.imagePromptId}`}>
                           {e.imagePromptText || "—"}
                         </span>
                       </td>
-                      <td className="px-3 py-2 border-b border-zinc-800 max-w-48 truncate" title={e.captionText}>
+                      <td className="px-3 py-2 border-b border-stone-200 max-w-48 truncate" title={e.captionText}>
                         <span title={`ID: ${e.captionId}`}>
                           {e.captionText || "—"}
                         </span>
                       </td>
-                      <td className="px-3 py-2 border-b border-zinc-800">
+                      <td className="px-3 py-2 border-b border-stone-200">
                         <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
-                          e.source === "cron" ? "bg-blue-900 text-blue-300" :
-                          e.source === "cron-topn" ? "bg-purple-900 text-purple-300" :
-                          e.source === "cron-ig" ? "bg-pink-900 text-pink-300" :
-                          e.source === "cron-fallback" ? "bg-orange-900 text-orange-300" :
-                          "bg-zinc-800 text-zinc-300"
+                          e.source === "cron" ? "bg-blue-100 text-blue-600" :
+                          e.source === "cron-topn" ? "bg-purple-100 text-purple-600" :
+                          e.source === "cron-ig" ? "bg-pink-100 text-pink-600" :
+                          e.source === "cron-fallback" ? "bg-orange-100 text-orange-600" :
+                          "bg-stone-100 text-stone-700"
                         }`}>
                           {e.source}
                         </span>
                       </td>
-                      <td className="px-3 py-2 border-b border-zinc-800">
+                      <td className="px-3 py-2 border-b border-stone-200">
                         {e.postBridgeUrl ? (
                           <a
                             href={e.postBridgeUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-blue-400 underline"
+                            className="text-blue-600 underline"
                             title={e.postBridgeId}
                           >
                             View
                           </a>
                         ) : (
-                          <span className="text-zinc-500" title={e.postBridgeId}>
+                          <span className="text-stone-500" title={e.postBridgeId}>
                             {e.postBridgeId ? `${e.postBridgeId.slice(0, 8)}...` : "—"}
                           </span>
                         )}
@@ -250,7 +250,7 @@ export default function PostLogPage() {
         )}
 
         {dupeCount > 0 && (
-          <div className="mt-4 p-3 bg-red-950 border border-red-800 rounded text-sm text-red-300">
+          <div className="mt-4 p-3 bg-red-100 border border-red-300 rounded text-sm text-red-600">
             Rows highlighted in red indicate potential duplicates — same account and slideshow posted more than once on this date.
           </div>
         )}

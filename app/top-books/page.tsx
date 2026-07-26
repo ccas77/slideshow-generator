@@ -801,7 +801,7 @@ export default function TopBooksPage() {
   }).sort((a, b) => (a.pinned === b.pinned ? 0 : a.pinned ? -1 : 1));
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-zinc-900 to-black text-white">
+    <div className="min-h-screen bg-gradient-to-br from-stone-50 via-white to-stone-100 text-stone-900">
       <div className="mx-auto w-full max-w-4xl px-6 sm:px-10 py-10">
         <AppHeader />
         <HowItWorks>
@@ -813,13 +813,13 @@ export default function TopBooksPage() {
 
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold">Top Books</h1>
-          <button onClick={load} className="text-sm text-zinc-500 hover:text-white transition-colors">
+          <button onClick={load} className="text-sm text-stone-500 hover:text-stone-900 transition-colors">
             {loading ? "Loading..." : "Refresh"}
           </button>
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 mb-6 bg-zinc-900 rounded-lg p-1 w-fit">
+        <div className="flex gap-1 mb-6 bg-white rounded-lg p-1 w-fit">
           {(["books", "lists", "music", "automation", "overview"] as const).map((t) => {
             const configuredCount = Object.values(topnAutoConfig.accounts).filter((c) => c.enabled).length;
             const label = t === "books" ? `Books (${books.length})` : t === "lists" ? `Lists (${lists.length})` : t === "music" ? `Music (${musicTracks.length})` : t === "overview" ? "Overview" : `Automation${configuredCount > 0 ? ` (${configuredCount})` : ""}`;
@@ -828,7 +828,7 @@ export default function TopBooksPage() {
                 key={t}
                 onClick={() => setTab(t)}
                 className={`px-4 py-2 rounded-md text-sm transition-colors ${
-                  tab === t ? "bg-zinc-700 text-white" : "text-zinc-400 hover:text-white"
+                  tab === t ? "bg-stone-200 text-stone-900" : "text-stone-600 hover:text-stone-900"
                 }`}
               >
                 {label}
@@ -843,20 +843,20 @@ export default function TopBooksPage() {
             {bulkMode && (
               <div className="mb-4 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
                 <div className="flex items-center justify-between mb-3">
-                  <span className="text-sm font-medium text-amber-300">{bulkSelected.size} book{bulkSelected.size !== 1 ? "s" : ""} selected</span>
-                  <button onClick={() => { setBulkMode(false); setBulkSelected(new Set()); }} className="text-xs text-zinc-400 hover:text-white">Cancel</button>
+                  <span className="text-sm font-medium text-amber-600">{bulkSelected.size} book{bulkSelected.size !== 1 ? "s" : ""} selected</span>
+                  <button onClick={() => { setBulkMode(false); setBulkSelected(new Set()); }} className="text-xs text-stone-600 hover:text-stone-900">Cancel</button>
                 </div>
                 <div className="flex items-center gap-2 mb-2">
                   <input
                     value={bulkGenre}
                     onChange={(e) => setBulkGenre(e.target.value)}
                     placeholder="Genre to apply..."
-                    className="flex-1 rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-white text-sm placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-500/30"
+                    className="flex-1 rounded-lg border border-stone-300 bg-stone-100 px-3 py-2 text-stone-900 text-sm placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-500/30"
                   />
                   <button
                     onClick={bulkApplyGenre}
                     disabled={bulkSelected.size === 0 || !bulkGenre.trim() || loading}
-                    className="rounded-lg bg-amber-500 text-black px-4 py-2 text-sm font-medium hover:bg-amber-400 transition-colors disabled:opacity-50"
+                    className="rounded-lg bg-amber-500 text-white px-4 py-2 text-sm font-medium hover:bg-amber-400 transition-colors disabled:opacity-50"
                   >
                     {loading ? "Saving..." : "Apply"}
                   </button>
@@ -864,15 +864,15 @@ export default function TopBooksPage() {
                 <div className="flex items-center gap-3 text-xs">
                   <label className="flex items-center gap-1.5 cursor-pointer">
                     <input type="radio" checked={bulkAppend} onChange={() => setBulkAppend(true)} className="accent-amber-500" />
-                    <span className="text-zinc-300">Append to existing</span>
+                    <span className="text-stone-700">Append to existing</span>
                   </label>
                   <label className="flex items-center gap-1.5 cursor-pointer">
                     <input type="radio" checked={!bulkAppend} onChange={() => setBulkAppend(false)} className="accent-amber-500" />
-                    <span className="text-zinc-300">Replace</span>
+                    <span className="text-stone-700">Replace</span>
                   </label>
                   <button
                     onClick={() => setBulkSelected(new Set(filteredBooks.map((b) => b.id)))}
-                    className="ml-auto text-amber-400 hover:text-amber-300"
+                    className="ml-auto text-amber-600 hover:text-amber-700"
                   >
                     Select all visible
                   </button>
@@ -882,14 +882,14 @@ export default function TopBooksPage() {
             <div className="flex items-center gap-3 mb-4 flex-wrap">
               <button
                 onClick={() => openBookForm()}
-                className="rounded-lg bg-white text-black px-4 py-2 text-sm font-medium hover:bg-zinc-200 transition-colors"
+                className="rounded-lg bg-stone-900 text-white px-4 py-2 text-sm font-medium hover:bg-stone-700 transition-colors"
               >
                 + Add Book
               </button>
               <button
                 onClick={() => { setBulkMode(!bulkMode); setBulkSelected(new Set()); }}
                 className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
-                  bulkMode ? "bg-amber-500 text-black" : "border border-zinc-700 text-zinc-400 hover:text-white hover:border-zinc-500"
+                  bulkMode ? "bg-amber-500 text-white" : "border border-stone-300 text-stone-600 hover:text-stone-900 hover:border-stone-400"
                 }`}
               >
                 Bulk Tag Genre
@@ -898,14 +898,14 @@ export default function TopBooksPage() {
                 value={bookSearch}
                 onChange={(e) => setBookSearch(e.target.value)}
                 placeholder="Search by title, author, or genre..."
-                className="flex-1 min-w-[200px] rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-white text-sm placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-white/20"
+                className="flex-1 min-w-[200px] rounded-lg border border-stone-300 bg-stone-100 px-3 py-2 text-stone-900 text-sm placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-900/15"
               />
               {genres.length > 1 && (
-                <div className="flex gap-1 bg-zinc-900 rounded-lg p-1 flex-wrap">
+                <div className="flex gap-1 bg-white rounded-lg p-1 flex-wrap">
                   <button
                     onClick={() => setGenreFilter("all")}
                     className={`px-3 py-1.5 rounded-md text-xs transition-colors ${
-                      genreFilter === "all" ? "bg-zinc-700 text-white" : "text-zinc-400 hover:text-white"
+                      genreFilter === "all" ? "bg-stone-200 text-stone-900" : "text-stone-600 hover:text-stone-900"
                     }`}
                   >
                     All ({books.length})
@@ -920,7 +920,7 @@ export default function TopBooksPage() {
                         key={g}
                         onClick={() => setGenreFilter(g)}
                         className={`px-3 py-1.5 rounded-md text-xs transition-colors ${
-                          genreFilter === g ? "bg-zinc-700 text-white" : "text-zinc-400 hover:text-white"
+                          genreFilter === g ? "bg-stone-200 text-stone-900" : "text-stone-600 hover:text-stone-900"
                         }`}
                       >
                         {g} ({count})
@@ -944,8 +944,8 @@ export default function TopBooksPage() {
                         })}
                         className={`absolute top-2 left-2 z-10 w-6 h-6 rounded-full border-2 flex items-center justify-center text-xs font-bold transition-colors ${
                           bulkSelected.has(b.id)
-                            ? "bg-amber-500 border-amber-500 text-black"
-                            : "bg-black/50 border-zinc-400 text-transparent hover:border-white"
+                            ? "bg-amber-500 border-amber-500 text-white"
+                            : "bg-stone-900/35 border-stone-400 text-transparent hover:border-stone-900"
                         }`}
                       >
                         ✓
@@ -956,7 +956,7 @@ export default function TopBooksPage() {
                 ))}
               </div>
             ) : (
-              <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-10 text-center text-zinc-500">
+              <div className="rounded-2xl border border-stone-200 bg-white/70 p-10 text-center text-stone-500">
                 No books yet. Add some to get started.
               </div>
             )}
@@ -968,13 +968,13 @@ export default function TopBooksPage() {
           <>
             <button
               onClick={() => openListForm()}
-              className="mb-6 rounded-lg bg-white text-black px-4 py-2 text-sm font-medium hover:bg-zinc-200 transition-colors"
+              className="mb-6 rounded-lg bg-stone-900 text-white px-4 py-2 text-sm font-medium hover:bg-stone-700 transition-colors"
             >
               + New List
             </button>
 
             {lists.length === 0 ? (
-              <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-10 text-center text-zinc-500">
+              <div className="rounded-2xl border border-stone-200 bg-white/70 p-10 text-center text-stone-500">
                 No lists yet. Create one to build a Top N slideshow.
               </div>
             ) : (
@@ -989,15 +989,15 @@ export default function TopBooksPage() {
                     : [];
                   const listBooks = [...manualBooks, ...genreBooks];
                   return (
-                    <div key={l.id} className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-4">
+                    <div key={l.id} className="rounded-xl border border-stone-200 bg-white/70 p-4">
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
                             <span className="font-medium">{l.name}</span>
                           </div>
-                          <div className="text-sm text-zinc-400 mt-1">
+                          <div className="text-sm text-stone-600 mt-1">
                             {(l.titleTexts || []).length} title{(l.titleTexts || []).length !== 1 ? "s" : ""} &middot; {l.count} books from {listBooks.length} in pool
-                            {l.genres && l.genres.length > 0 && <span className="text-green-400"> ({l.genres.join(", ")})</span>}
+                            {l.genres && l.genres.length > 0 && <span className="text-green-600"> ({l.genres.join(", ")})</span>}
                           </div>
                           {listBooks.length > 0 && (
                             <div className="flex gap-1 mt-2 flex-wrap">
@@ -1005,7 +1005,7 @@ export default function TopBooksPage() {
                                 <img key={b.id} src={b.coverData} alt={b.title} className="w-8 h-12 rounded object-cover" />
                               ))}
                               {listBooks.length > 8 && (
-                                <span className="text-xs text-zinc-500 self-center ml-1">+{listBooks.length - 8}</span>
+                                <span className="text-xs text-stone-500 self-center ml-1">+{listBooks.length - 8}</span>
                               )}
                             </div>
                           )}
@@ -1013,14 +1013,14 @@ export default function TopBooksPage() {
                         <div className="flex gap-2 shrink-0">
                           <button
                             onClick={() => setPreviewListId(l.id)}
-                            className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
+                            className="text-xs text-blue-600 hover:text-blue-700 transition-colors"
                           >
                             Preview
                           </button>
                           <button
                             onClick={() => generateVideoPreview(l.id)}
                             disabled={generatingVideoForList !== null}
-                            className="text-xs text-purple-400 hover:text-purple-300 transition-colors disabled:text-zinc-600"
+                            className="text-xs text-purple-600 hover:text-purple-700 transition-colors disabled:text-stone-400"
                           >
                             {generatingVideoForList === l.id ? "Generating..." : "Preview Video"}
                           </button>
@@ -1030,10 +1030,10 @@ export default function TopBooksPage() {
                           >
                             Publish
                           </button>
-                          <button onClick={() => openListForm(l)} className="text-xs text-zinc-400 hover:text-white transition-colors">
+                          <button onClick={() => openListForm(l)} className="text-xs text-stone-600 hover:text-stone-900 transition-colors">
                             Edit
                           </button>
-                          <button onClick={() => deleteList(l.id)} className="text-xs text-red-400 hover:text-red-300 transition-colors">
+                          <button onClick={() => deleteList(l.id)} className="text-xs text-red-600 hover:text-red-700 transition-colors">
                             Delete
                           </button>
                         </div>
@@ -1050,8 +1050,8 @@ export default function TopBooksPage() {
         {tab === "music" && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-white">Music Tracks</h2>
-              <label className={`px-4 py-2 rounded-lg text-sm font-medium cursor-pointer transition-colors ${uploadingMusic ? "bg-zinc-700 text-zinc-400" : "bg-white text-black hover:bg-zinc-200"}`}>
+              <h2 className="text-lg font-semibold text-stone-900">Music Tracks</h2>
+              <label className={`px-4 py-2 rounded-lg text-sm font-medium cursor-pointer transition-colors ${uploadingMusic ? "bg-stone-200 text-stone-600" : "bg-stone-900 text-white hover:bg-stone-700"}`}>
                 {uploadingMusic
                   ? uploadProgress
                     ? `Uploading ${uploadProgress.current}/${uploadProgress.total}...`
@@ -1060,26 +1060,26 @@ export default function TopBooksPage() {
                 <input type="file" accept="audio/*" multiple onChange={handleMusicUpload} className="hidden" disabled={uploadingMusic} />
               </label>
             </div>
-            <p className="text-xs text-zinc-500">Upload MP3 or M4A files. Assign them to lists in the list editor. A random track is picked for each video post.</p>
+            <p className="text-xs text-stone-500">Upload MP3 or M4A files. Assign them to lists in the list editor. A random track is picked for each video post.</p>
             {musicTracks.length === 0 ? (
-              <p className="text-zinc-500 text-sm text-center py-8">No music tracks yet. Upload one to get started.</p>
+              <p className="text-stone-500 text-sm text-center py-8">No music tracks yet. Upload one to get started.</p>
             ) : (
               <div className="space-y-3">
                 {musicTracks.map((t) => {
                   const usedIn = lists.filter((l) => l.musicTrackIds?.includes(t.id)).map((l) => l.name);
                   const audioUrl = `/api/music-tracks?password=${encodeURIComponent(password || "")}&id=${t.id}`;
                   return (
-                    <div key={t.id} className="bg-zinc-900 rounded-lg px-4 py-3 border border-zinc-800 space-y-2">
+                    <div key={t.id} className="bg-white rounded-lg px-4 py-3 border border-stone-200 space-y-2">
                       <div className="flex items-center justify-between">
                         <div>
-                          <span className="text-white text-sm">{t.name}</span>
+                          <span className="text-stone-900 text-sm">{t.name}</span>
                           {usedIn.length > 0 && (
-                            <span className="text-xs text-purple-400 ml-2">Used in: {usedIn.join(", ")}</span>
+                            <span className="text-xs text-purple-600 ml-2">Used in: {usedIn.join(", ")}</span>
                           )}
                         </div>
-                        <button onClick={() => deleteMusic(t.id)} className="text-xs text-red-400 hover:text-red-300 transition-colors">Delete</button>
+                        <button onClick={() => deleteMusic(t.id)} className="text-xs text-red-600 hover:text-red-700 transition-colors">Delete</button>
                       </div>
-                      <audio controls preload="none" src={audioUrl} className="w-full h-8 [&::-webkit-media-controls-panel]:bg-zinc-800" />
+                      <audio controls preload="none" src={audioUrl} className="w-full h-8 [&::-webkit-media-controls-panel]:bg-stone-100" />
                     </div>
                   );
                 })}
@@ -1099,21 +1099,21 @@ export default function TopBooksPage() {
           return (
             <>
               {allAccts.length === 0 ? (
-                <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-10 text-center text-zinc-500">
+                <div className="rounded-2xl border border-stone-200 bg-white/70 p-10 text-center text-stone-500">
                   No accounts available. Connect TikTok, Instagram, or Facebook accounts first.
                 </div>
               ) : (
                 <>
                   {/* Account selector with search */}
                   <div className="mb-4">
-                    <label className="text-xs text-zinc-400 block mb-2">Select account to configure</label>
+                    <label className="text-xs text-stone-600 block mb-2">Select account to configure</label>
                     <input
                       placeholder="Search accounts..."
                       value={accountSearch}
                       onChange={(e) => setAccountSearch(e.target.value)}
-                      className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-white text-sm placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-white/20 mb-2"
+                      className="w-full rounded-lg border border-stone-300 bg-stone-100 px-3 py-2 text-stone-900 text-sm placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-900/15 mb-2"
                     />
-                    <div className="max-h-48 overflow-y-auto rounded-lg border border-zinc-700 bg-zinc-800">
+                    <div className="max-h-48 overflow-y-auto rounded-lg border border-stone-300 bg-stone-100">
                       {allAccts
                         .filter((a) => !accountSearch.trim() || a.username.toLowerCase().includes(accountSearch.toLowerCase()))
                         .map((a) => {
@@ -1123,12 +1123,12 @@ export default function TopBooksPage() {
                             <button
                               key={`${a.platformLabel}-${a.id}`}
                               onClick={() => { ensureAccountConfig(String(a.id)); setAccountSearch(""); }}
-                              className={`w-full text-left px-3 py-2 text-sm border-b border-zinc-700/50 last:border-0 transition-colors ${
-                                isSelected ? "bg-zinc-700 text-white" : "text-zinc-300 hover:bg-zinc-700/50"
+                              className={`w-full text-left px-3 py-2 text-sm border-b border-stone-300/60 last:border-0 transition-colors ${
+                                isSelected ? "bg-stone-200 text-stone-900" : "text-stone-700 hover:bg-stone-200/60"
                               }`}
                             >
-                              @{a.username} <span className="text-zinc-500">({a.platformLabel})</span>
-                              {cfg?.enabled && <span className="text-green-400 ml-1">[ON]</span>}
+                              @{a.username} <span className="text-stone-500">({a.platformLabel})</span>
+                              {cfg?.enabled && <span className="text-green-600 ml-1">[ON]</span>}
                             </button>
                           );
                         })}
@@ -1137,18 +1137,18 @@ export default function TopBooksPage() {
                     {/* Summary of all enabled accounts */}
                     {Object.entries(topnAutoConfig.accounts).filter(([, c]) => c.enabled).length > 0 && (
                       <div className="mt-4 space-y-2">
-                        <h4 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">All enabled accounts</h4>
+                        <h4 className="text-xs font-semibold uppercase tracking-wide text-stone-500">All enabled accounts</h4>
                         {Object.entries(topnAutoConfig.accounts).filter(([, c]) => c.enabled).map(([accId, cfg]) => {
                           const acc = allAccts.find((a) => String(a.id) === accId);
                           const listCount = cfg.listIds.length > 0 ? cfg.listIds.length : lists.length;
                           const pLabel = (() => { switch(cfg.platform) { case "tiktok-carousel": return "TikTok Carousel"; case "tiktok-video": return "TikTok Video"; case "fb-video": return "FB Video"; case "ig-carousel": return "IG Carousel"; case "ig-video": return "IG Video"; default: return cfg.platform; } })();
                           return (
-                            <div key={accId} className="rounded-lg border border-zinc-700/50 bg-zinc-800/50 px-3 py-2">
+                            <div key={accId} className="rounded-lg border border-stone-300/60 bg-stone-100/70 px-3 py-2">
                               <div className="flex items-center gap-2">
-                                <span className="text-sm font-medium text-white">@{acc?.username || accId}</span>
-                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-700 text-zinc-300">{pLabel}</span>
+                                <span className="text-sm font-medium text-stone-900">@{acc?.username || accId}</span>
+                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-stone-200 text-stone-700">{pLabel}</span>
                               </div>
-                              <div className="text-xs text-zinc-400">
+                              <div className="text-xs text-stone-600">
                                 {cfg.intervals.map((w) => `${w.start}–${w.end}`).join(", ") || "no windows"} · every {cfg.frequencyDays}d · {listCount} list{listCount !== 1 ? "s" : ""} · ptr {cfg.pointer}{cfg.lastPostDate ? ` · last ${cfg.lastPostDate}` : ""}
                               </div>
                             </div>
@@ -1160,7 +1160,7 @@ export default function TopBooksPage() {
 
                   {/* Per-account config */}
                   {selectedTopnAccount && selectedCfg && (
-                    <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-5 space-y-5">
+                    <div className="rounded-xl border border-stone-200 bg-white/70 p-5 space-y-5">
                       {/* Enable toggle */}
                       <label className="flex items-center gap-2 text-sm">
                         <input
@@ -1174,11 +1174,11 @@ export default function TopBooksPage() {
 
                       {/* Platform */}
                       <div>
-                        <label className="text-xs text-zinc-400 block mb-1">Platform</label>
+                        <label className="text-xs text-stone-600 block mb-1">Platform</label>
                         <select
                           value={selectedCfg.platform}
                           onChange={(e) => updateAccountConfig(selectedTopnAccount, { platform: e.target.value as TopNAccountConfig["platform"] })}
-                          className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20"
+                          className="w-full rounded-lg border border-stone-300 bg-stone-100 px-3 py-2 text-stone-900 text-sm focus:outline-none focus:ring-2 focus:ring-stone-900/15"
                         >
                           <option value="tiktok-carousel">TikTok Carousel</option>
                           <option value="tiktok-video">TikTok Video</option>
@@ -1190,26 +1190,26 @@ export default function TopBooksPage() {
 
                       {/* Frequency */}
                       <div>
-                        <label className="text-xs text-zinc-400 block mb-1">Frequency</label>
+                        <label className="text-xs text-stone-600 block mb-1">Frequency</label>
                         <div className="flex items-center gap-2">
-                          <span className="text-sm text-zinc-300">Post every</span>
+                          <span className="text-sm text-stone-700">Post every</span>
                           <input
                             type="number"
                             min={1}
                             value={selectedCfg.frequencyDays}
                             onChange={(e) => updateAccountConfig(selectedTopnAccount, { frequencyDays: Math.max(1, Number(e.target.value)) })}
-                            className="w-20 rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20"
+                            className="w-20 rounded-lg border border-stone-300 bg-stone-100 px-3 py-2 text-stone-900 text-sm focus:outline-none focus:ring-2 focus:ring-stone-900/15"
                           />
-                          <span className="text-sm text-zinc-300">day{selectedCfg.frequencyDays !== 1 ? "s" : ""}</span>
+                          <span className="text-sm text-stone-700">day{selectedCfg.frequencyDays !== 1 ? "s" : ""}</span>
                         </div>
                       </div>
 
                       {/* List selection */}
                       <div>
-                        <label className="text-xs text-zinc-400 block mb-2">
+                        <label className="text-xs text-stone-600 block mb-2">
                           Lists to include ({selectedCfg.listIds.length === 0 ? "all" : selectedCfg.listIds.length + " selected"})
                         </label>
-                        <p className="text-[11px] text-zinc-600 mb-2">Leave none checked to include all lists.</p>
+                        <p className="text-[11px] text-stone-400 mb-2">Leave none checked to include all lists.</p>
                         <div className="space-y-1.5 max-h-40 overflow-y-auto">
                           {lists.map((l) => (
                             <label key={l.id} className="flex items-center gap-2 text-sm">
@@ -1227,8 +1227,8 @@ export default function TopBooksPage() {
 
                       {/* Background prompts (account-level) */}
                       <div>
-                        <label className="text-xs text-zinc-400 block mb-1">Background prompts (one per line)</label>
-                        <p className="text-[11px] text-zinc-600 mb-2">Overrides list-level background prompts. Leave empty to use each list&apos;s own prompts.</p>
+                        <label className="text-xs text-stone-600 block mb-1">Background prompts (one per line)</label>
+                        <p className="text-[11px] text-stone-400 mb-2">Overrides list-level background prompts. Leave empty to use each list&apos;s own prompts.</p>
                         <textarea
                           value={bgPromptsText}
                           onChange={(e) => setBgPromptsText(e.target.value)}
@@ -1238,17 +1238,17 @@ export default function TopBooksPage() {
                           }}
                           rows={3}
                           placeholder="e.g. A dark moody bookshelf with candlelight"
-                          className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20"
+                          className="w-full rounded-lg border border-stone-300 bg-stone-100 px-3 py-2 text-stone-900 text-sm focus:outline-none focus:ring-2 focus:ring-stone-900/15"
                         />
                         <div className="mt-2 space-y-2">
-                          <p className="text-[11px] text-zinc-600">Generate a prompt from an image:</p>
+                          <p className="text-[11px] text-stone-400">Generate a prompt from an image:</p>
                           <div className="flex gap-2">
                             <input
                               type="text"
                               value={bgImageUrl}
                               onChange={(e) => setBgImageUrl(e.target.value)}
                               placeholder="Paste image URL"
-                              className="flex-1 rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20"
+                              className="flex-1 rounded-lg border border-stone-300 bg-stone-100 px-3 py-1.5 text-stone-900 text-sm focus:outline-none focus:ring-2 focus:ring-stone-900/15"
                             />
                             <button
                               disabled={describingImage || !bgImageUrl.trim()}
@@ -1273,13 +1273,13 @@ export default function TopBooksPage() {
                                 } catch (e) { alert(String(e)); }
                                 finally { setDescribingImage(false); }
                               }}
-                              className="rounded-lg bg-zinc-700 px-3 py-1.5 text-xs text-white hover:bg-zinc-600 disabled:opacity-50"
+                              className="rounded-lg bg-stone-200 px-3 py-1.5 text-xs text-stone-900 hover:bg-stone-300 disabled:opacity-50"
                             >
                               {describingImage ? "..." : "Get prompt"}
                             </button>
                           </div>
                           <div className="flex items-center gap-2">
-                            <label className="rounded-lg bg-zinc-700 px-3 py-1.5 text-xs text-white hover:bg-zinc-600 cursor-pointer text-center">
+                            <label className="rounded-lg bg-stone-200 px-3 py-1.5 text-xs text-stone-900 hover:bg-stone-300 cursor-pointer text-center">
                               Upload image
                               <input
                                 type="file"
@@ -1314,7 +1314,7 @@ export default function TopBooksPage() {
                                 }}
                               />
                             </label>
-                            {describingImage && <span className="text-xs text-zinc-500">Analyzing image...</span>}
+                            {describingImage && <span className="text-xs text-stone-500">Analyzing image...</span>}
                           </div>
                         </div>
                       </div>
@@ -1322,15 +1322,15 @@ export default function TopBooksPage() {
                       {/* Time windows */}
                       <div>
                         <div className="flex items-center justify-between mb-2">
-                          <label className="text-xs text-zinc-400">Time windows (UTC)</label>
+                          <label className="text-xs text-stone-600">Time windows (UTC)</label>
                           <button
                             onClick={() => addAccountInterval(selectedTopnAccount)}
-                            className="text-xs text-blue-400 hover:text-blue-300"
+                            className="text-xs text-blue-600 hover:text-blue-700"
                           >
                             + Add window
                           </button>
                         </div>
-                        <p className="text-[11px] text-zinc-600 mb-2">
+                        <p className="text-[11px] text-stone-400 mb-2">
                           One post is scheduled per window per day, at a random time inside the window.
                         </p>
                         <div className="space-y-2">
@@ -1340,19 +1340,19 @@ export default function TopBooksPage() {
                                 type="time"
                                 value={w.start}
                                 onChange={(e) => updateAccountInterval(selectedTopnAccount, i, "start", e.target.value)}
-                                className="rounded-lg border border-zinc-700 bg-zinc-800 px-2 py-1.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20"
+                                className="rounded-lg border border-stone-300 bg-stone-100 px-2 py-1.5 text-stone-900 text-sm focus:outline-none focus:ring-2 focus:ring-stone-900/15"
                               />
-                              <span className="text-zinc-500 text-sm">&rarr;</span>
+                              <span className="text-stone-500 text-sm">&rarr;</span>
                               <input
                                 type="time"
                                 value={w.end}
                                 onChange={(e) => updateAccountInterval(selectedTopnAccount, i, "end", e.target.value)}
-                                className="rounded-lg border border-zinc-700 bg-zinc-800 px-2 py-1.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20"
+                                className="rounded-lg border border-stone-300 bg-stone-100 px-2 py-1.5 text-stone-900 text-sm focus:outline-none focus:ring-2 focus:ring-stone-900/15"
                               />
                               {selectedCfg.intervals.length > 1 && (
                                 <button
                                   onClick={() => removeAccountInterval(selectedTopnAccount, i)}
-                                  className="text-xs text-red-400 hover:text-red-300 ml-auto"
+                                  className="text-xs text-red-600 hover:text-red-700 ml-auto"
                                 >
                                   Remove
                                 </button>
@@ -1366,7 +1366,7 @@ export default function TopBooksPage() {
                       <button
                         onClick={saveTopnAutomation}
                         disabled={savingAuto}
-                        className="w-full rounded-lg bg-white text-black py-2 text-sm font-medium hover:bg-zinc-200 transition-colors disabled:opacity-50"
+                        className="w-full rounded-lg bg-stone-900 text-white py-2 text-sm font-medium hover:bg-stone-700 transition-colors disabled:opacity-50"
                       >
                         {savingAuto ? "Saving..." : "Save automation"}
                       </button>
@@ -1390,14 +1390,14 @@ export default function TopBooksPage() {
 
           return (
             <div className="space-y-6">
-              <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6">
+              <div className="rounded-2xl border border-stone-200 bg-white/70 p-6">
                 <h2 className="text-lg font-semibold mb-1">Top Books Automation Overview</h2>
-                <p className="text-sm text-zinc-500 mb-6">
+                <p className="text-sm text-stone-500 mb-6">
                   {enabled.length} active account{enabled.length !== 1 ? "s" : ""}
                 </p>
 
                 {enabled.length === 0 ? (
-                  <p className="text-sm text-zinc-500 text-center py-4">No accounts have automation enabled.</p>
+                  <p className="text-sm text-stone-500 text-center py-4">No accounts have automation enabled.</p>
                 ) : (
                   <div className="space-y-2">
                     {enabled.map(([accId, cfg]) => {
@@ -1405,13 +1405,13 @@ export default function TopBooksPage() {
                       const listCount = cfg.listIds.length > 0 ? cfg.listIds.length : lists.length;
                       const pLabel = (() => { switch(cfg.platform) { case "tiktok-carousel": return "TikTok Carousel"; case "tiktok-video": return "TikTok Video"; case "fb-video": return "FB Video"; case "ig-carousel": return "IG Carousel"; case "ig-video": return "IG Video"; default: return cfg.platform; } })();
                       return (
-                        <div key={accId} className="rounded-lg border border-zinc-700/50 bg-zinc-800/50 px-4 py-3">
+                        <div key={accId} className="rounded-lg border border-stone-300/60 bg-stone-100/70 px-4 py-3">
                           <div className="flex items-center gap-2 mb-1">
-                            <span className="text-sm font-medium text-white">@{acc?.username || accId}</span>
-                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-700 text-zinc-300">{pLabel}</span>
-                            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-500/20 text-green-400 font-medium">ON</span>
+                            <span className="text-sm font-medium text-stone-900">@{acc?.username || accId}</span>
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-stone-200 text-stone-700">{pLabel}</span>
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-500/20 text-green-600 font-medium">ON</span>
                           </div>
-                          <div className="text-xs text-zinc-400">
+                          <div className="text-xs text-stone-600">
                             {cfg.intervals.map((w) => `${w.start}–${w.end}`).join(", ") || "no windows"} · every {cfg.frequencyDays}d · {listCount} list{listCount !== 1 ? "s" : ""} · ptr {cfg.pointer}{cfg.lastPostDate ? ` · last ${cfg.lastPostDate}` : ""}
                           </div>
                         </div>
@@ -1430,43 +1430,43 @@ export default function TopBooksPage() {
             <div className="space-y-4">
               {!editBookId && (
                 <div>
-                  <label className="text-xs text-zinc-400 block mb-1">Cover Image URL {fetchingUrl && <span className="text-blue-400 ml-1">Fetching...</span>}</label>
+                  <label className="text-xs text-stone-600 block mb-1">Cover Image URL {fetchingUrl && <span className="text-blue-600 ml-1">Fetching...</span>}</label>
                   <div className="flex gap-2">
                     <input
                       value={bookUrl}
                       onChange={(e) => setBookUrl(e.target.value)}
                       placeholder="Paste image URL (right-click cover → Copy Image Address)"
-                      className="flex-1 rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20"
+                      className="flex-1 rounded-lg border border-stone-300 bg-stone-100 px-3 py-2 text-stone-900 text-sm focus:outline-none focus:ring-2 focus:ring-stone-900/15"
                       onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); fetchBookUrl(); } }}
                     />
                     <button
                       onClick={fetchBookUrl}
                       disabled={fetchingUrl || !bookUrl.trim()}
-                      className="rounded-lg bg-zinc-700 hover:bg-zinc-600 px-3 py-2 text-sm text-white transition-colors disabled:opacity-50 shrink-0"
+                      className="rounded-lg bg-stone-200 hover:bg-stone-300 px-3 py-2 text-sm text-stone-900 transition-colors disabled:opacity-50 shrink-0"
                     >
                       Fetch
                     </button>
                   </div>
-                  <p className="text-[11px] text-zinc-600 mt-1">Fetches cover and auto-detects title &amp; author</p>
-                  {fetchUrlError && <p className="text-[11px] text-red-400 mt-1">{fetchUrlError}</p>}
+                  <p className="text-[11px] text-stone-400 mt-1">Fetches cover and auto-detects title &amp; author</p>
+                  {fetchUrlError && <p className="text-[11px] text-red-600 mt-1">{fetchUrlError}</p>}
                 </div>
               )}
               <div>
-                <label className="text-xs text-zinc-400 block mb-1">Title * {recognizing && <span className="text-blue-400 ml-1">Recognizing...</span>}</label>
-                <input value={bookTitle} onChange={(e) => setBookTitle(e.target.value)} className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20" />
+                <label className="text-xs text-stone-600 block mb-1">Title * {recognizing && <span className="text-blue-600 ml-1">Recognizing...</span>}</label>
+                <input value={bookTitle} onChange={(e) => setBookTitle(e.target.value)} className="w-full rounded-lg border border-stone-300 bg-stone-100 px-3 py-2 text-stone-900 text-sm focus:outline-none focus:ring-2 focus:ring-stone-900/15" />
               </div>
               <div>
-                <label className="text-xs text-zinc-400 block mb-1">Author</label>
-                <input value={bookAuthor} onChange={(e) => setBookAuthor(e.target.value)} className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20" />
+                <label className="text-xs text-stone-600 block mb-1">Author</label>
+                <input value={bookAuthor} onChange={(e) => setBookAuthor(e.target.value)} className="w-full rounded-lg border border-stone-300 bg-stone-100 px-3 py-2 text-stone-900 text-sm focus:outline-none focus:ring-2 focus:ring-stone-900/15" />
               </div>
               <div>
-                <label className="text-xs text-zinc-400 block mb-1">Genre</label>
-                <input value={bookGenre} onChange={(e) => setBookGenre(e.target.value)} placeholder="e.g. Dark Romance, Thriller, Fantasy" className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20" />
-                <p className="text-[11px] text-zinc-600 mt-1">Separate multiple genres with commas</p>
+                <label className="text-xs text-stone-600 block mb-1">Genre</label>
+                <input value={bookGenre} onChange={(e) => setBookGenre(e.target.value)} placeholder="e.g. Dark Romance, Thriller, Fantasy" className="w-full rounded-lg border border-stone-300 bg-stone-100 px-3 py-2 text-stone-900 text-sm focus:outline-none focus:ring-2 focus:ring-stone-900/15" />
+                <p className="text-[11px] text-stone-400 mt-1">Separate multiple genres with commas</p>
               </div>
               <div>
-                <label className="text-xs text-zinc-400 block mb-1">Cover Image {!editBookId && "*"}</label>
-                <input type="file" accept="image/*" onChange={handleCoverFile} className="text-sm text-zinc-400" />
+                <label className="text-xs text-stone-600 block mb-1">Cover Image {!editBookId && "*"}</label>
+                <input type="file" accept="image/*" onChange={handleCoverFile} className="text-sm text-stone-600" />
                 {bookCoverPreview && (
                   <img src={bookCoverPreview} alt="Cover" className="mt-2 w-24 h-36 rounded object-cover" />
                 )}
@@ -1475,7 +1475,7 @@ export default function TopBooksPage() {
                 <input type="checkbox" checked={bookPinned} onChange={(e) => setBookPinned(e.target.checked)} className="rounded" />
                 Always recommended (pinned)
               </label>
-              <button onClick={saveBook} disabled={loading} className="w-full rounded-lg bg-white text-black py-2 text-sm font-medium hover:bg-zinc-200 transition-colors disabled:opacity-50">
+              <button onClick={saveBook} disabled={loading} className="w-full rounded-lg bg-stone-900 text-white py-2 text-sm font-medium hover:bg-stone-700 transition-colors disabled:opacity-50">
                 {loading ? "Saving..." : "Save"}
               </button>
             </div>
@@ -1487,14 +1487,14 @@ export default function TopBooksPage() {
           <Modal onClose={() => setShowListForm(false)} title={editListId ? "Edit List" : "New List"}>
             <div className="space-y-4">
               <div>
-                <label className="text-xs text-zinc-400 block mb-1">List Name *</label>
-                <input value={listName} onChange={(e) => setListName(e.target.value)} placeholder="e.g. Dark Romance" className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20" />
+                <label className="text-xs text-stone-600 block mb-1">List Name *</label>
+                <input value={listName} onChange={(e) => setListName(e.target.value)} placeholder="e.g. Dark Romance" className="w-full rounded-lg border border-stone-300 bg-stone-100 px-3 py-2 text-stone-900 text-sm focus:outline-none focus:ring-2 focus:ring-stone-900/15" />
               </div>
-              <div className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-3">
+              <div className="rounded-lg border border-stone-200 bg-white/60 p-3">
                 <div className="flex items-center justify-between gap-3 flex-wrap">
                   <div className="min-w-0">
-                    <div className="text-sm text-white font-medium">Generate hooks, captions and image prompts</div>
-                    <div className="text-[11px] text-zinc-500 mt-0.5">
+                    <div className="text-sm text-stone-900 font-medium">Generate hooks, captions and image prompts</div>
+                    <div className="text-[11px] text-stone-500 mt-0.5">
                       Uses the list name {listGenres.length ? `and genres (${listGenres.join(", ")})` : "(set genres below for sharper results)"}. Appends to whatever is already in the three fields. Click again later for more, no repeats.
                     </div>
                   </div>
@@ -1502,34 +1502,34 @@ export default function TopBooksPage() {
                     type="button"
                     onClick={generateBookTokContent}
                     disabled={generatingBookTok || !listName.trim()}
-                    className="shrink-0 px-3 py-2 rounded-lg text-sm font-medium bg-white text-black hover:bg-zinc-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="shrink-0 px-3 py-2 rounded-lg text-sm font-medium bg-stone-900 text-white hover:bg-stone-700 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {generatingBookTok ? "Generating…" : "Generate"}
                   </button>
                 </div>
                 {bookTokError && (
-                  <div className="mt-2 text-[12px] text-red-400">{bookTokError}</div>
+                  <div className="mt-2 text-[12px] text-red-600">{bookTokError}</div>
                 )}
               </div>
               <div>
-                <label className="text-xs text-zinc-400 block mb-1">Title Slide Texts * (one per line, random pick each publish)</label>
-                <textarea value={listTitles} onChange={(e) => setListTitles(e.target.value)} rows={3} placeholder={"Top 10 Dark Romance Books\nDark Romance Must-Reads\nBooks That Will Ruin You"} className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20" />
+                <label className="text-xs text-stone-600 block mb-1">Title Slide Texts * (one per line, random pick each publish)</label>
+                <textarea value={listTitles} onChange={(e) => setListTitles(e.target.value)} rows={3} placeholder={"Top 10 Dark Romance Books\nDark Romance Must-Reads\nBooks That Will Ruin You"} className="w-full rounded-lg border border-stone-300 bg-stone-100 px-3 py-2 text-stone-900 text-sm focus:outline-none focus:ring-2 focus:ring-stone-900/15" />
               </div>
               <div>
-                <label className="text-xs text-zinc-400 block mb-1">Number of books to include</label>
-                <input type="number" min={1} value={listCount} onChange={(e) => setListCount(Number(e.target.value))} className="w-24 rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20" />
+                <label className="text-xs text-stone-600 block mb-1">Number of books to include</label>
+                <input type="number" min={1} value={listCount} onChange={(e) => setListCount(Number(e.target.value))} className="w-24 rounded-lg border border-stone-300 bg-stone-100 px-3 py-2 text-stone-900 text-sm focus:outline-none focus:ring-2 focus:ring-stone-900/15" />
               </div>
               <div>
-                <label className="text-xs text-zinc-400 block mb-1">Captions (separate each caption with a blank line)</label>
-                <textarea value={listCaptions} onChange={(e) => setListCaptions(e.target.value)} rows={5} placeholder={"First caption here with #hashtags\n\nSecond caption variation\n\nThird caption option"} className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20" />
+                <label className="text-xs text-stone-600 block mb-1">Captions (separate each caption with a blank line)</label>
+                <textarea value={listCaptions} onChange={(e) => setListCaptions(e.target.value)} rows={5} placeholder={"First caption here with #hashtags\n\nSecond caption variation\n\nThird caption option"} className="w-full rounded-lg border border-stone-300 bg-stone-100 px-3 py-2 text-stone-900 text-sm focus:outline-none focus:ring-2 focus:ring-stone-900/15" />
               </div>
               <div>
-                <label className="text-xs text-zinc-400 block mb-1">Background image prompts (one per line, random pick each publish)</label>
-                <textarea value={listBgPrompts} onChange={(e) => setListBgPrompts(e.target.value)} rows={3} placeholder={"Dark moody roses and shadows\nMystery bookshelf with candlelight\nGothic castle at night"} className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20" />
-                <p className="text-[11px] text-zinc-600 mt-1">Leave empty for plain dark background</p>
+                <label className="text-xs text-stone-600 block mb-1">Background image prompts (one per line, random pick each publish)</label>
+                <textarea value={listBgPrompts} onChange={(e) => setListBgPrompts(e.target.value)} rows={3} placeholder={"Dark moody roses and shadows\nMystery bookshelf with candlelight\nGothic castle at night"} className="w-full rounded-lg border border-stone-300 bg-stone-100 px-3 py-2 text-stone-900 text-sm focus:outline-none focus:ring-2 focus:ring-stone-900/15" />
+                <p className="text-[11px] text-stone-400 mt-1">Leave empty for plain dark background</p>
               </div>
               <div>
-                <label className="text-xs text-zinc-400 block mb-2">
+                <label className="text-xs text-stone-600 block mb-2">
                   Music tracks for video posts ({listMusicTrackIds.length} selected)
                 </label>
                 {musicTracks.length > 0 ? (
@@ -1542,8 +1542,8 @@ export default function TopBooksPage() {
                           onClick={() => toggleMusicInList(t.id)}
                           className={`px-3 py-1 rounded-full text-xs transition-colors ${
                             selected
-                              ? "bg-purple-500/20 border-purple-500 text-purple-400 border"
-                              : "border border-zinc-700 text-zinc-400 hover:border-zinc-600"
+                              ? "bg-purple-500/20 border-purple-500 text-purple-600 border"
+                              : "border border-stone-300 text-stone-600 hover:border-stone-400"
                           }`}
                         >
                           {t.name}
@@ -1552,12 +1552,12 @@ export default function TopBooksPage() {
                     })}
                   </div>
                 ) : (
-                  <p className="text-[11px] text-zinc-500 mb-2">No music tracks uploaded yet. Upload tracks below.</p>
+                  <p className="text-[11px] text-stone-500 mb-2">No music tracks uploaded yet. Upload tracks below.</p>
                 )}
-                <p className="text-[11px] text-zinc-600">Random pick per video publish. Only used for video platform types.</p>
+                <p className="text-[11px] text-stone-400">Random pick per video publish. Only used for video platform types.</p>
               </div>
               <div>
-                <label className="text-xs text-zinc-400 block mb-2">
+                <label className="text-xs text-stone-600 block mb-2">
                   Auto-select by genre ({listGenres.length} selected)
                 </label>
                 <div className="flex flex-wrap gap-2 mb-3">
@@ -1569,8 +1569,8 @@ export default function TopBooksPage() {
                         onClick={() => setListGenres(selected ? listGenres.filter((x) => x !== g) : [...listGenres, g])}
                         className={`px-3 py-1 rounded-full text-xs transition-colors ${
                           selected
-                            ? "bg-green-500/20 border-green-500 text-green-400 border"
-                            : "border border-zinc-700 text-zinc-400 hover:border-zinc-600"
+                            ? "bg-green-500/20 border-green-500 text-green-600 border"
+                            : "border border-stone-300 text-stone-600 hover:border-stone-400"
                         }`}
                       >
                         {g}
@@ -1579,13 +1579,13 @@ export default function TopBooksPage() {
                   })}
                 </div>
                 {listGenres.length > 0 && (
-                  <p className="text-[11px] text-zinc-600 mb-3">
+                  <p className="text-[11px] text-stone-400 mb-3">
                     Books matching these genres will be automatically included. You can also manually select additional books below.
                   </p>
                 )}
               </div>
               <div>
-                <label className="text-xs text-zinc-400 block mb-2">
+                <label className="text-xs text-stone-600 block mb-2">
                   Select books ({listBookIds.length} selected, {books.filter((b) => b.pinned).length} pinned)
                 </label>
                 <div className="grid grid-cols-3 gap-2 max-h-60 overflow-y-auto">
@@ -1597,8 +1597,8 @@ export default function TopBooksPage() {
                         onClick={() => toggleBookInList(b.id)}
                         className={`flex items-center gap-2 p-2 rounded-lg border text-left text-xs transition-colors ${
                           selected
-                            ? "border-blue-500 bg-blue-500/10 text-white"
-                            : "border-zinc-700 bg-zinc-800 text-zinc-400 hover:border-zinc-600"
+                            ? "border-blue-500 bg-blue-500/10 text-blue-700"
+                            : "border-stone-300 bg-stone-100 text-stone-600 hover:border-stone-400"
                         }`}
                       >
                         <img src={b.coverData} alt="" className="w-6 h-9 rounded object-cover shrink-0" />
@@ -1610,7 +1610,7 @@ export default function TopBooksPage() {
                   })}
                 </div>
               </div>
-              <button onClick={saveList} className="w-full rounded-lg bg-white text-black py-2 text-sm font-medium hover:bg-zinc-200 transition-colors">
+              <button onClick={saveList} className="w-full rounded-lg bg-stone-900 text-white py-2 text-sm font-medium hover:bg-stone-700 transition-colors">
                 Save
               </button>
             </div>
@@ -1625,7 +1625,7 @@ export default function TopBooksPage() {
                 <button
                   onClick={refreshAccounts}
                   disabled={refreshingAccounts}
-                  className="text-xs text-blue-400 hover:text-blue-300 disabled:text-zinc-600 transition-colors"
+                  className="text-xs text-blue-600 hover:text-blue-700 disabled:text-stone-400 transition-colors"
                 >
                   {refreshingAccounts ? "Refreshing..." : "Refresh accounts"}
                 </button>
@@ -1633,7 +1633,7 @@ export default function TopBooksPage() {
               <div className="space-y-4">
                 {accounts.length > 0 && (
                   <div>
-                    <label className="text-xs text-zinc-400 block mb-2">TikTok accounts</label>
+                    <label className="text-xs text-stone-600 block mb-2">TikTok accounts</label>
                     <div className="space-y-2">
                       {accounts.map((a) => (
                         <label key={a.id} className="flex items-center gap-2 text-sm cursor-pointer">
@@ -1641,7 +1641,7 @@ export default function TopBooksPage() {
                             type="checkbox"
                             checked={publishAccounts.includes(a.id)}
                             onChange={() => togglePublishAccount(a.id)}
-                            className="appearance-none w-5 h-5 rounded border border-zinc-500 bg-zinc-700 checked:bg-blue-500 checked:border-blue-500 hover:border-zinc-300 cursor-pointer transition-colors shrink-0 relative after:absolute after:inset-0 after:flex after:items-center after:justify-center after:text-white after:text-sm after:font-bold checked:after:content-['✓']"
+                            className="appearance-none w-5 h-5 rounded border border-stone-400 bg-stone-200 checked:bg-blue-500 checked:border-blue-500 hover:border-stone-400 cursor-pointer transition-colors shrink-0 relative after:absolute after:inset-0 after:flex after:items-center after:justify-center after:text-white after:text-sm after:font-bold checked:after:content-['✓']"
                           />
                           @{a.username}
                         </label>
@@ -1651,7 +1651,7 @@ export default function TopBooksPage() {
                 )}
                 {igAccounts.length > 0 && (
                   <div>
-                    <label className="text-xs text-zinc-400 block mb-2">Instagram accounts</label>
+                    <label className="text-xs text-stone-600 block mb-2">Instagram accounts</label>
                     <div className="space-y-2">
                       {igAccounts.map((a) => (
                         <label key={a.id} className="flex items-center gap-2 text-sm cursor-pointer">
@@ -1659,7 +1659,7 @@ export default function TopBooksPage() {
                             type="checkbox"
                             checked={publishAccounts.includes(a.id)}
                             onChange={() => togglePublishAccount(a.id)}
-                            className="appearance-none w-5 h-5 rounded border border-zinc-500 bg-zinc-700 checked:bg-blue-500 checked:border-blue-500 hover:border-zinc-300 cursor-pointer transition-colors shrink-0 relative after:absolute after:inset-0 after:flex after:items-center after:justify-center after:text-white after:text-sm after:font-bold checked:after:content-['✓']"
+                            className="appearance-none w-5 h-5 rounded border border-stone-400 bg-stone-200 checked:bg-blue-500 checked:border-blue-500 hover:border-stone-400 cursor-pointer transition-colors shrink-0 relative after:absolute after:inset-0 after:flex after:items-center after:justify-center after:text-white after:text-sm after:font-bold checked:after:content-['✓']"
                           />
                           @{a.username}
                         </label>
@@ -1669,7 +1669,7 @@ export default function TopBooksPage() {
                 )}
                 {fbAccounts.length > 0 && (
                   <div>
-                    <label className="text-xs text-zinc-400 block mb-2">Facebook accounts</label>
+                    <label className="text-xs text-stone-600 block mb-2">Facebook accounts</label>
                     <div className="space-y-2">
                       {fbAccounts.map((a) => (
                         <label key={a.id} className="flex items-center gap-2 text-sm cursor-pointer">
@@ -1677,7 +1677,7 @@ export default function TopBooksPage() {
                             type="checkbox"
                             checked={publishAccounts.includes(a.id)}
                             onChange={() => togglePublishAccount(a.id)}
-                            className="appearance-none w-5 h-5 rounded border border-zinc-500 bg-zinc-700 checked:bg-blue-500 checked:border-blue-500 hover:border-zinc-300 cursor-pointer transition-colors shrink-0 relative after:absolute after:inset-0 after:flex after:items-center after:justify-center after:text-white after:text-sm after:font-bold checked:after:content-['✓']"
+                            className="appearance-none w-5 h-5 rounded border border-stone-400 bg-stone-200 checked:bg-blue-500 checked:border-blue-500 hover:border-stone-400 cursor-pointer transition-colors shrink-0 relative after:absolute after:inset-0 after:flex after:items-center after:justify-center after:text-white after:text-sm after:font-bold checked:after:content-['✓']"
                           />
                           @{a.username}
                         </label>
@@ -1687,14 +1687,14 @@ export default function TopBooksPage() {
                 )}
               </div>
               <div>
-                <label className="text-xs text-zinc-400 block mb-1">Schedule (optional)</label>
+                <label className="text-xs text-stone-600 block mb-1">Schedule (optional)</label>
                 <input
                   type="datetime-local"
                   value={scheduledAt}
                   onChange={(e) => setScheduledAt(e.target.value)}
-                  className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20"
+                  className="w-full rounded-lg border border-stone-300 bg-stone-100 px-3 py-2 text-stone-900 text-sm focus:outline-none focus:ring-2 focus:ring-stone-900/15"
                 />
-                <p className="text-[11px] text-zinc-600 mt-1">Leave empty to publish immediately</p>
+                <p className="text-[11px] text-stone-400 mt-1">Leave empty to publish immediately</p>
               </div>
               <button
                 onClick={publishList}
@@ -1704,7 +1704,7 @@ export default function TopBooksPage() {
                 {publishing ? "Publishing..." : scheduledAt ? "Schedule" : "Publish Now"}
               </button>
               {publishResult && (
-                <div className={`text-sm p-3 rounded-lg ${publishResult.startsWith("Error") ? "bg-red-500/10 text-red-300" : "bg-green-500/10 text-green-300"}`}>
+                <div className={`text-sm p-3 rounded-lg ${publishResult.startsWith("Error") ? "bg-red-500/10 text-red-600" : "bg-green-500/10 text-green-600"}`}>
                   {publishResult}
                 </div>
               )}
@@ -1715,16 +1715,16 @@ export default function TopBooksPage() {
 
         {/* ═══ VIDEO GENERATING OVERLAY ═══ */}
         {generatingVideoForList && !videoPreviewUrl && (
-          <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm">
+          <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-stone-900/50 backdrop-blur-sm">
             <div className="animate-spin w-10 h-10 border-4 border-purple-500 border-t-transparent rounded-full mb-4" />
-            <p className="text-white text-sm">Generating video preview...</p>
-            <p className="text-zinc-500 text-xs mt-1">This can take up to a minute</p>
+            <p className="text-stone-900 text-sm">Generating video preview...</p>
+            <p className="text-stone-500 text-xs mt-1">This can take up to a minute</p>
           </div>
         )}
 
         {/* ═══ VIDEO PREVIEW MODAL ═══ */}
         {videoPreviewUrl && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm" onClick={() => { URL.revokeObjectURL(videoPreviewUrl); setVideoPreviewUrl(null); }}>
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/50 backdrop-blur-sm" onClick={() => { URL.revokeObjectURL(videoPreviewUrl); setVideoPreviewUrl(null); }}>
             <div className="relative w-full max-w-sm mx-4" onClick={(e) => e.stopPropagation()}>
               <video
                 src={videoPreviewUrl}
@@ -1734,7 +1734,7 @@ export default function TopBooksPage() {
               />
               <button
                 onClick={() => { URL.revokeObjectURL(videoPreviewUrl); setVideoPreviewUrl(null); }}
-                className="w-full text-xs text-zinc-500 hover:text-white transition-colors py-2 mt-2"
+                className="w-full text-xs text-stone-500 hover:text-stone-900 transition-colors py-2 mt-2"
               >
                 Close
               </button>
@@ -1772,29 +1772,29 @@ export default function TopBooksPage() {
             : undefined;
 
           return (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm" onClick={() => setPreviewListId(null)}>
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/45 backdrop-blur-sm" onClick={() => setPreviewListId(null)}>
               <div className="relative w-full max-w-sm mx-4" onClick={(e) => e.stopPropagation()}>
                 {/* Title slide */}
-                <div className="rounded-2xl overflow-hidden bg-gradient-to-br from-zinc-800 via-zinc-700 to-zinc-900 border border-zinc-600 shadow-2xl p-6 mb-3">
-                  <div className="text-[10px] text-zinc-500 uppercase tracking-widest mb-3">Title slide</div>
-                  <div className="text-lg font-bold text-white leading-snug">{titleText}</div>
-                  <div className="text-[10px] text-zinc-500 mt-3">Background image generated at post time</div>
+                <div className="rounded-2xl overflow-hidden bg-gradient-to-br from-stone-100 via-stone-200 to-white border border-stone-300 shadow-2xl p-6 mb-3">
+                  <div className="text-[10px] text-stone-500 uppercase tracking-widest mb-3">Title slide</div>
+                  <div className="text-lg font-bold text-stone-900 leading-snug">{titleText}</div>
+                  <div className="text-[10px] text-stone-500 mt-3">Background image generated at post time</div>
                 </div>
 
                 {/* Book grid */}
-                <div className="rounded-2xl overflow-hidden bg-zinc-900/90 border border-zinc-700 p-4 mb-3">
-                  <div className="text-[10px] text-zinc-500 uppercase tracking-widest mb-3">
+                <div className="rounded-2xl overflow-hidden bg-white/90 border border-stone-300 p-4 mb-3">
+                  <div className="text-[10px] text-stone-500 uppercase tracking-widest mb-3">
                     {finalOrder.length} books selected (shuffled)
                   </div>
                   <div className="grid grid-cols-5 gap-2">
                     {finalOrder.map((b, i) => (
                       <div key={b.id} className="relative">
                         <img src={b.coverData} alt={b.title} className="w-full aspect-[2/3] rounded-lg object-cover" />
-                        <div className="absolute top-0.5 left-0.5 bg-black/70 text-white text-[9px] w-4 h-4 rounded-full flex items-center justify-center font-bold">
+                        <div className="absolute top-0.5 left-0.5 bg-stone-900/60 text-white text-[9px] w-4 h-4 rounded-full flex items-center justify-center font-bold">
                           {i + 1}
                         </div>
                         {b.pinned && (
-                          <div className="absolute bottom-0.5 right-0.5 bg-amber-500/80 text-[8px] px-1 rounded text-black font-bold">
+                          <div className="absolute bottom-0.5 right-0.5 bg-amber-500/80 text-[8px] px-1 rounded text-white font-bold">
                             PIN
                           </div>
                         )}
@@ -1805,19 +1805,19 @@ export default function TopBooksPage() {
 
                 {/* Caption */}
                 {caption && (
-                  <div className="text-xs text-zinc-400 bg-zinc-900/80 border border-zinc-800 rounded-lg p-3 mb-3 max-h-20 overflow-y-auto">
-                    <span className="text-zinc-600 uppercase text-[10px] tracking-wide block mb-1">Caption</span>
+                  <div className="text-xs text-stone-600 bg-white/80 border border-stone-200 rounded-lg p-3 mb-3 max-h-20 overflow-y-auto">
+                    <span className="text-stone-400 uppercase text-[10px] tracking-wide block mb-1">Caption</span>
                     {caption}
                   </div>
                 )}
 
-                <p className="text-[10px] text-zinc-600 text-center mb-2">
+                <p className="text-[10px] text-stone-400 text-center mb-2">
                   Each preview shuffles differently. Pinned books always appear.
                 </p>
 
                 <button
                   onClick={() => setPreviewListId(null)}
-                  className="w-full text-xs text-zinc-500 hover:text-white transition-colors py-1"
+                  className="w-full text-xs text-stone-500 hover:text-stone-900 transition-colors py-1"
                 >
                   Close preview
                 </button>
@@ -1842,17 +1842,17 @@ function BookCard({
   onTogglePin: () => void;
 }) {
   return (
-    <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-3 group">
+    <div className="rounded-xl border border-stone-200 bg-white/70 p-3 group">
       <img src={book.coverData} alt={book.title} className="w-full aspect-[2/3] rounded-lg object-cover mb-2" />
       <div className="text-sm font-medium truncate">{book.title}</div>
-      {book.author && <div className="text-xs text-zinc-500 truncate">{book.author}</div>}
-      {book.genre && <div className="text-[10px] text-zinc-600 truncate">{book.genre}</div>}
+      {book.author && <div className="text-xs text-stone-500 truncate">{book.author}</div>}
+      {book.genre && <div className="text-[10px] text-stone-400 truncate">{book.genre}</div>}
       <div className="flex items-center gap-2 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
-        <button onClick={onTogglePin} className={`text-[10px] px-1.5 py-0.5 rounded ${book.pinned ? "bg-amber-500/20 text-amber-300" : "bg-zinc-700 text-zinc-400"}`}>
+        <button onClick={onTogglePin} className={`text-[10px] px-1.5 py-0.5 rounded ${book.pinned ? "bg-amber-500/20 text-amber-600" : "bg-stone-200 text-stone-600"}`}>
           {book.pinned ? "Pinned" : "Pin"}
         </button>
-        <button onClick={onEdit} className="text-[10px] text-zinc-400 hover:text-white">Edit</button>
-        <button onClick={onDelete} className="text-[10px] text-red-400 hover:text-red-300">Delete</button>
+        <button onClick={onEdit} className="text-[10px] text-stone-600 hover:text-stone-900">Edit</button>
+        <button onClick={onDelete} className="text-[10px] text-red-600 hover:text-red-700">Delete</button>
       </div>
     </div>
   );
@@ -1860,11 +1860,11 @@ function BookCard({
 
 function Modal({ children, onClose, title }: { children: React.ReactNode; onClose: () => void; title: string }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-6">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/45 p-4" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="bg-white border border-stone-200 rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold">{title}</h2>
-          <button onClick={onClose} className="text-zinc-500 hover:text-white text-xl">&times;</button>
+          <button onClick={onClose} className="text-stone-500 hover:text-stone-900 text-xl">&times;</button>
         </div>
         {children}
       </div>

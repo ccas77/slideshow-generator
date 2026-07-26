@@ -63,7 +63,7 @@ export default function OverviewTab({ accounts, books, password }: OverviewTabPr
   }, [accounts, books, password]);
 
   if (loading) {
-    return <div className="text-sm text-zinc-500 text-center py-10">Loading all account configs...</div>;
+    return <div className="text-sm text-stone-500 text-center py-10">Loading all account configs...</div>;
   }
 
   const active = summaries.filter((s) => s.enabled);
@@ -71,24 +71,24 @@ export default function OverviewTab({ accounts, books, password }: OverviewTabPr
 
   return (
     <section className="space-y-6">
-      <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6">
+      <div className="rounded-2xl border border-stone-200 bg-white/70 p-6">
         <h2 className="text-lg font-semibold mb-1">Slide Automation Overview</h2>
-        <p className="text-sm text-zinc-500 mb-6">
+        <p className="text-sm text-stone-500 mb-6">
           {active.length} active account{active.length !== 1 ? "s" : ""} · {accounts.length} total
         </p>
 
         {active.length === 0 ? (
-          <p className="text-sm text-zinc-500 text-center py-4">No accounts have automation enabled.</p>
+          <p className="text-sm text-stone-500 text-center py-4">No accounts have automation enabled.</p>
         ) : (
           <div className="space-y-2">
             {active.map((s) => (
-              <div key={s.accountId} className="rounded-lg border border-zinc-700/50 bg-zinc-800/50 px-4 py-3">
+              <div key={s.accountId} className="rounded-lg border border-stone-300/60 bg-stone-100/70 px-4 py-3">
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="text-sm font-medium text-white">@{s.username}</span>
-                  <span className="text-[10px] uppercase tracking-wide text-zinc-500">{s.platform}</span>
-                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-500/20 text-green-400 font-medium">ON</span>
+                  <span className="text-sm font-medium text-stone-900">@{s.username}</span>
+                  <span className="text-[10px] uppercase tracking-wide text-stone-500">{s.platform}</span>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-500/20 text-green-600 font-medium">ON</span>
                 </div>
-                <div className="text-xs text-zinc-400">
+                <div className="text-xs text-stone-600">
                   {s.intervals.map((w) => `${utcToLocal(w.start)}–${utcToLocal(w.end)}`).join(", ") || "no windows"} · {s.bookNames.join(", ") || "no books"} · {s.selectionCount} slideshow{s.selectionCount !== 1 ? "s" : ""} · ptr {s.pointer}
                 </div>
               </div>
@@ -98,16 +98,16 @@ export default function OverviewTab({ accounts, books, password }: OverviewTabPr
 
         {inactive.length > 0 && (
           <>
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500 mt-6 mb-3">Disabled (have selections)</h3>
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-stone-500 mt-6 mb-3">Disabled (have selections)</h3>
             <div className="space-y-2">
               {inactive.map((s) => (
-                <div key={s.accountId} className="rounded-lg border border-zinc-800/50 bg-zinc-900/30 px-4 py-3 opacity-60">
+                <div key={s.accountId} className="rounded-lg border border-stone-200/70 bg-white/60 px-4 py-3 opacity-60">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="text-sm font-medium text-zinc-400">@{s.username}</span>
-                    <span className="text-[10px] uppercase tracking-wide text-zinc-600">{s.platform}</span>
-                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-zinc-700 text-zinc-400 font-medium">OFF</span>
+                    <span className="text-sm font-medium text-stone-600">@{s.username}</span>
+                    <span className="text-[10px] uppercase tracking-wide text-stone-400">{s.platform}</span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-stone-200 text-stone-600 font-medium">OFF</span>
                   </div>
-                  <div className="text-xs text-zinc-500">
+                  <div className="text-xs text-stone-500">
                     {s.bookNames.join(", ") || "no books"} · {s.selectionCount} slideshow{s.selectionCount !== 1 ? "s" : ""}
                   </div>
                 </div>

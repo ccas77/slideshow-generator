@@ -26,7 +26,7 @@ export default function AppHeader() {
       <Link
         href={href}
         className={`text-sm transition-colors ${
-          active ? "text-white font-medium" : "text-zinc-500 hover:text-white"
+          active ? "text-stone-900 font-medium" : "text-stone-500 hover:text-stone-900"
         }`}
       >
         {label}
@@ -37,7 +37,7 @@ export default function AppHeader() {
   return (
     <header className="flex items-center justify-between gap-4 mb-8 flex-wrap">
       <div className="flex items-center gap-4 flex-wrap min-w-0">
-        <div className="text-lg font-bold text-white shrink-0">Slideshow Generator</div>
+        <div className="text-lg font-bold text-stone-900 shrink-0">Slideshow Generator</div>
         <nav className="flex items-center gap-4 flex-wrap">
           {link("/", "Home")}
           {link("/create", "Create")}
@@ -54,14 +54,14 @@ export default function AppHeader() {
         <button
           onClick={refreshAccounts}
           disabled={refreshing}
-          className="text-sm text-blue-400 hover:text-blue-300 disabled:text-zinc-600 transition-colors"
+          className="text-sm text-blue-600 hover:text-blue-700 disabled:text-stone-400 transition-colors"
           title="Re-fetch accounts from PostBridge"
         >
           {refreshing ? "Refreshing..." : "Refresh accounts"}
         </button>
         <button
           onClick={logout}
-          className="text-sm text-zinc-500 hover:text-white transition-colors"
+          className="text-sm text-stone-500 hover:text-stone-900 transition-colors"
         >
           Log out
         </button>

@@ -103,7 +103,7 @@ export default function ChatPage() {
   // Auth gate
   if (!authed) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-zinc-900 to-black flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-stone-50 via-white to-stone-100 flex items-center justify-center">
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -120,11 +120,11 @@ export default function ChatPage() {
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Password"
             autoFocus
-            className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-4 py-3 text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-white/20 mb-4"
+            className="w-full rounded-lg border border-stone-200 bg-stone-100 px-4 py-3 text-stone-900 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-900/15 mb-4"
           />
           <button
             type="submit"
-            className="w-full px-6 py-3 rounded-lg bg-white text-black font-semibold hover:bg-zinc-200 transition-colors text-sm"
+            className="w-full px-6 py-3 rounded-lg bg-stone-900 text-white font-semibold hover:bg-stone-700 transition-colors text-sm"
           >
             Enter
           </button>
@@ -136,20 +136,20 @@ export default function ChatPage() {
   // PC credentials gate
   if (!pcSaved) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-zinc-900 to-black text-white">
+      <div className="min-h-screen bg-gradient-to-br from-stone-50 via-white to-stone-100 text-stone-900">
         <div className="mx-auto w-full max-w-3xl px-6 sm:px-10 py-10">
           <AppHeader />
           <div className="max-w-md mx-auto mt-20">
             <h2 className="text-xl font-semibold mb-2">
               Connect Publisher Champ
             </h2>
-            <p className="text-sm text-zinc-500 mb-6">
+            <p className="text-sm text-stone-500 mb-6">
               Enter your Publisher Champ API key and account ID. These are saved
               locally on this device only.
             </p>
             <div className="space-y-4">
               <div>
-                <label className="block text-xs text-zinc-500 mb-1">
+                <label className="block text-xs text-stone-500 mb-1">
                   API Key
                 </label>
                 <input
@@ -157,11 +157,11 @@ export default function ChatPage() {
                   value={pcApiKey}
                   onChange={(e) => setPcApiKey(e.target.value)}
                   placeholder="Your Publisher Champ API key"
-                  className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-4 py-3 text-white placeholder-zinc-600 text-sm focus:outline-none focus:ring-2 focus:ring-white/20"
+                  className="w-full rounded-lg border border-stone-200 bg-white px-4 py-3 text-stone-900 placeholder-stone-400 text-sm focus:outline-none focus:ring-2 focus:ring-stone-900/15"
                 />
               </div>
               <div>
-                <label className="block text-xs text-zinc-500 mb-1">
+                <label className="block text-xs text-stone-500 mb-1">
                   Account ID
                 </label>
                 <input
@@ -169,13 +169,13 @@ export default function ChatPage() {
                   value={pcAccountId}
                   onChange={(e) => setPcAccountId(e.target.value)}
                   placeholder="Account UUID from Publisher Champ"
-                  className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-4 py-3 text-white placeholder-zinc-600 text-sm focus:outline-none focus:ring-2 focus:ring-white/20"
+                  className="w-full rounded-lg border border-stone-200 bg-white px-4 py-3 text-stone-900 placeholder-stone-400 text-sm focus:outline-none focus:ring-2 focus:ring-stone-900/15"
                 />
               </div>
               <button
                 onClick={savePcCredentials}
                 disabled={!pcApiKey.trim() || !pcAccountId.trim()}
-                className="w-full px-6 py-3 rounded-lg bg-white text-black font-semibold hover:bg-zinc-200 transition-colors text-sm disabled:opacity-40 disabled:cursor-not-allowed"
+                className="w-full px-6 py-3 rounded-lg bg-stone-900 text-white font-semibold hover:bg-stone-700 transition-colors text-sm disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 Connect
               </button>
@@ -187,7 +187,7 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-zinc-900 to-black text-white flex flex-col">
+    <div className="min-h-screen bg-gradient-to-br from-stone-50 via-white to-stone-100 text-stone-900 flex flex-col">
       <div className="mx-auto w-full max-w-3xl px-6 sm:px-10 py-10 flex flex-col flex-1 min-h-0">
         <AppHeader />
         <HowItWorks>
@@ -199,7 +199,7 @@ export default function ChatPage() {
           <h2 className="text-lg font-semibold">Publisher Champ Chat</h2>
           <button
             onClick={clearPcCredentials}
-            className="text-xs text-zinc-600 hover:text-zinc-400 transition-colors"
+            className="text-xs text-stone-400 hover:text-stone-600 transition-colors"
           >
             Disconnect
           </button>
@@ -213,7 +213,7 @@ export default function ChatPage() {
         >
           {messages.length === 0 && !loading && (
             <div className="text-center py-20">
-              <p className="text-zinc-500 text-sm mb-4">
+              <p className="text-stone-500 text-sm mb-4">
                 Ask anything about your publishing data
               </p>
               <div className="flex flex-wrap justify-center gap-2">
@@ -228,7 +228,7 @@ export default function ChatPage() {
                     onClick={() => {
                       setInput(q);
                     }}
-                    className="px-3 py-2 rounded-lg border border-zinc-800 text-xs text-zinc-400 hover:text-white hover:border-zinc-600 transition-colors"
+                    className="px-3 py-2 rounded-lg border border-stone-200 text-xs text-stone-600 hover:text-stone-900 hover:border-stone-400 transition-colors"
                   >
                     {q}
                   </button>
@@ -247,8 +247,8 @@ export default function ChatPage() {
               <div
                 className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
                   msg.role === "user"
-                    ? "bg-white text-black"
-                    : "bg-zinc-800/80 text-zinc-200"
+                    ? "bg-stone-900 text-white"
+                    : "bg-stone-100/80 text-stone-800"
                 }`}
               >
                 <div className="whitespace-pre-wrap">{msg.content}</div>
@@ -258,9 +258,9 @@ export default function ChatPage() {
 
           {loading && (
             <div className="flex justify-start">
-              <div className="bg-zinc-800/80 rounded-2xl px-4 py-3 flex items-center gap-2">
-                <div className="w-4 h-4 border-2 border-zinc-500 border-t-transparent rounded-full animate-spin" />
-                <span className="text-xs text-zinc-500">
+              <div className="bg-stone-100/80 rounded-2xl px-4 py-3 flex items-center gap-2">
+                <div className="w-4 h-4 border-2 border-stone-400 border-t-transparent rounded-full animate-spin" />
+                <span className="text-xs text-stone-500">
                   Fetching your data...
                 </span>
               </div>
@@ -269,7 +269,7 @@ export default function ChatPage() {
         </div>
 
         {error && (
-          <p className="text-red-400 text-sm mb-2 text-center">{error}</p>
+          <p className="text-red-600 text-sm mb-2 text-center">{error}</p>
         )}
 
         {/* Input */}
@@ -286,12 +286,12 @@ export default function ChatPage() {
             placeholder="Ask about your sales, ads, royalties..."
             disabled={loading}
             autoFocus
-            className="flex-1 rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-white/20 disabled:opacity-50"
+            className="flex-1 rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-900/15 disabled:opacity-50"
           />
           <button
             type="submit"
             disabled={loading || !input.trim()}
-            className="px-5 py-3 rounded-xl bg-white text-black font-medium text-sm hover:bg-zinc-200 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            className="px-5 py-3 rounded-xl bg-stone-900 text-white font-medium text-sm hover:bg-stone-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
             Send
           </button>

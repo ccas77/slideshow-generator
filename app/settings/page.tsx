@@ -58,46 +58,46 @@ export default function SettingsPage() {
   if (!password) return null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-zinc-900 to-black text-white">
+    <div className="min-h-screen bg-gradient-to-br from-stone-50 via-white to-stone-100 text-stone-900">
       <div className="mx-auto w-full max-w-4xl px-6 sm:px-10 py-10">
         <AppHeader />
 
         <h1 className="text-2xl font-bold mb-6 mt-8">Settings</h1>
 
-        <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6">
+        <div className="rounded-2xl border border-stone-200 bg-white/70 p-6">
           <h2 className="text-lg font-medium mb-1">Censorship Substitutions</h2>
-          <p className="text-sm text-zinc-500 mb-4">
+          <p className="text-sm text-stone-500 mb-4">
             The default substitutions are always active. Add extra ones here — they get appended to the defaults.
           </p>
 
-          <label className="block text-sm font-medium text-zinc-300 mb-1">Extra Leetspeak</label>
+          <label className="block text-sm font-medium text-stone-700 mb-1">Extra Leetspeak</label>
           <textarea
             value={censorLeetspeak}
             onChange={(e) => { setCensorLeetspeak(e.target.value); setSaved(false); }}
             placeholder="c0p, ja!l, pr!son, d£ath, k!$, ..."
             rows={4}
-            className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white placeholder-zinc-600 focus:border-blue-500 focus:outline-none mb-4"
+            className="w-full rounded-lg border border-stone-300 bg-stone-100 px-3 py-2 text-sm text-stone-900 placeholder-stone-400 focus:border-blue-500 focus:outline-none mb-4"
           />
 
-          <label className="block text-sm font-medium text-zinc-300 mb-1">Extra Emoji</label>
+          <label className="block text-sm font-medium text-stone-700 mb-1">Extra Emoji</label>
           <textarea
             value={censorEmoji}
             onChange={(e) => { setCensorEmoji(e.target.value); setSaved(false); }}
             placeholder="😻 = pussy, 🐓 = cock, ..."
             rows={3}
-            className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white placeholder-zinc-600 focus:border-blue-500 focus:outline-none mb-4"
+            className="w-full rounded-lg border border-stone-300 bg-stone-100 px-3 py-2 text-sm text-stone-900 placeholder-stone-400 focus:border-blue-500 focus:outline-none mb-4"
           />
 
           <div className="flex items-center gap-3">
             <button
               onClick={save}
               disabled={saving}
-              className="rounded-lg bg-white text-black px-5 py-2 text-sm font-medium hover:bg-zinc-200 transition-colors disabled:opacity-50"
+              className="rounded-lg bg-stone-900 text-white px-5 py-2 text-sm font-medium hover:bg-stone-700 transition-colors disabled:opacity-50"
             >
               {saving ? "Saving..." : "Save"}
             </button>
-            {saved && <span className="text-sm text-green-400">Saved</span>}
-            {loading && <span className="text-sm text-zinc-500">Loading...</span>}
+            {saved && <span className="text-sm text-green-600">Saved</span>}
+            {loading && <span className="text-sm text-stone-500">Loading...</span>}
           </div>
         </div>
       </div>

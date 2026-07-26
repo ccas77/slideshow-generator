@@ -46,7 +46,7 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-zinc-900 to-black text-white">
+    <div className="min-h-screen bg-gradient-to-br from-stone-50 via-white to-stone-100 text-stone-900">
       <div className="mx-auto w-full max-w-3xl px-6 sm:px-10 py-10">
         <AppHeader />
         <HowItWorks>
@@ -56,15 +56,15 @@ export default function Home() {
         </HowItWorks>
 
         {/* Tab switcher */}
-        <div className="flex gap-1 p-1 rounded-xl bg-zinc-900/80 border border-zinc-800 mb-8">
+        <div className="flex gap-1 p-1 rounded-xl bg-white/80 border border-stone-200 mb-8">
           {([["automation", "Automation"], ["post-now", "Post Now"], ["overview", "Overview"]] as const).map(([key, label]) => (
             <button
               key={key}
               onClick={() => setTab(key)}
               className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                 tab === key
-                  ? "bg-white text-black shadow-sm"
-                  : "text-zinc-400 hover:text-white"
+                  ? "bg-stone-900 text-white shadow-sm"
+                  : "text-stone-600 hover:text-stone-900"
               }`}
             >
               {label}
