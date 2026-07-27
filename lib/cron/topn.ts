@@ -21,6 +21,12 @@ import type { TopNResult } from "./types";
 // accounts even in the worst case.
 const TOPN_BATCH_SIZE = 3;
 
+// Platforms whose publish path runs ffmpeg (see isVideo in lib/topn-publisher.ts).
+// These are memory-heavy and must not run concurrently with each other.
+function isVideoPlatform(platform?: string): boolean {
+  return platform === "tiktok-video" || platform === "fb-video" || platform === "ig-video";
+}
+
 interface TopNJob {
   accIdStr: string;
   accConfig: Awaited<ReturnType<typeof getTopNAutomation>>["accounts"][string];
@@ -207,12 +213,26 @@ export async function runTopNPhase(
       }
     }
 
-    for (let i = 0; i < topNJobs.length; i += TOPN_BATCH_SIZE) {
+    // Video jobs run ffmpeg and hold a multi-MB background image plus every
+    // rendered slide in memory at once. Three of those concurrently killed the
+    // 2026-07-27 00:30 run with "instance was killed because it ran out of
+    // available memory" — three jobs reached phase=renderVideo together after
+    // taking 120-172s each in generateSlides. Carousels stay batched; video
+    // jobs are strictly serial so peak memory is one encode, not three.
+    const batches: TopNJob[][] = [];
+    const carouselJobs = topNJobs.filter((j) => !isVideoPlatform(j.accConfig.platform));
+    const videoJobs = topNJobs.filter((j) => isVideoPlatform(j.accConfig.platform));
+    for (let i = 0; i < carouselJobs.length; i += TOPN_BATCH_SIZE) {
+      batches.push(carouselJobs.slice(i, i + TOPN_BATCH_SIZE));
+    }
+    for (const job of videoJobs) batches.push([job]);
+
+    for (let b = 0; b < batches.length; b++) {
       // Stop starting batches while there is still time to release the rest.
       // A Vercel kill here is the 2026-07-05 failure mode: keys stay marked,
       // nothing throws, and the accounts go silent for the day.
       if (!deadline.hasTimeFor(JOB_TIMEOUT_MS)) {
-        const deferred = topNJobs.slice(i);
+        const deferred = batches.slice(b).flat();
         await unmarkScheduled(deferred.map((j) => j.schedKey));
         await notify({
           subject: "Slideshow Generator: TopN phase ran out of cron budget",
@@ -222,8 +242,7 @@ export async function runTopNPhase(
         });
         break;
       }
-      const batch = topNJobs.slice(i, i + TOPN_BATCH_SIZE);
-      await Promise.allSettled(batch.map(runJob));
+      await Promise.allSettled(batches[b].map(runJob));
     }
 
     if (failedTopnKeys.length > 0) {
