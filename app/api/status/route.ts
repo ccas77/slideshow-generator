@@ -56,6 +56,26 @@ async function safeGet<T>(c: Redis, key: string): Promise<T | null> {
   }
 }
 
+// Why an attempted post isn't confirmed delivered:
+//   rejected          - Post Bridge has a result row, but not a successful one
+//   queued            - the post still exists at PB as scheduled/processing
+//   missing           - PB has no such post at all (the attempt vanished)
+//   no-post-bridge-id - the app logged a post it never got a PB id for
+//   unknown           - PB couldn't be asked (rate limit, transport error)
+type UnconfirmedState =
+  | "rejected"
+  | "queued"
+  | "missing"
+  | "no-post-bridge-id"
+  | "unknown";
+
+type UnconfirmedEntry = {
+  target: string;
+  postBridgeId: string;
+  error?: string;
+  state: UnconfirmedState;
+};
+
 type YesterdayResult = {
   date: string;
   planned: number | null;
@@ -64,7 +84,7 @@ type YesterdayResult = {
   attemptGap: number | null;
   confirmGap: number;
   error: string | null;
-  unconfirmed: Array<{ target: string; postBridgeId: string; error?: string }>;
+  unconfirmed: UnconfirmedEntry[];
   unattempted: Array<{ target: string; slot: string }>;
 };
 
@@ -190,8 +210,22 @@ async function computeYesterday(
     }
   }
 
+  const pushUnconfirmed = (e: PostLogEntry, entry: Omit<UnconfirmedEntry, "target">) => {
+    if (out.unconfirmed.length >= 25) return;
+    out.unconfirmed.push({
+      target: e.accountName || `account:${e.accountId}`,
+      ...entry,
+    });
+  };
+
   if (attemptedEntries.length === 0) {
+    // Every logged attempt lacks a Post Bridge id, so none of them can be
+    // confirmed. Name them instead of reporting a bare zero.
+    for (const e of postLog) {
+      pushUnconfirmed(e, { postBridgeId: "", state: "no-post-bridge-id" });
+    }
     out.attemptGap = planned === null ? null : Math.max(0, planned - attempted);
+    out.confirmGap = attempted;
     return out;
   }
   if (!(process.env.POSTBRIDGE_API_KEY || process.env.POST_BRIDGE_API_KEY)) {
@@ -204,30 +238,59 @@ async function computeYesterday(
     for (let i = 0; i < uniq.length; i += PB_CHUNK) chunks.push(uniq.slice(i, i + PB_CHUNK));
     const successById = new Set<string>();
     const errorById = new Map<string, string>();
+    const hasResultRow = new Set<string>();
     for (const chunk of chunks) {
       const qs = new URLSearchParams({ limit: "100" });
       for (const id of chunk) qs.append("post_id", id);
       const r = await pbGet<{ data?: PBPostResult[] }>(`/v1/post-results?${qs}`);
       for (const row of r.data || []) {
         if (!row.post_id) continue;
+        hasResultRow.add(row.post_id);
         if (row.success === true) successById.add(row.post_id);
         else if (row.error && !errorById.has(row.post_id)) {
           errorById.set(row.post_id, typeof row.error === "string" ? row.error : JSON.stringify(row.error));
         }
       }
     }
-    let confirmed = 0;
-    for (const e of attemptedEntries) {
-      if (!e.postBridgeId) continue;
-      if (successById.has(e.postBridgeId)) {
-        confirmed += 1;
-      } else if (out.unconfirmed.length < 25) {
-        out.unconfirmed.push({
-          target: e.accountName || `account:${e.accountId}`,
-          postBridgeId: e.postBridgeId,
-          error: errorById.get(e.postBridgeId),
-        });
+
+    // No result row at all is ambiguous: still queued at PB, or gone. Ask PB
+    // about the parent post, same as the 24h cross-check does. Bounded so a
+    // bad day can't turn the status route into dozens of serial calls.
+    const parentState = new Map<string, "queued" | "missing" | "unknown">();
+    const needParentCheck = uniq
+      .filter((id) => !successById.has(id) && !hasResultRow.has(id))
+      .slice(0, PARENT_CHECK_MAX);
+    for (const id of needParentCheck) {
+      try {
+        const post = await pbGet<PBPost>(`/v1/posts/${encodeURIComponent(id)}`);
+        const st = post?.status;
+        parentState.set(id, st === "scheduled" || st === "processing" ? "queued" : "unknown");
+      } catch (err) {
+        const status = err instanceof PBError ? err.status : 0;
+        parentState.set(id, status === 500 || status === 404 ? "missing" : "unknown");
       }
+    }
+
+    // Walk the whole post log, not just the entries that carry a PB id, so
+    // every post counted in confirmGap is named with a reason.
+    let confirmed = 0;
+    for (const e of postLog) {
+      if (e.postBridgeId && successById.has(e.postBridgeId)) {
+        confirmed += 1;
+        continue;
+      }
+      if (!e.postBridgeId) {
+        pushUnconfirmed(e, { postBridgeId: "", state: "no-post-bridge-id" });
+        continue;
+      }
+      const state: UnconfirmedState = hasResultRow.has(e.postBridgeId)
+        ? "rejected"
+        : parentState.get(e.postBridgeId) ?? "unknown";
+      pushUnconfirmed(e, {
+        postBridgeId: e.postBridgeId,
+        error: errorById.get(e.postBridgeId),
+        state,
+      });
     }
     out.confirmed = confirmed;
   } catch (e) {
@@ -241,6 +304,8 @@ async function computeYesterday(
 
 const PB_BASE = "https://api.post-bridge.com";
 const PB_CHUNK = 20;
+// Cap on serial /v1/posts/{id} lookups when classifying unconfirmed posts.
+const PARENT_CHECK_MAX = 15;
 
 type PBPostResult = {
   id?: string;
