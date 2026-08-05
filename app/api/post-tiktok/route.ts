@@ -1,29 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { redis } from "@/lib/kv";
-import { defaultScheduledAt } from "@/lib/post-bridge";
+import { pbFetch, uploadImage, defaultScheduledAt } from "@/lib/post-bridge";
 
 // Uploading a full carousel means one round trip per slide plus the S3 PUT,
 // and this route had no explicit cap, so it inherited the platform default.
 export const maxDuration = 60;
 
-const PB_BASE = "https://api.post-bridge.com";
 const ACCOUNTS_CACHE_TTL_SECONDS = 120;
 
-async function pbFetch(path: string, init: RequestInit = {}) {
-  const res = await fetch(`${PB_BASE}${path}`, {
-    ...init,
-    headers: {
-      Authorization: `Bearer ${process.env.POSTBRIDGE_API_KEY}`,
-      "Content-Type": "application/json",
-      ...(init.headers || {}),
-    },
-  });
-  if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`post-bridge ${path} ${res.status}: ${body}`);
-  }
-  return res.json();
-}
+// This route used to carry its own bare-fetch PostBridge client with no retry
+// and no attempt logging, so manual posting gave up on the first hiccup while
+// the cron shrugged the same hiccup off. It now uses the shared client in
+// lib/post-bridge, which retries 5xx and network errors on the idempotent
+// calls and records every attempt in the retry-log. POST /v1/posts stays
+// non-retryable there — re-issuing it can duplicate a post (2026-05-08).
 
 function checkAuth(password: string | undefined) {
   const appPassword = process.env.APP_PASSWORD;
@@ -33,12 +23,9 @@ function checkAuth(password: string | undefined) {
   return null;
 }
 
-function dataUrlToArrayBuffer(dataUrl: string): ArrayBuffer {
+function dataUrlToBuffer(dataUrl: string): Buffer {
   const base64 = dataUrl.split(",")[1];
-  const buf = Buffer.from(base64, "base64");
-  const ab = new ArrayBuffer(buf.length);
-  new Uint8Array(ab).set(buf);
-  return ab;
+  return Buffer.from(base64, "base64");
 }
 
 // GET: list TikTok accounts, or scheduled posts (requires ?password=...)
@@ -53,9 +40,9 @@ export async function GET(req: NextRequest) {
     if (action === "posts") {
       const accountId = url.searchParams.get("accountId");
       const [postsResp, resultsResp, analyticsResp] = await Promise.all([
-        pbFetch("/v1/posts?limit=50"),
-        pbFetch("/v1/post-results?limit=100").catch(() => ({ data: [] })),
-        pbFetch("/v1/analytics?limit=100").catch(() => ({ data: [] })),
+        pbFetch("/v1/posts?limit=50", {}, { retryable: true }),
+        pbFetch("/v1/post-results?limit=100", {}, { retryable: true }).catch(() => ({ data: [] })),
+        pbFetch("/v1/analytics?limit=100", {}, { retryable: true }).catch(() => ({ data: [] })),
       ]);
       const resultsAll = resultsResp.data || [];
       const analyticsAll = analyticsResp.data || [];
@@ -182,7 +169,9 @@ export async function GET(req: NextRequest) {
     const accountsResp = await pbFetch(
       platform
         ? `/v1/social-accounts?platform=${platform}&limit=100`
-        : `/v1/social-accounts?limit=100`
+        : `/v1/social-accounts?limit=100`,
+      {},
+      { retryable: true }
     );
     const accounts = (accountsResp.data || []).map(
       (a: { id: number; username: string }) => ({
@@ -209,16 +198,8 @@ export async function DELETE(req: NextRequest) {
     if (!postId) {
       return NextResponse.json({ error: "postId required" }, { status: 400 });
     }
-    const res = await fetch(`${PB_BASE}/v1/posts/${postId}`, {
-      method: "DELETE",
-      headers: {
-        Authorization: `Bearer ${process.env.POSTBRIDGE_API_KEY}`,
-      },
-    });
-    if (!res.ok) {
-      const body = await res.text();
-      throw new Error(`post-bridge DELETE ${res.status}: ${body}`);
-    }
+    // Deleting a specific post id is idempotent, so retrying is safe.
+    await pbFetch(`/v1/posts/${postId}`, { method: "DELETE" }, { retryable: true });
     return NextResponse.json({ ok: true });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Failed";
@@ -234,31 +215,15 @@ export async function POST(req: NextRequest) {
     const authError = checkAuth(body.password);
     if (authError) return authError;
 
-    // Upload a single image (browser sends PNG as base64 data URL)
+    // Upload a single image (browser sends PNG as base64 data URL).
+    // uploadImage does create-upload-url + the presigned S3 PUT, both with
+    // retry and attempt logging. This is the step PostBridge has been
+    // returning 500s on, and the step that previously had no retry at all.
     if (action === "upload") {
       const { image, index } = body as { image: string; index: number };
-      const ab = dataUrlToArrayBuffer(image);
-
-      const upload = await pbFetch("/v1/media/create-upload-url", {
-        method: "POST",
-        body: JSON.stringify({
-          name: `slide-${index + 1}.png`,
-          mime_type: "image/png",
-          size_bytes: ab.byteLength,
-        }),
-      });
-
-      const putRes = await fetch(upload.upload_url, {
-        method: "PUT",
-        headers: { "Content-Type": "image/png" },
-        body: ab,
-      });
-      if (!putRes.ok) {
-        const t = await putRes.text();
-        throw new Error(`S3 upload failed: ${putRes.status} ${t}`);
-      }
-
-      return NextResponse.json({ media_id: upload.media_id });
+      const buffer = dataUrlToBuffer(image);
+      const mediaId = await uploadImage(buffer, `slide-${index + 1}.png`, "image/png");
+      return NextResponse.json({ media_id: mediaId });
     }
 
     // Publish the post to selected accounts
