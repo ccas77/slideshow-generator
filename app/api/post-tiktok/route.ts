@@ -228,24 +228,41 @@ export async function POST(req: NextRequest) {
 
     // Publish the post to selected accounts
     if (action === "publish") {
-      const { caption, mediaIds, accountIds, scheduledAt } = body as {
+      const { caption, mediaIds, accountIds, scheduledAt, platform } = body as {
         caption: string;
         mediaIds: string[];
         accountIds: number[];
         scheduledAt?: string;
+        platform?: string;
       };
 
       if (!accountIds || accountIds.length === 0) {
         return NextResponse.json(
-          { error: "Select at least one TikTok account" },
+          { error: "Select at least one account" },
           { status: 400 }
         );
       }
       if (!mediaIds || mediaIds.length < 2) {
         return NextResponse.json(
-          { error: "Need at least 2 slides for a TikTok carousel" },
+          { error: "Need at least 2 slides for a carousel" },
           { status: 400 }
         );
+      }
+
+      // The account picker offers TikTok, Instagram AND Facebook accounts, but
+      // this route used to hardcode a TikTok platform_configurations block. A
+      // post created for an Instagram or Facebook account with a TikTok config
+      // is accepted by PostBridge — the request returns 200 and the UI says
+      // "Posted" — and then never publishes, because the configuration does not
+      // match the account. Mirror the mapping the cron already uses
+      // (lib/topn-publisher.ts) and key it off the selected account.
+      const platformConfigurations: Record<string, unknown> = {};
+      if (platform === "instagram") {
+        platformConfigurations.instagram = {};
+      } else if (platform === "facebook") {
+        platformConfigurations.facebook = {};
+      } else {
+        platformConfigurations.tiktok = { draft: false, is_aigc: false };
       }
 
       const post = await pbFetch("/v1/posts", {
@@ -259,9 +276,7 @@ export async function POST(req: NextRequest) {
           // "Post now" appeared to do nothing. Defaults to a couple of minutes
           // out, matching the cron fallback's behaviour.
           scheduled_at: scheduledAt || defaultScheduledAt(),
-          platform_configurations: {
-            tiktok: { draft: false, is_aigc: false },
-          },
+          platform_configurations: platformConfigurations,
         }),
       });
 

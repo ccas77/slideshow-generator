@@ -233,6 +233,11 @@ export default function PostNowTab({
           caption,
           mediaIds,
           accountIds: [accountId],
+          // The picker lists TikTok, Instagram and Facebook accounts, so the
+          // server needs to know which one this is to send the matching
+          // platform_configurations. Without it the post is created with a
+          // TikTok config and silently never publishes on the other platforms.
+          platform: selectedAccount?.platform || "tiktok",
         }),
       });
       const pubData = await pubRes.json();
