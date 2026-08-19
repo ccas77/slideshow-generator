@@ -204,18 +204,39 @@ async function computeYesterday(
     for (let i = 0; i < uniq.length; i += PB_CHUNK) chunks.push(uniq.slice(i, i + PB_CHUNK));
     const successById = new Set<string>();
     const errorById = new Map<string, string>();
+    const hasResultRow = new Set<string>();
     for (const chunk of chunks) {
       const qs = new URLSearchParams({ limit: "100" });
       for (const id of chunk) qs.append("post_id", id);
       const r = await pbGet<{ data?: PBPostResult[] }>(`/v1/post-results?${qs}`);
       for (const row of r.data || []) {
         if (!row.post_id) continue;
+        hasResultRow.add(row.post_id);
         if (row.success === true) successById.add(row.post_id);
         else if (row.error && !errorById.has(row.post_id)) {
           errorById.set(row.post_id, typeof row.error === "string" ? row.error : JSON.stringify(row.error));
         }
       }
     }
+
+    // Post Bridge does not always return a per-account result row for a post it
+    // did deliver (TikTok posts in particular come back with an empty
+    // social_accounts list). Missing rows are not evidence of failure, so ask PB
+    // about the parent post: status "posted" is delivery confirmation. Without
+    // this, a successful post is reported as a missed one. Bounded so a bad day
+    // can't turn the status route into dozens of serial calls.
+    const idsNeedingParentCheck = uniq
+      .filter((id) => !successById.has(id) && !hasResultRow.has(id))
+      .slice(0, PARENT_CHECK_MAX);
+    for (const id of idsNeedingParentCheck) {
+      try {
+        const post = await pbGet<PBPost>(`/v1/posts/${encodeURIComponent(id)}`);
+        if (post?.status === "posted") successById.add(id);
+      } catch {
+        // Leave it unconfirmed; the entry below still names it.
+      }
+    }
+
     let confirmed = 0;
     for (const e of attemptedEntries) {
       if (!e.postBridgeId) continue;
@@ -241,6 +262,9 @@ async function computeYesterday(
 
 const PB_BASE = "https://api.post-bridge.com";
 const PB_CHUNK = 20;
+// Cap on serial /v1/posts/{id} lookups when confirming posts that have no
+// per-account result row at Post Bridge.
+const PARENT_CHECK_MAX = 15;
 
 type PBPostResult = {
   id?: string;
@@ -339,13 +363,14 @@ async function selfCrossCheckAgainstPB(
   // For each id with no post-results, check if the parent post exists in PB
   // (queued) or truly doesn't (silent failure). One /v1/posts/{id} call per
   // id, throttled by the app's own network stack. 500 = truly missing.
-  const parentStatus = new Map<string, "queued" | "missing" | "unknown">();
+  const parentStatus = new Map<string, "posted" | "queued" | "missing" | "unknown">();
   const idsNeedingParentCheck = ids.filter((id) => !(resultsByPostId.get(id) || []).length);
   for (const id of idsNeedingParentCheck) {
     try {
       const post = await pbGet<PBPost>(`/v1/posts/${encodeURIComponent(id)}`);
       const st = post?.status;
-      if (st === "scheduled" || st === "processing") parentStatus.set(id, "queued");
+      if (st === "posted") parentStatus.set(id, "posted");
+      else if (st === "scheduled" || st === "processing") parentStatus.set(id, "queued");
       else parentStatus.set(id, "unknown");
     } catch (e) {
       const status = e instanceof PBError ? e.status : 0;
@@ -363,7 +388,8 @@ async function selfCrossCheckAgainstPB(
     }
     if (rows.length === 0) {
       const p = parentStatus.get(e.postBridgeId);
-      if (p === "queued") out.queuedAtPB24h += 1;
+      if (p === "posted") out.confirmed24h += 1;
+      else if (p === "queued") out.queuedAtPB24h += 1;
       else if (p === "missing") {
         out.missingFromPB24h += 1;
         if (out.missingDetail.length < 10) {
