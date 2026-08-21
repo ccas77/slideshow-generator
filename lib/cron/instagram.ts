@@ -13,6 +13,7 @@ import { notify } from "@/lib/notify";
 import { notifyPostFailure } from "@/lib/post-failure";
 import { withJobTimeout, JOB_TIMEOUT_MS } from "./with-timeout";
 import { unlimitedDeadline, type RunDeadline } from "./deadline";
+import { buildGoneAccountGuard } from "./live-accounts";
 import type { IgAutoResult } from "./types";
 
 function pickRandom<T>(arr: T[]): T | null {
@@ -32,10 +33,17 @@ export async function runInstagramPhase(
       const igSlideshows = await getIgSlideshows();
       if (igSlideshows.length > 0) {
         const updatedAccounts = { ...igAuto.accounts };
+        const isGone = await buildGoneAccountGuard();
 
         for (const [accIdStr, accConfig] of Object.entries(igAuto.accounts)) {
           if (outOfBudget) break;
           if (!accConfig.enabled || accConfig.intervals.length === 0) continue;
+          if (await isGone(accIdStr, "IG")) {
+            igAutoResults.push({
+              status: `${accIdStr}: skipped — PostBridge no longer has this account`,
+            });
+            continue;
+          }
 
           // Build pool: filter by books, then by specific slideshows
           let filtered = igSlideshows;

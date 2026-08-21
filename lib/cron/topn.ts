@@ -11,6 +11,7 @@ import { notify } from "@/lib/notify";
 import { notifyPostFailure } from "@/lib/post-failure";
 import { withJobTimeout, JOB_TIMEOUT_MS } from "./with-timeout";
 import { unlimitedDeadline, type RunDeadline } from "./deadline";
+import { buildGoneAccountGuard } from "./live-accounts";
 import type { TopNResult } from "./types";
 
 // Cap how many TopN publishes run at once. Each publishTopN takes 30-90s
@@ -49,9 +50,17 @@ export async function runTopNPhase(
     // Phase 1: build all jobs across accounts, advancing the pointer for each.
     const topNJobs: TopNJob[] = [];
     const excessSchedKeys: string[] = [];
+    const isGone = await buildGoneAccountGuard();
 
     for (const [accIdStr, accConfig] of Object.entries(topNAuto.accounts)) {
       if (!accConfig.enabled || accConfig.intervals.length === 0) continue;
+      if (await isGone(accIdStr, "TopN")) {
+        topNResults.push({
+          listName: "(topn-auto)",
+          status: `${accIdStr}: skipped — PostBridge no longer has this account`,
+        });
+        continue;
+      }
 
       // Frequency check: skip if not enough days since last post
       if (accConfig.lastPostDate) {

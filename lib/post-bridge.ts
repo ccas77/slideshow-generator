@@ -294,6 +294,41 @@ export async function listTikTokAccounts(): Promise<
   }));
 }
 
+/**
+ * Every social account PostBridge still holds, across all platforms, as a set
+ * of ids. Paginated, because the TikTok-only list above is already close to
+ * the 100-row page cap and this one spans every platform.
+ *
+ * Returns null — never a partial or empty set — if PostBridge can't be read or
+ * paginated cleanly. Callers use this to skip accounts PostBridge has dropped,
+ * so a failed read must mean "don't know, carry on", never "skip everything".
+ */
+export async function listAllSocialAccountIds(): Promise<Set<number> | null> {
+  const ids = new Set<number>();
+  const limit = 100;
+  // Bounded so a server that never stops advancing can't spin the cron.
+  const maxPages = 20;
+  try {
+    for (let page = 0; page < maxPages; page++) {
+      const r = await pbFetch(
+        `/v1/social-accounts?limit=${limit}&offset=${page * limit}`,
+        {},
+        { retryable: true },
+      );
+      const rows: Array<{ id?: number }> = r.data || [];
+      for (const a of rows) {
+        if (typeof a.id === "number") ids.add(a.id);
+      }
+      if (rows.length < limit) return ids;
+    }
+    // Hit the page cap on a full last page: the list is truncated, so it
+    // cannot be used to prove any account is gone.
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 // When POST /v1/posts errors after PostBridge has actually accepted the post
 // (5xx from their gateway, network drop on response, etc.), we can't safely
 // retry (duplicate-post risk per 2026-05-08). But we CAN check whether the
