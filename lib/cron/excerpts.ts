@@ -14,6 +14,7 @@ import { notify } from "@/lib/notify";
 import { notifyPostFailure } from "@/lib/post-failure";
 import { withJobTimeout, JOB_TIMEOUT_MS } from "./with-timeout";
 import { unlimitedDeadline, type RunDeadline } from "./deadline";
+import { buildGoneAccountGuard } from "./live-accounts";
 import type { ExcerptAutoResult } from "./types";
 
 function pickRandom<T>(arr: T[]): T | undefined {
@@ -36,10 +37,17 @@ export async function runExcerptPhase(
     if (excerpts.length === 0) return results;
 
     const updatedAccounts = { ...auto.accounts };
+    const isGone = await buildGoneAccountGuard();
 
     for (const [accIdStr, accConfig] of Object.entries(auto.accounts)) {
       if (outOfBudget) break;
       if (!accConfig.enabled || accConfig.intervals.length === 0) continue;
+      if (await isGone(accIdStr, "excerpt")) {
+        results.push({
+          status: `${accIdStr}: skipped — PostBridge no longer has this account`,
+        });
+        continue;
+      }
 
       // Build excerpt pool
       let pool = excerpts.filter(
