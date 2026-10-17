@@ -204,10 +204,28 @@ async function computeYesterday(
     for (let i = 0; i < uniq.length; i += PB_CHUNK) chunks.push(uniq.slice(i, i + PB_CHUNK));
     const successById = new Set<string>();
     const errorById = new Map<string, string>();
+    // A failed lookup used to abort the whole loop: every post was then
+    // counted unconfirmed with none of them listed. Retry once, and if a
+    // chunk still fails, name its posts with the reason they weren't checked.
+    const uncheckedById = new Map<string, string>();
     for (const chunk of chunks) {
       const qs = new URLSearchParams({ limit: "100" });
       for (const id of chunk) qs.append("post_id", id);
-      const r = await pbGet<{ data?: PBPostResult[] }>(`/v1/post-results?${qs}`);
+      let r: { data?: PBPostResult[] } | null = null;
+      for (let attempt = 0; attempt < 2 && !r; attempt++) {
+        try {
+          r = await pbGet<{ data?: PBPostResult[] }>(`/v1/post-results?${qs}`);
+        } catch (e) {
+          if (attempt === 0) {
+            await new Promise((res) => setTimeout(res, 1500));
+            continue;
+          }
+          const msg = (e as Error).message;
+          out.error = msg;
+          for (const id of chunk) uncheckedById.set(id, `delivery not checked, Post Bridge lookup failed: ${msg}`);
+        }
+      }
+      if (!r) continue;
       for (const row of r.data || []) {
         if (!row.post_id) continue;
         if (row.success === true) successById.add(row.post_id);
@@ -225,7 +243,7 @@ async function computeYesterday(
         out.unconfirmed.push({
           target: e.accountName || `account:${e.accountId}`,
           postBridgeId: e.postBridgeId,
-          error: errorById.get(e.postBridgeId),
+          error: errorById.get(e.postBridgeId) ?? uncheckedById.get(e.postBridgeId),
         });
       }
     }
